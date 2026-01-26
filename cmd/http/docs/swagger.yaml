@@ -1,0 +1,71 @@
+basePath: /api
+definitions:
+  rest.BaseResponse:
+    properties:
+      data: {}
+      error_code:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  user.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+host: devices-stg.phx-smartuni.com
+info:
+  contact: {}
+  description: Restfull API Application for web devices management
+  title: Devices manager API
+  version: "1.0"
+paths:
+  /v1/login:
+    post:
+      consumes:
+      - application/json
+      description: Login
+      parameters:
+      - description: payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Login
+      tags:
+      - User
+  /v2/login:
+    post:
+      consumes:
+      - application/json
+      description: Login v2
+      parameters:
+      - description: payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Login v2
+      tags:
+      - User v2
+swagger: "2.0"

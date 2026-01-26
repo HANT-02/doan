@@ -1,0 +1,77 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+*.test
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Wire generated files
+**/wire_gen.go
+
+# Test coverage
+*.coverprofile
+coverage.out
+coverage.html
+
+# Build artifacts
+dist/
+build/
+
+# Config files (keep samples)
+config.yaml
+config.yml
+*.env
+.env
+.env.local
+
+# Keep sample configs
+!config.yaml.sample
+!config.yml.sample
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# OS specific
+Thumbs.db
+
+# Swagger generated files (optional - uncomment if you want to regenerate always)
+# cmd/http/docs/docs.go
+# cmd/http/docs/swagger.json
+# cmd/http/docs/swagger.yaml
+
+# Application specific
+uploads/
+storage/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.backup
+main.go.backup
+

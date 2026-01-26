@@ -1,0 +1,67 @@
+pipeline {
+    agent { label 'ubuntu' }
+    environment {
+        SERVICE_NAME = 'api' //
+        BRANCH_NAME = 'staging' // Global variable
+        SERVICE_TYPE = 'api' // Global variable
+        IMAGE_NAME = 'running-service'
+        REGISTRY_URL = 'vcr.vngcloud.vn'
+        DOCKER_CREDENTIALS = credentials('vng-docker-registry')
+        GIT_CREDENTIALS = credentials('gitlab-phx-pull')
+        GIT_REPO_URL = 'https://gitlab.phx-smartuni.com/uat/23.uat_running_be_go.git'
+    }
+    stages {
+        stage('Clone repository') {
+            steps {
+                git url: "${env.GIT_REPO_URL}",
+                    branch: "${env.BRANCH_NAME}",
+                    credentialsId: 'gitlab-phx-pull'
+            }
+        }
+        stage('Set Image Tag') {
+            steps {
+                script {
+                    // Get the short git revision
+                    env.IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    env.SERVICE_PATH = "cmd/${env.SERVICE_NAME}"
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${REGISTRY_URL}/106404-phx-smartuni/${IMAGE_NAME}:${env.BRANCH_NAME}-${env.IMAGE_TAG}",
+                        "--build-arg SERVICE_PATH=${env.SERVICE_PATH} --build-arg SERVICE_TYPE=${env.SERVICE_TYPE} --build-arg BRANCH_NAME=${env.BRANCH_NAME} -f deploy/Dockerfile .")
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry("https://${REGISTRY_URL}", 'vng-docker-registry') {
+                        docker.image("${REGISTRY_URL}/106404-phx-smartuni/${IMAGE_NAME}:${env.BRANCH_NAME}-${env.IMAGE_TAG}").push()
+                    }
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    def namespace = env.BRANCH_NAME
+                    def kubeconfigId = env.BRANCH_NAME == 'production' ? 'kube-production' : 'kube-staging'
+                    withCredentials([file(credentialsId: kubeconfigId, variable: 'KUBECONFIG')]) {
+                        withEnv(["KUBECONFIG=${env.KUBECONFIG}"]) {
+                            sh 'kubectl config use-context deployer-context'
+                            sh """
+                                helm upgrade --install running-service deploy/helm \\
+                                --values ${env.SERVICE_PATH}/values-${namespace}.yaml \\
+                                --set image.repository=${REGISTRY_URL}/106404-phx-smartuni/${IMAGE_NAME},image.tag=${env.BRANCH_NAME}-${env.IMAGE_TAG} \\
+                                --namespace ${namespace}
+                            """
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
