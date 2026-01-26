@@ -1,4 +1,4 @@
-# Doan - Go Monorepo Project
+# Doan - Go Monorepo Project(Đồ án tốt nghiệp Project BE - Nguyễn Thế Hà 61165 CS2)
 
 Clean architecture Go monorepo with GORM, Wire DI, and Gin framework.
 
@@ -86,10 +86,6 @@ Using GORM AutoMigrate:
 ```bash
 # Run migration
 make migrate
-
-# Reset database (development only)
-chmod +x scripts/reset-db.sh
-./scripts/reset-db.sh
 ```
 
 ## 🔌 Wire Dependency Injection
@@ -107,7 +103,7 @@ make wire
 
 ## 📖 API Documentation
 
-Swagger documentation auto-generated:
+Swagger documentation auto-generated: //todo
 
 ```bash
 # Generate swagger docs
@@ -144,7 +140,7 @@ make docker-local-down
 
 1. Create entity in `internal/entities/`:
 ```go
-type Product struct {
+type Student struct {
     ID   uuid.UUID `gorm:"type:uuid;primary_key"`
     Name string    `gorm:"not null"`
 }
@@ -155,7 +151,7 @@ type Product struct {
 func (m *migration) getAllEntities() []interface{} {
     return []interface{}{
         &entities.User{},
-        &entities.Product{},  // Add here
+        &entities.Student{},  // Add here
     }
 }
 ```
@@ -172,12 +168,6 @@ make migrate
 make clean
 make install-tools
 make wire
-```
-
-### Migration fails
-```bash
-# Reset database
-./scripts/reset-db.sh
 ```
 
 ### Port already in use
@@ -207,7 +197,7 @@ This project is licensed under the MIT License.
 
 ## 👥 Authors
 
-- Your Name - Initial work
+- Nguyễn Thế Hà 61165 CS2 - Initial work(đồ án tốt nghiệp Back-end project)
 
 ## 🙏 Acknowledgments
 

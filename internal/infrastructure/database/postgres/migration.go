@@ -103,16 +103,16 @@ func (m *migration) seedSampleData() error {
 
 	// Sample users - Password is bcrypt hash of "password123"
 	sampleUsers := []entities.User{
-		{UserName: "admin", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "user1", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "user2", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "testuser", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "john_doe", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "jane_smith", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "bob_wilson", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "inactive"},
-		{UserName: "alice_jones", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "charlie_brown", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "active"},
-		{UserName: "david_miller", PassWord: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Status: "suspended"},
+		{Email: "admin", Code: "admin", FullName: "admin", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "ADMIN"},
+		{Email: "user1", Code: "user1", FullName: "user1", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "user2", Code: "user2", FullName: "user2", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "testuser", Code: "testuser", FullName: "testuser", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "john_doe", Code: "john_doe", FullName: "john_doe", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "jane_smith", Code: "jane_smith", FullName: "jane_smith", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "bob_wilson", Code: "bob_wilson", FullName: "bob_wilson", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "alice_jones", Code: "alice_jones", FullName: "alice_jones", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "charlie_brown", Code: "charlie_brown", FullName: "charlie_brown", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
+		{Email: "david_miller", Code: "david_miller", FullName: "david_miller", Password: "$2a$10$rqJ2VqGXqK3Z5X8Ry5Qz7.YqJ3vZJqJ5X8Ry5Qz7YqJ3vZJqJ5X8R", Role: "STUDENT"},
 	}
 
 	// Insert in batch
