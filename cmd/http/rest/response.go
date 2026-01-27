@@ -17,21 +17,44 @@ type BaseResponse struct {
 }
 
 func HandleError(c *gin.Context, err error) {
-	var xErr *xerror.Error
+	var xErr *xerror.AppError
 	if errors.As(err, &xErr) {
-		fmt.Printf("HandleError, %s, %s\n", xErr.ErrCode(), xErr.Message())
-		c.AbortWithStatusJSON(xErr.SttCode(), &BaseResponse{
+		fmt.Printf("HandleError, %s, %s\n", xErr.Error(), xErr.WithUserMessage(""))
+		c.AbortWithStatusJSON(xErr.HTTPStatusCode(), &BaseResponse{
 			Success:   false,
-			Message:   utils.NewString(xErr.Message()),
-			ErrorCode: utils.NewString(xErr.ErrCode()),
+			Message:   utils.NewStringPtr(xErr.Message),
+			ErrorCode: utils.NewStringPtr(xErr.Code),
 			Data:      nil,
 		})
 		return
 	}
 	c.AbortWithStatusJSON(http.StatusInternalServerError, &BaseResponse{
 		Success:   false,
-		Message:   utils.NewString(err.Error()),
-		ErrorCode: nil,
+		Message:   utils.NewStringPtr(xErr.Message),
+		ErrorCode: utils.NewStringPtr(xErr.Code),
+		Data:      nil,
+	})
+}
+
+// ResponseSuccess sends a successful response
+func ResponseSuccess(c *gin.Context, statusCode int, message string, data interface{}) {
+	c.JSON(statusCode, &BaseResponse{
+		Success: true,
+		Message: utils.NewStringPtr(message),
+		Data:    data,
+	})
+}
+
+// ResponseError sends an error response
+func ResponseError(c *gin.Context, statusCode int, message string, err error) {
+	errorCode := ""
+	if err != nil {
+		errorCode = err.Error()
+	}
+	c.AbortWithStatusJSON(statusCode, &BaseResponse{
+		Success:   false,
+		Message:   utils.NewStringPtr(message),
+		ErrorCode: utils.NewStringPtr(errorCode),
 		Data:      nil,
 	})
 }

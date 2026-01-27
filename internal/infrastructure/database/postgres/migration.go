@@ -75,9 +75,23 @@ func (m *migration) Down() error {
 func (m *migration) getAllEntities() []interface{} {
 	return []interface{}{
 		&entities.User{},
-		// Add more entities here:
-		// &entities.Product{},
-		// &entities.Order{},
+		&entities.Teacher{},
+		&entities.Student{},
+		&entities.Room{},
+		&entities.Course{},
+		&entities.Program{},
+		&entities.ProgramCourse{},
+		&entities.Objective{},
+		&entities.Outcome{},
+		&entities.Class{},
+		&entities.Lesson{},
+		&entities.Enrollment{},
+		&entities.Attendance{},
+		&entities.ClassSchedule{},
+		&entities.LessonSummary{},
+		&entities.AcademicRecord{},
+		&entities.Consultation{},
+		&entities.LeaveRequest{},
 	}
 }
 

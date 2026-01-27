@@ -8,4 +8,6 @@ import (
 var UserUseCaseProviders = wire.NewSet(
 	user.NewGetUserByIdUseCase,
 	user.NewLoginUseCase,
+	user.NewLogoutUseCase,
+	user.NewRefreshTokenUseCase,
 )

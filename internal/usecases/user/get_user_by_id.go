@@ -44,10 +44,10 @@ func (u *getUserByIdUseCase) Execute(ctx context.Context, input GetUserByIdInput
 
 	result := &GetUserByIdOutput{
 		ID:        user.ID,
-		UserName:  user.UserName,
-		Status:    user.Status,
+		UserName:  user.FullName,
+		Status:    "active",
 		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		UpdatedAt: &user.UpdatedAt,
 	}
 
 	return result, nil

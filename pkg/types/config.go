@@ -33,3 +33,10 @@ type PSQLConfig struct {
 	MaxIdleConns    int    `json:"max_idle_conns,omitempty" yaml:"max_idle_conns" mapstructure:"max_idle_conns"`
 	ConnMaxLifetime string `json:"conn_max_lifetime,omitempty" yaml:"conn_max_lifetime" mapstructure:"conn_max_lifetime"`
 }
+
+// JWTConfig cấu hình cho JWT
+type JWTConfig struct {
+	Secret               string `json:"secret,omitempty" yaml:"secret" mapstructure:"secret"`
+	AccessTokenDuration  string `json:"access_token_duration,omitempty" yaml:"access_token_duration" mapstructure:"access_token_duration"`
+	RefreshTokenDuration string `json:"refresh_token_duration,omitempty" yaml:"refresh_token_duration" mapstructure:"refresh_token_duration"`
+}

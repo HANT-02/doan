@@ -49,6 +49,12 @@ migrate: migration-wire
 	@echo "Running migration..."
 	go run cmd/cli/migration/main.go cmd/cli/migration/wire_gen.go
 
+# Seed database with sample data
+seed:
+	@echo "Seeding database..."
+	go run cmd/cli/seed/main.go
+	@echo "Database seeded successfully!"
+
 # Run migration down
 migrate-down: migration-wire
 	@echo "Rolling back migration..."

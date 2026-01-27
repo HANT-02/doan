@@ -13,8 +13,71 @@ definitions:
   user.LoginRequest:
     properties:
       password:
+        example: password123
         type: string
       username:
+        example: user@example.com
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  user.LoginResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/user.UserResponse'
+    type: object
+  user.LogoutRequest:
+    properties:
+      token:
+        type: string
+    required:
+    - token
+    type: object
+  user.LogoutResponse:
+    properties:
+      message:
+        example: Logged out successfully
+        type: string
+    type: object
+  user.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  user.RefreshTokenResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  user.UserResponse:
+    properties:
+      code:
+        example: USER001
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      full_name:
+        example: John Doe
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      role:
+        example: STUDENT
         type: string
     type: object
 host: devices-stg.phx-smartuni.com
@@ -24,13 +87,13 @@ info:
   title: Devices manager API
   version: "1.0"
 paths:
-  /v1/login:
+  /v1/auth/login:
     post:
       consumes:
       - application/json
-      description: Login
+      description: Authenticate user and return JWT tokens
       parameters:
-      - description: payload
+      - description: Login credentials
         in: body
         name: payload
         required: true
@@ -42,17 +105,114 @@ paths:
         "200":
           description: OK
           schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.LoginResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
             $ref: '#/definitions/rest.BaseResponse'
-      summary: Login
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: User login
       tags:
-      - User
-  /v2/login:
+      - Authentication
+  /v1/auth/logout:
     post:
       consumes:
       - application/json
-      description: Login v2
+      description: Invalidate user session
       parameters:
-      - description: payload
+      - description: Logout request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.LogoutResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: User logout
+      tags:
+      - Authentication
+  /v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.RefreshTokenResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Refresh access token
+      tags:
+      - Authentication
+  /v2/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT tokens
+      parameters:
+      - description: Login credentials
         in: body
         name: payload
         required: true
@@ -64,8 +224,105 @@ paths:
         "200":
           description: OK
           schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.LoginResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
             $ref: '#/definitions/rest.BaseResponse'
-      summary: Login v2
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: User login (v2)
       tags:
-      - User v2
+      - Authentication v2
+  /v2/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate user session
+      parameters:
+      - description: Logout request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.LogoutResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: User logout (v2)
+      tags:
+      - Authentication v2
+  /v2/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.RefreshTokenResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Refresh access token (v2)
+      tags:
+      - Authentication v2
 swagger: "2.0"
