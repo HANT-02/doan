@@ -10,6 +10,23 @@ definitions:
       success:
         type: boolean
     type: object
+  user.ChangePasswordRequest:
+    properties:
+      new_password_enc:
+        type: string
+      old_password_enc:
+        type: string
+    required:
+    - new_password_enc
+    - old_password_enc
+    type: object
+  user.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   user.LoginRequest:
     properties:
       password:
@@ -46,6 +63,12 @@ definitions:
         example: Logged out successfully
         type: string
     type: object
+  user.MessageResponse:
+    properties:
+      message:
+        example: Operation successful
+        type: string
+    type: object
   user.RefreshTokenRequest:
     properties:
       refresh_token:
@@ -58,6 +81,36 @@ definitions:
       access_token:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
+    type: object
+  user.RegisterRequest:
+    properties:
+      email:
+        type: string
+      full_name:
+        minLength: 2
+        type: string
+      password_enc:
+        type: string
+    required:
+    - email
+    - full_name
+    - password_enc
+    type: object
+  user.RegisterResponse:
+    properties:
+      user_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
+  user.ResetPasswordRequest:
+    properties:
+      new_password_enc:
+        type: string
+      token:
+        type: string
+    required:
+    - new_password_enc
+    - token
     type: object
   user.UserResponse:
     properties:
@@ -87,6 +140,82 @@ info:
   title: Devices manager API
   version: "1.0"
 paths:
+  /v1/auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Change current user's password
+      parameters:
+      - description: Change password request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.MessageResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - Authentication
+  /v1/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send a password reset email if the account exists
+      parameters:
+      - description: Forgot password request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.MessageResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Request password reset
+      tags:
+      - Authentication
   /v1/auth/login:
     post:
       consumes:
@@ -204,6 +333,80 @@ paths:
           schema:
             $ref: '#/definitions/rest.BaseResponse'
       summary: Refresh access token
+      tags:
+      - Authentication
+  /v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: Register request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.RegisterResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: User registration
+      tags:
+      - Authentication
+  /v1/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using the provided token
+      parameters:
+      - description: Reset password request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.MessageResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Reset password
       tags:
       - Authentication
   /v2/auth/login:

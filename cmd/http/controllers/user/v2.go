@@ -161,3 +161,23 @@ func (c *ControllerV2) RefreshToken(ctx *gin.Context) {
 
 	rest.ResponseSuccess(ctx, http.StatusOK, "Token refreshed successfully", response)
 }
+
+func (c *ControllerV2) Register(ctx *gin.Context) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ControllerV2) ForgotPassword(ctx *gin.Context) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ControllerV2) ResetPassword(ctx *gin.Context) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ControllerV2) ChangePassword(ctx *gin.Context) {
+	//TODO implement me
+	panic("implement me")
+}

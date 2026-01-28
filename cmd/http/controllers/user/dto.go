@@ -42,3 +42,33 @@ type RefreshTokenRequest struct {
 type RefreshTokenResponse struct {
 	AccessToken string `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 }
+
+// Account APIs DTOs
+
+type RegisterRequest struct {
+	Email       string `json:"email" binding:"required,email"`
+	FullName    string `json:"full_name" binding:"required,min=2"`
+	PasswordEnc string `json:"password_enc" binding:"required"`
+}
+
+type RegisterResponse struct {
+	UserID string `json:"user_id" example:"123e4567-e89b-12d3-a456-426614174000"`
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type MessageResponse struct {
+	Message string `json:"message" example:"Operation successful"`
+}
+
+type ResetPasswordRequest struct {
+	Token          string `json:"token" binding:"required"`
+	NewPasswordEnc string `json:"new_password_enc" binding:"required"`
+}
+
+type ChangePasswordRequest struct {
+	OldPasswordEnc string `json:"old_password_enc" binding:"required"`
+	NewPasswordEnc string `json:"new_password_enc" binding:"required"`
+}
