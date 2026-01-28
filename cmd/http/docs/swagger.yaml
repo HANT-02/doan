@@ -80,7 +80,7 @@ definitions:
         example: STUDENT
         type: string
     type: object
-host: devices-stg.phx-smartuni.com
+host: localhost:9000
 info:
   contact: {}
   description: Restfull API Application for web devices management

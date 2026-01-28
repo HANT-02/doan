@@ -9,7 +9,7 @@ type Controller interface {
 }
 
 // RegisterRoutesV1 register routes for version 1
-func RegisterRoutesV1(router *gin.Engine, controller Controller) {
+func RegisterRoutesV1(router *gin.RouterGroup, controller Controller) {
 	v1 := router.Group("/v1/auth")
 	{
 		v1.POST("/login", controller.Login)
@@ -19,7 +19,7 @@ func RegisterRoutesV1(router *gin.Engine, controller Controller) {
 }
 
 // RegisterRoutesV2 register routes for version 2
-func RegisterRoutesV2(router *gin.Engine, controller Controller) {
+func RegisterRoutesV2(router *gin.RouterGroup, controller Controller) {
 	v2 := router.Group("/v2/auth")
 	{
 		v2.POST("/login", controller.Login)

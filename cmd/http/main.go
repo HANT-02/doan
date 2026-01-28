@@ -57,16 +57,19 @@ func (a *App) Run() error {
 }
 
 func (a *App) registerRoute() {
+	// Base API group
+	api := a.router.Group("/api")
+
 	// Routes
-	a.router.GET("/ping", func(c *gin.Context) {
+	api.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-	// Swagger route
-	a.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Swagger route under /api
+	api.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api/swagger/doc.json")))
 
-	user.RegisterRoutesV1(a.router, a.userControllerV1)
-	user.RegisterRoutesV2(a.router, a.userControllerV2)
+	user.RegisterRoutesV1(api, a.userControllerV1)
+	user.RegisterRoutesV2(api, a.userControllerV2)
 }
 
 func inject(
@@ -83,7 +86,7 @@ func inject(
 // @version 1.0
 // @description Restfull API Application for web devices management
 // @scheme https
-// @host devices-stg.phx-smartuni.com
+// @host localhost:9000
 // @BasePath /api
 func main() {
 	app := &App{}

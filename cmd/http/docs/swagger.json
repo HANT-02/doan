@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "devices-stg.phx-smartuni.com",
+    "host": "localhost:9000",
     "basePath": "/api",
     "paths": {
         "/v1/auth/login": {
