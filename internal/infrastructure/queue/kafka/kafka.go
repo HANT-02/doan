@@ -2,14 +2,14 @@ package kafkatemp
 
 import (
 	"context"
+	_interface "doan/internal/infrastructure/queue/interface"
+	"doan/pkg/logger"
+	xerror "doan/pkg/x-error"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
-	_interface "q-cdio/internal/infrastructure/queue-temp/interface"
-	"q-cdio/utils/logger"
-	xerror "q-cdio/utils/x-error"
 	"sync"
 	"time"
 )

@@ -1,9 +1,9 @@
 package queue_temp
 
 import (
-	"q-cdio/internal/infrastructure/queue-temp/interface"
-	kafka "q-cdio/internal/infrastructure/queue-temp/kafka"
-	rabbitmq "q-cdio/internal/infrastructure/queue-temp/rabbitmq"
+	"doan/internal/infrastructure/queue/interface"
+	kafka "doan/internal/infrastructure/queue/kafka"
+	rabbitmq "doan/internal/infrastructure/queue/rabbitmq"
 	"time"
 )
 

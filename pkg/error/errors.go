@@ -415,7 +415,7 @@ func (e AppError) MakeGRPCStatus() AppError {
 
 	st, _ = st.WithDetails(&errdetails.ErrorInfo{
 		Reason:   e.Code,
-		Domain:   "eduone.service",
+		Domain:   "doan",
 		Metadata: metadata,
 	})
 
