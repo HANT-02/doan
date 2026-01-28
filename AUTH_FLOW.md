@@ -248,7 +248,7 @@ The server will start on `http://localhost:9000`
 
 Open your browser and navigate to:
 ```
-http://localhost:9000/swagger/index.html
+http://localhost:9000/api/swagger/index.html
 ```
 
 ## Authentication Flow Details

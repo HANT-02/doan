@@ -17,9 +17,9 @@ make dev
 ```
 
 **Access:**
-- API: http://localhost:8080
-- Swagger: http://localhost:8080/swagger/index.html
-- Health: http://localhost:8080/ping
+- API: http://localhost:8080/api
+- Swagger: http://localhost:8080/api/swagger/index.html
+- Health: http://localhost:8080/api/ping
 
 ## 📋 Prerequisites
 
@@ -109,7 +109,7 @@ Swagger documentation auto-generated: //todo
 # Generate swagger docs
 make swagger
 
-# Access: http://localhost:8080/swagger/index.html
+# Access: http://localhost:8080/api/swagger/index.html
 ```
 
 ## 🧪 Testing

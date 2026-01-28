@@ -87,7 +87,7 @@ Server sẽ chạy tại: `http://localhost:9000`
 
 Mở trình duyệt và truy cập:
 ```
-http://localhost:9000/swagger/index.html
+http://localhost:9000/api/swagger/index.html
 ```
 
 ## API Endpoints

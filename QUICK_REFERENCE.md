@@ -169,7 +169,7 @@ http:
 - **DEVELOPMENT.md** - Development guide & best practices
 - **RESTRUCTURE_GUIDE.md** - Restructure steps
 - **QUICK_REFERENCE.md** - This file
-- **Swagger** - http://localhost:8080/swagger/index.html
+- **Swagger** - http://localhost:8080/api/swagger/index.html
 
 ## 🎓 Learning Resources
 

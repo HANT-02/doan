@@ -144,9 +144,9 @@ Wire đã được setup! Để thêm dependency mới:
 
 Sau khi chạy `make dev`:
 
-- **API Server**: http://localhost:8080
-- **Swagger Docs**: http://localhost:8080/swagger/index.html
-- **Health Check**: http://localhost:8080/ping
+- **API Server**: http://localhost:8080/api
+- **Swagger Docs**: http://localhost:8080/api/swagger/index.html
+- **Health Check**: http://localhost:8080/api/ping
 
 ---
 
@@ -179,7 +179,7 @@ doan/
 ```bash
 ./scripts/quick-setup.sh
 make dev
-# Access http://localhost:8080/swagger/index.html
+# Access http://localhost:8080/api/swagger/index.html
 ```
 
 ### Day 2: Understand Structure

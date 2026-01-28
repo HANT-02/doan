@@ -201,7 +201,7 @@ curl http://localhost:8080/ping
 
 ### Check Swagger docs
 
-Mở browser: http://localhost:8080/swagger/index.html
+Mở browser: http://localhost:8080/api/swagger/index.html
 
 ## 🎉 Xong! Application đã chạy
 
