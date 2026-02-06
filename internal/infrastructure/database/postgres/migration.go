@@ -92,6 +92,8 @@ func (m *migration) getAllEntities() []interface{} {
 		&entities.AcademicRecord{},
 		&entities.Consultation{},
 		&entities.LeaveRequest{},
+		&entities.PasswordReset{}, // Add PasswordReset entity for auto-migration
+		&entities.UserOTP{},       // Add UserOTP entity for auto-migration
 	}
 }
 

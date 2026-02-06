@@ -18,6 +18,7 @@ type ControllerV1 struct {
 	forgotPasswordUseCase user.ForgotPasswordUseCase
 	resetPasswordUseCase  user.ResetPasswordUseCase
 	changePasswordUseCase user.ChangePasswordUseCase
+	verifyOTPUseCase      user.VerifyOTPUseCase
 }
 
 func NewUserControllerV1(
@@ -28,6 +29,7 @@ func NewUserControllerV1(
 	forgotPasswordUseCase user.ForgotPasswordUseCase,
 	resetPasswordUseCase user.ResetPasswordUseCase,
 	changePasswordUseCase user.ChangePasswordUseCase,
+	verifyOTPUseCase user.VerifyOTPUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
 		loginUseCase:          loginUseCase,
@@ -37,6 +39,7 @@ func NewUserControllerV1(
 		forgotPasswordUseCase: forgotPasswordUseCase,
 		resetPasswordUseCase:  resetPasswordUseCase,
 		changePasswordUseCase: changePasswordUseCase,
+		verifyOTPUseCase:      verifyOTPUseCase,
 	}
 }
 
@@ -315,4 +318,38 @@ func (c *ControllerV1) ChangePassword(ctx *gin.Context) {
 	}
 
 	rest.ResponseSuccess(ctx, http.StatusOK, "Password changed successfully", MessageResponse{Message: "Password changed successfully"})
+}
+
+// VerifyOTP godoc
+// @Summary Verify OTP
+// @Description Verify one-time password for user actions
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param payload body VerifyOTPRequest true "Verify OTP request"
+// @Success 200 {object} rest.BaseResponse{data=MessageResponse}
+// @Failure 400 {object} rest.BaseResponse
+// @Failure 500 {object} rest.BaseResponse
+// @Router /v1/auth/verify-otp [post]
+func (c *ControllerV1) VerifyOTP(ctx *gin.Context) {
+	ctxLogger := logger.NewLogger(ctx)
+
+	var req VerifyOTPRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctxLogger.Errorf("Failed to bind request: %v", err)
+		rest.ResponseError(ctx, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if err := c.verifyOTPUseCase.Execute(ctx, user.VerifyOTPInput{
+		UserID: req.UserID,
+		OTP:    req.OTP,
+	}); err != nil {
+		ctxLogger.Errorf("Failed to verify OTP: %v", err)
+		rest.ResponseError(ctx, http.StatusBadRequest, "Failed to verify OTP", err)
+		return
+	}
+
+	rest.ResponseSuccess(ctx, http.StatusOK, "OTP verified successfully",
+		MessageResponse{Message: "OTP verified successfully"})
 }

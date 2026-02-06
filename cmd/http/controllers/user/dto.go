@@ -72,3 +72,8 @@ type ChangePasswordRequest struct {
 	OldPasswordEnc string `json:"old_password_enc" binding:"required"`
 	NewPasswordEnc string `json:"new_password_enc" binding:"required"`
 }
+
+type VerifyOTPRequest struct {
+	UserID string `json:"user_id" binding:"required"`
+	OTP    string `json:"otp" binding:"required"`
+}

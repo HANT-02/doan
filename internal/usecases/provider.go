@@ -14,4 +14,5 @@ var UserUseCaseProviders = wire.NewSet(
 	user.NewForgotPasswordUseCase,
 	user.NewResetPasswordUseCase,
 	user.NewChangePasswordUseCase,
+	user.NewVerifyOTPUseCase,
 )

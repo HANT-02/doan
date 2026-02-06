@@ -11,3 +11,9 @@ database:
   schema: database
 redis:
   url: localhost:6379
+
+app:
+  frontend_reset_url: "http://localhost:3000/reset-password" # URL for frontend password reset page
+
+auth:
+  reset_token_ttl_minutes: 15 # Password reset token time-to-live in minutes

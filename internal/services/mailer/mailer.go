@@ -13,8 +13,6 @@ import (
 	"doan/pkg/logger"
 )
 
-// Mail defines a simple email payload
-// HTML content is expected; plaintext is also acceptable but not formatted here.
 type Mail struct {
 	To      string
 	Subject string
@@ -23,13 +21,13 @@ type Mail struct {
 
 type Mailer interface {
 	Send(ctx context.Context, m Mail) error
+	SendOTPEmail(ctx context.Context, toEmail string, otp string) error
 }
 
 type queueMailer struct {
-	q      _interface.Queue
-	log    logger.Logger
-	config config.Manager
-	// topic/routing can be configured later; for now, we use a conventional topic name
+	q          _interface.Queue
+	log        logger.Logger
+	config     config.Manager
 	kafkaTopic string
 }
 
@@ -167,6 +165,30 @@ func (m *queueMailer) Send(ctx context.Context, mail Mail) error {
 	}
 	m.log.Info(ctx, "Email sent via SMTP (plain)", "to", mail.To, "addr", addr)
 	return nil
+}
+
+func (m *queueMailer) SendOTPEmail(ctx context.Context, toEmail string, otp string) error {
+	subject := "Your OTP Verification Code"
+
+	htmlBody := fmt.Sprintf(`
+		<html>
+		<body style="font-family: Arial, sans-serif;">
+			<h3>Email Verification</h3>
+			<p>Your OTP code is:</p>
+			<p style="font-size: 20px; font-weight: bold;">%s</p>
+			<p>This code will expire in <strong>5 minutes</strong>.</p>
+			<p>If you did not request this, please ignore this email.</p>
+		</body>
+		</html>
+	`, otp)
+
+	mail := Mail{
+		To:      toEmail,
+		Subject: subject,
+		HTML:    htmlBody,
+	}
+
+	return m.Send(ctx, mail)
 }
 
 // encodeRFC2047 encodes strings for use in mail headers per RFC 2047 (for non-ASCII subjects)

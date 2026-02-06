@@ -6,6 +6,7 @@ import (
 	"doan/internal/infrastructure/database/postgres/implement"
 	"doan/pkg/config"
 	"doan/pkg/logger"
+
 	"github.com/google/wire"
 	"gorm.io/gorm"
 )
@@ -14,6 +15,7 @@ var DBProvider = wire.NewSet(
 	ProvideDB,
 	postgres.NewMigration,
 	implement.NewUserRepository,
+	implement.NewPasswordResetRepository,
 )
 
 // ProvideDB wraps GetDBContext and panics on error (for Wire)

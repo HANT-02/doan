@@ -12,6 +12,7 @@ type Controller interface {
 	ForgotPassword(ctx *gin.Context)
 	ResetPassword(ctx *gin.Context)
 	ChangePassword(ctx *gin.Context)
+	VerifyOTP(ctx *gin.Context)
 }
 
 // RegisterRoutesV1 register routes for version 1
@@ -25,6 +26,7 @@ func RegisterRoutesV1(router *gin.RouterGroup, controller Controller) {
 		v1.POST("/forgot-password", controller.ForgotPassword)
 		v1.POST("/reset-password", controller.ResetPassword)
 		v1.POST("/change-password", controller.ChangePassword)
+		v1.POST("/verify-otp", controller.VerifyOTP)
 	}
 }
 
