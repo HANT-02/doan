@@ -16,6 +16,7 @@ var DBProvider = wire.NewSet(
 	postgres.NewMigration,
 	implement.NewUserRepository,
 	implement.NewPasswordResetRepository,
+	implement.NewTeacherRepository,
 )
 
 // ProvideDB wraps GetDBContext and panics on error (for Wire)

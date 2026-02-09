@@ -11,6 +11,7 @@ import (
 	"doan/internal/usecases"
 	"doan/pkg/config"
 	"doan/pkg/logger"
+
 	"github.com/google/wire"
 )
 
@@ -33,6 +34,7 @@ func wireApp(app *App) error {
 
 		// UseCase providers
 		usecases.UserUseCaseProviders,
+		usecases.TeacherUseCaseProviders,
 
 		// Controller providers
 		controllers.ControllerProviders,

@@ -1,5 +1,31 @@
 basePath: /api
 definitions:
+  cmd_http_controllers_teacher.TeachingHoursStat:
+    properties:
+      hours:
+        type: number
+      period:
+        type: string
+    type: object
+  cmd_http_controllers_teacher.TimetableLesson:
+    properties:
+      class_id:
+        type: string
+      class_name:
+        type: string
+      end_time:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      room_id:
+        type: string
+      room_name:
+        type: string
+      start_time:
+        type: string
+    type: object
   rest.BaseResponse:
     properties:
       data: {}
@@ -9,6 +35,120 @@ definitions:
         type: string
       success:
         type: boolean
+    type: object
+  teacher.CreateTeacherRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+      employment_type:
+        description: PART_TIME, FULL_TIME
+        type: string
+      full_name:
+        type: string
+      is_school_teacher:
+        type: boolean
+      notes:
+        type: string
+      phone:
+        type: string
+      school_name:
+        type: string
+      status:
+        description: ACTIVE, INACTIVE
+        type: string
+    required:
+    - full_name
+    type: object
+  teacher.ListTeachersResponse:
+    properties:
+      pagination:
+        $ref: '#/definitions/teacher.PaginationMeta'
+      teachers:
+        items:
+          $ref: '#/definitions/teacher.TeacherResponse'
+        type: array
+    type: object
+  teacher.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  teacher.PaginationMeta:
+    properties:
+      current_page:
+        type: integer
+      items_per_page:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  teacher.TeacherResponse:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      employment_type:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      is_school_teacher:
+        type: boolean
+      notes:
+        type: string
+      phone:
+        type: string
+      school_name:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  teacher.TeachingHoursStatsResponse:
+    properties:
+      breakdown:
+        items:
+          $ref: '#/definitions/cmd_http_controllers_teacher.TeachingHoursStat'
+        type: array
+      total_hours:
+        type: number
+    type: object
+  teacher.TimetableResponse:
+    properties:
+      lessons:
+        items:
+          $ref: '#/definitions/cmd_http_controllers_teacher.TimetableLesson'
+        type: array
+    type: object
+  teacher.UpdateTeacherRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+      employment_type:
+        type: string
+      full_name:
+        type: string
+      is_school_teacher:
+        type: boolean
+      notes:
+        type: string
+      phone:
+        type: string
+      school_name:
+        type: string
+      status:
+        type: string
     type: object
   user.ChangePasswordRequest:
     properties:
@@ -132,6 +272,16 @@ definitions:
       role:
         example: STUDENT
         type: string
+    type: object
+  user.VerifyOTPRequest:
+    properties:
+      otp:
+        type: string
+      user_id:
+        type: string
+    required:
+    - otp
+    - user_id
     type: object
 host: localhost:9000
 info:
@@ -409,6 +559,380 @@ paths:
       summary: Reset password
       tags:
       - Authentication
+  /v1/auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verify one-time password for user actions
+      parameters:
+      - description: Verify OTP request
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/user.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.MessageResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Verify OTP
+      tags:
+      - Authentication
+  /v1/teachers:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of teachers with filtering and pagination
+      parameters:
+      - description: Search in name, email, phone, code
+        in: query
+        name: search
+        type: string
+      - description: Filter by status (ACTIVE, INACTIVE)
+        in: query
+        name: status
+        type: string
+      - description: Filter by employment type (PART_TIME, FULL_TIME)
+        in: query
+        name: employment_type
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Sort field
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order (asc, desc)
+        in: query
+        name: sort_order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/teacher.ListTeachersResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: List teachers
+      tags:
+      - Teachers
+    post:
+      consumes:
+      - application/json
+      description: Create a new teacher (Admin only)
+      parameters:
+      - description: Teacher data
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/teacher.CreateTeacherRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/teacher.TeacherResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new teacher
+      tags:
+      - Teachers
+  /v1/teachers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a teacher (Admin only)
+      parameters:
+      - description: Teacher ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/teacher.MessageResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete teacher
+      tags:
+      - Teachers
+    get:
+      consumes:
+      - application/json
+      description: Get teacher details by ID
+      parameters:
+      - description: Teacher ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/teacher.TeacherResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Get teacher by ID
+      tags:
+      - Teachers
+    put:
+      consumes:
+      - application/json
+      description: Update teacher information (Admin only)
+      parameters:
+      - description: Teacher ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated teacher data
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/teacher.UpdateTeacherRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/teacher.TeacherResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Update teacher
+      tags:
+      - Teachers
+  /v1/teachers/{id}/stats/teaching-hours:
+    get:
+      consumes:
+      - application/json
+      description: Get teacher's teaching hours statistics grouped by period
+      parameters:
+      - description: Teacher ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      - default: day
+        description: Group by period (day, week, month)
+        in: query
+        name: group_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/teacher.TeachingHoursStatsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Get teaching hours statistics
+      tags:
+      - Teachers
+  /v1/teachers/{id}/timetable:
+    get:
+      consumes:
+      - application/json
+      description: Get teacher's lesson schedule within a date range
+      parameters:
+      - description: Teacher ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/teacher.TimetableResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      summary: Get teacher timetable
+      tags:
+      - Teachers
   /v2/auth/login:
     post:
       consumes:

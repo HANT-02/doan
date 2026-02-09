@@ -50,7 +50,7 @@ export const LoginPage = () => {
         setErrorMsg(null);
         try {
             await login(data);
-            const from = location.state?.from?.pathname || '/profile';
+            const from = location.state?.from?.pathname || '/app';
             navigate(from, { replace: true });
         } catch (error: any) {
             console.error(error);

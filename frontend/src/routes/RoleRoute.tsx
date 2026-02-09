@@ -3,8 +3,12 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
 
-export const PrivateRoute = () => {
-    const { isAuthenticated, isLoading } = useAuth();
+interface RoleRouteProps {
+    allowedRoles: string[];
+}
+
+export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
+    const { user, isLoading } = useAuth();
 
     if (isLoading) {
         return (
@@ -14,7 +18,13 @@ export const PrivateRoute = () => {
         );
     }
 
-    // Attempt to keep the user on the requested page if feasible, otherwise redirect
-    // Use 'replace' to avoid history stack issues
-    return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (!allowedRoles.includes(user.role)) {
+        return <Navigate to="/403" replace />;
+    }
+
+    return <Outlet />;
 };

@@ -2,6 +2,7 @@ package main
 
 import (
 	httpConfig "doan/cmd/http/config"
+	"doan/cmd/http/controllers/teacher"
 	"doan/cmd/http/controllers/user"
 	_ "doan/cmd/http/docs"
 	"doan/cmd/http/middleware"
@@ -9,22 +10,24 @@ import (
 	"doan/pkg/constants"
 	"flag"
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"net/http"
 )
 
 type App struct {
-	Name             string
-	Version          string
-	ConfigFilePath   string
-	ConfigFile       string
-	router           *gin.Engine
-	restConfig       httpConfig.RestServer
-	userControllerV1 user.Controller
-	userControllerV2 user.Controller
+	Name                string
+	Version             string
+	ConfigFilePath      string
+	ConfigFile          string
+	router              *gin.Engine
+	restConfig          httpConfig.RestServer
+	userControllerV1    user.Controller
+	userControllerV2    user.Controller
+	teacherControllerV1 teacher.Controller
 }
 
 func (a *App) initFlag() {
@@ -70,15 +73,18 @@ func (a *App) registerRoute() {
 
 	user.RegisterRoutesV1(api, a.userControllerV1)
 	user.RegisterRoutesV2(api, a.userControllerV2)
+	teacher.RegisterRoutesV1(api, a.teacherControllerV1, config.GetManager())
 }
 
 func inject(
 	app *App,
 	userControllerV1 *user.ControllerV1,
 	userControllerV2 *user.ControllerV2,
+	teacherControllerV1 teacher.Controller,
 ) error {
 	app.userControllerV1 = userControllerV1
 	app.userControllerV2 = userControllerV2
+	app.teacherControllerV1 = teacherControllerV1
 	return nil
 }
 
