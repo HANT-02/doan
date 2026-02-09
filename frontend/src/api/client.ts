@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL from env or default to proxy
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1/auth';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export const apiClient = axios.create({
     baseURL: BASE_URL,

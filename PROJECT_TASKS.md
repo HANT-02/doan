@@ -92,11 +92,11 @@
   - [ ] Cấu hình testing framework
 
 ### Task 2.2: Xây dựng Module Quản lý Đào tạo (Core)
-- [ ] API quản lý Giáo viên
-  - [ ] CRUD Teacher (Create, Read, Update, Delete)
-  - [ ] API lấy danh sách giáo viên theo bộ lọc
-  - [ ] API lấy lịch dạy của giáo viên
-  - [ ] API thống kê giờ dạy
+- [x] API quản lý Giáo viên *(Hoàn thành: 2026-02-06)*
+  - [x] CRUD Teacher (POST/GET/PUT/DELETE `/api/v1/teachers`)
+  - [x] API lấy danh sách giáo viên theo bộ lọc (GET `/api/v1/teachers?search=&status=&employment_type=&page=&limit=`)
+  - [x] API lấy lịch dạy của giáo viên (GET `/api/v1/teachers/:id/timetable?from=&to=`)
+  - [x] API thống kê giờ dạy (GET `/api/v1/teachers/:id/stats/teaching-hours?from=&to=&group_by=`)
 - [ ] API quản lý Học sinh
   - [ ] CRUD Student
   - [ ] API đăng ký khóa học

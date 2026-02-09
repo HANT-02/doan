@@ -4,8 +4,10 @@ import (
 	"doan/cmd/http/rest"
 	"doan/internal/usecases/user"
 	"doan/pkg/logger"
-	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 var _ Controller = (*ControllerV1)(nil)
@@ -19,6 +21,7 @@ type ControllerV1 struct {
 	resetPasswordUseCase  user.ResetPasswordUseCase
 	changePasswordUseCase user.ChangePasswordUseCase
 	verifyOTPUseCase      user.VerifyOTPUseCase
+	getUserByIdUseCase    user.GetUserByIdUseCase
 }
 
 func NewUserControllerV1(
@@ -30,6 +33,7 @@ func NewUserControllerV1(
 	resetPasswordUseCase user.ResetPasswordUseCase,
 	changePasswordUseCase user.ChangePasswordUseCase,
 	verifyOTPUseCase user.VerifyOTPUseCase,
+	getUserByIdUseCase user.GetUserByIdUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
 		loginUseCase:          loginUseCase,
@@ -40,6 +44,7 @@ func NewUserControllerV1(
 		resetPasswordUseCase:  resetPasswordUseCase,
 		changePasswordUseCase: changePasswordUseCase,
 		verifyOTPUseCase:      verifyOTPUseCase,
+		getUserByIdUseCase:    getUserByIdUseCase,
 	}
 }
 
@@ -352,4 +357,50 @@ func (c *ControllerV1) VerifyOTP(ctx *gin.Context) {
 
 	rest.ResponseSuccess(ctx, http.StatusOK, "OTP verified successfully",
 		MessageResponse{Message: "OTP verified successfully"})
+}
+
+// GetMe godoc
+// @Summary Get current user profile
+// @Description Get the profile of the currently authenticated user
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} rest.BaseResponse{data=UserResponse}
+// @Failure 401 {object} rest.BaseResponse
+// @Failure 500 {object} rest.BaseResponse
+// @Router /v1/auth/me [get]
+func (c *ControllerV1) GetMe(ctx *gin.Context) {
+	ctxLogger := logger.NewLogger(ctx)
+
+	userIDVal, exists := ctx.Get("user_id")
+	if !exists {
+		rest.ResponseError(ctx, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, _ := userIDVal.(string)
+
+	userIDInt, err := strconv.Atoi(userID)
+	if err != nil {
+		ctxLogger.Errorf("Failed to convert user ID to int: %v", err)
+		rest.ResponseError(ctx, http.StatusInternalServerError, "Internal server error", nil)
+		return
+	}
+
+	out, err := c.getUserByIdUseCase.Execute(ctx, user.GetUserByIdInput{ID: userIDInt})
+	if err != nil {
+		ctxLogger.Errorf("Failed to get user by ID: %v", err)
+		rest.ResponseError(ctx, http.StatusInternalServerError, "Failed to retrieve user profile", err)
+		return
+	}
+
+	resp := UserResponse{
+		ID:       out.ID,
+		Code:     out.Code,
+		FullName: out.FullName,
+		Email:    out.Email,
+		Role:     out.Role,
+		IsActive: out.IsActive,
+	}
+	rest.ResponseSuccess(ctx, http.StatusOK, "User profile retrieved successfully", resp)
 }

@@ -1,12 +1,13 @@
 import { apiClient } from './client';
-import type { LoginResponse, RefreshTokenResponse, MessageResponse } from '@/types/auth';
+import type { LoginResponse as AuthResponse, RefreshTokenResponse, MessageResponse, User } from '@/types/auth';
 
 export const authApi = {
-    login: (data: any) => apiClient.post<any, { data: LoginResponse }>('/login', data),
-    logout: (token: string) => apiClient.post<any, { data: MessageResponse }>('/logout', { token }),
-    refreshToken: (token: string) => apiClient.post<any, { data: RefreshTokenResponse }>('/refresh', { refresh_token: token }),
-    register: (data: any) => apiClient.post('/register', data),
-    forgotPassword: (email: string) => apiClient.post<any, { data: MessageResponse }>('/forgot-password', { email }),
-    resetPassword: (data: any) => apiClient.post<any, { data: MessageResponse }>('/reset-password', data),
-    changePassword: (data: any) => apiClient.post<any, { data: MessageResponse }>('/change-password', data),
+    getMe: () => apiClient.get<any, { data: User }>('/auth/me'),
+    login: (data: any) => apiClient.post<any, { data: AuthResponse }>('/auth/login', data),
+    logout: (token: string) => apiClient.post<any, { data: MessageResponse }>('/auth/logout', { token }),
+    refreshToken: (token: string) => apiClient.post<any, { data: RefreshTokenResponse }>('/auth/refresh', { refresh_token: token }),
+    register: (data: any) => apiClient.post('/v1/auth/register', data),
+    forgotPassword: (email: string) => apiClient.post<any, { data: MessageResponse }>('/auth/forgot-password', { email }),
+    resetPassword: (data: any) => apiClient.post<any, { data: MessageResponse }>('/auth/reset-password', data),
+    changePassword: (data: any) => apiClient.post<any, { data: MessageResponse }>('/auth/change-password', data),
 };

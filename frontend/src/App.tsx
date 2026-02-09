@@ -21,6 +21,11 @@ import { TeacherOverview } from '@/pages/teacher/TeacherOverview';
 import { StudentOverview } from '@/pages/student/StudentOverview';
 import { ComplianceOverview } from '@/pages/compliance/ComplianceOverview';
 
+// Admin Teacher Management Pages
+import { TeachersPage } from '@/pages/admin/TeachersPage';
+import { TeacherDetailPage } from '@/pages/admin/TeacherDetailPage';
+import { TeacherFormPage } from '@/pages/admin/TeacherFormPage';
+
 // Placeholder & Error Pages
 import { PlaceholderPage } from '@/components/layout/PlaceholderPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
@@ -81,6 +86,10 @@ function App() {
                 <Route path="admin/overview" element={<AdminOverview />} />
                 <Route path="admin/accounts" element={<PlaceholderPage title="Accounts & Roles" />} />
                 <Route path="admin/legal" element={<PlaceholderPage title="Legal & Profiles" />} />
+                <Route path="admin/teachers" element={<TeachersPage />} />
+                <Route path="admin/teachers/new" element={<TeacherFormPage />} />
+                <Route path="admin/teachers/:id" element={<TeacherDetailPage />} />
+                <Route path="admin/teachers/:id/edit" element={<TeacherFormPage />} />
                 <Route path="admin/programs" element={<PlaceholderPage title="Programs & Courses" />} />
                 <Route path="admin/classes" element={<PlaceholderPage title="Classes" />} />
                 <Route path="admin/scheduling" element={<PlaceholderPage title="Auto Scheduling" />} />

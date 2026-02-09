@@ -39,6 +39,12 @@ export const NAV_ITEMS: NavItem[] = [
         roles: ["admin", "super_admin"]
     },
     {
+        label: "Teachers",
+        path: "/app/admin/teachers",
+        icon: Users,
+        roles: ["admin", "super_admin"]
+    },
+    {
         label: "Programs & Courses",
         path: "/app/admin/programs",
         icon: BookOpen,

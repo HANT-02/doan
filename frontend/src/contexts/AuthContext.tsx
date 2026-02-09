@@ -24,19 +24,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const initAuth = async () => {
             const storedRefreshToken = localStorage.getItem('refresh_token');
-            const storedUser = localStorage.getItem('user');
 
-            if (storedRefreshToken && storedUser) {
+            if (storedRefreshToken) {
                 try {
-                    setUser(JSON.parse(storedUser));
-                    // Optional: Refresh token immediately to ensure validity and get fresh access token
-                    const { data } = await authApi.refreshToken(storedRefreshToken);
-                    setAccessToken(data.access_token);
-                    setAuthToken(data.access_token);
+                    // 1. Refresh token immediately to ensure validity and get fresh access token
+                    const { data: refreshData } = await authApi.refreshToken(storedRefreshToken);
+                    const newAccessToken = refreshData.access_token;
+
+                    setAccessToken(newAccessToken);
+                    setAuthToken(newAccessToken);
+
+                    // 2. Fetch fresh user data from server
+                    const { data: userData } = await authApi.getMe();
+                    const normalizedUser = { ...userData, role: userData.role.toLowerCase() };
+                    setUser(normalizedUser);
+
+                    localStorage.setItem('user', JSON.stringify(normalizedUser));
                 } catch (error) {
-                    console.error("Session expired:", error);
+                    console.error("Auth bootstrap failed:", error);
                     handleLogoutCleanup();
                 }
+            } else {
+                handleLogoutCleanup();
             }
             setIsLoading(false);
         };
@@ -55,12 +64,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (credentials: any) => {
         try {
             const { data } = await authApi.login(credentials);
-            setUser(data.user);
+            const normalizedUser = { ...data.user, role: data.user.role.toLowerCase() };
+            setUser(normalizedUser);
             setAccessToken(data.access_token);
             setAuthToken(data.access_token);
 
             localStorage.setItem('refresh_token', data.refresh_token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('user', JSON.stringify(normalizedUser));
         } catch (error) {
             throw error;
         }

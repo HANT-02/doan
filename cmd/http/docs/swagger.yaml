@@ -446,6 +446,36 @@ paths:
       summary: User logout
       tags:
       - Authentication
+  /v1/auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the profile of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rest.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/rest.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Authentication
   /v1/auth/refresh:
     post:
       consumes:

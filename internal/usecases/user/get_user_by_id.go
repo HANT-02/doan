@@ -14,7 +14,11 @@ type GetUserByIdInput struct {
 // GetUserByIdOutput DTO Output for GetUserById UseCase
 type GetUserByIdOutput struct {
 	ID        string     `json:"id"`
-	UserName  string     `json:"user_name"`
+	Code      string     `json:"code"`
+	FullName  string     `json:"full_name"`
+	Email     string     `json:"email"`
+	Role      string     `json:"role"`
+	IsActive  bool       `json:"is_active"`
 	Status    string     `json:"status"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
@@ -44,7 +48,11 @@ func (u *getUserByIdUseCase) Execute(ctx context.Context, input GetUserByIdInput
 
 	result := &GetUserByIdOutput{
 		ID:        user.ID,
-		UserName:  user.FullName,
+		Code:      user.Code,
+		FullName:  user.FullName,
+		Email:     user.Email,
+		Role:      user.Role,
+		IsActive:  user.IsActive,
 		Status:    "active",
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: &user.UpdatedAt,

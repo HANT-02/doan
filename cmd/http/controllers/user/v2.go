@@ -4,8 +4,9 @@ import (
 	"doan/cmd/http/rest"
 	"doan/internal/usecases/user"
 	"doan/pkg/logger"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 var _ Controller = (*ControllerV2)(nil)
@@ -183,6 +184,11 @@ func (c *ControllerV2) ChangePassword(ctx *gin.Context) {
 }
 
 func (c *ControllerV2) VerifyOTP(ctx *gin.Context) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ControllerV2) GetMe(ctx *gin.Context) {
 	//TODO implement me
 	panic("implement me")
 }
