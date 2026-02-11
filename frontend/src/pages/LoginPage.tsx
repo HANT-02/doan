@@ -10,17 +10,18 @@ import {
     Typography,
     TextField,
     Button,
-    Paper,
     InputAdornment,
     IconButton,
     CircularProgress,
-    Alert
+    Alert,
+    Stack
 } from '@mui/material';
-import { Visibility, VisibilityOff, Login as LoginIcon } from '@mui/icons-material';
+import { Visibility, VisibilityOff, School } from '@mui/icons-material';
+import FormCard from '@/components/common/FormCard';
 
 const loginSchema = z.object({
-    username: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    username: z.string().email('Địa chỉ email không hợp lệ'),
+    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -54,52 +55,40 @@ export const LoginPage = () => {
             navigate(from, { replace: true });
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Login failed. Please check your credentials.');
+            setErrorMsg(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Container component="main" maxWidth="xs">
-            <Box
-                sx={{
-                    marginTop: 8,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                }}
-            >
-                <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Box sx={{
-                        m: 1,
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        p: 1.5,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <LoginIcon />
-                    </Box>
-                    <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-                        Sign in
+        <Container maxWidth="xs">
+            <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 4, alignItems: 'center' }}>
+                    <School color="primary" sx={{ fontSize: 40 }} />
+                    <Typography variant="h4" component="h1" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                        EduCenter
                     </Typography>
+                </Stack>
 
+                <FormCard
+                    title="Đăng nhập"
+                    subtitle="Chào mừng quay trở lại hệ thống quản lý"
+                    sx={{ width: '100%' }}
+                >
                     {errorMsg && (
-                        <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+                        <Alert severity="error" sx={{ mb: 3 }}>
                             {errorMsg}
                         </Alert>
                     )}
 
-                    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1, width: '100%' }}>
+                    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
                         <TextField
                             margin="normal"
                             required
                             fullWidth
                             id="email"
-                            label="Email Address"
+                            label="Địa chỉ Email"
                             autoComplete="email"
                             autoFocus
                             error={!!errors.username}
@@ -110,7 +99,7 @@ export const LoginPage = () => {
                             margin="normal"
                             required
                             fullWidth
-                            label="Password"
+                            label="Mật khẩu"
                             type={showPassword ? 'text' : 'password'}
                             id="password"
                             autoComplete="current-password"
@@ -135,25 +124,31 @@ export const LoginPage = () => {
                             type="submit"
                             fullWidth
                             variant="contained"
-                            sx={{ mt: 3, mb: 2, py: 1.2 }}
+                            size="large"
+                            sx={{ mt: 4, mb: 2, height: 48 }}
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
                         </Button>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+
+                        <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
                             <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
-                                <Typography variant="body2" color="primary">
-                                    Forgot password?
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                                    Quên mật khẩu?
                                 </Typography>
                             </Link>
                             <Link to="/register" style={{ textDecoration: 'none' }}>
-                                <Typography variant="body2" color="primary">
-                                    Don't have an account? Sign Up
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                                    Đăng ký tài khoản
                                 </Typography>
                             </Link>
-                        </Box>
+                        </Stack>
                     </Box>
-                </Paper>
+                </FormCard>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 4, textAlign: 'center' }}>
+                    &copy; {new Date().getFullYear()} EduCenter Management System.
+                </Typography>
             </Box>
         </Container>
     );

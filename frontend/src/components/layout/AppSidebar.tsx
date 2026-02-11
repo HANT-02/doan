@@ -1,112 +1,212 @@
-
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getNavItemsByRole } from '@/config/nav';
-import { cn } from '@/lib/utils';
-import { ChevronRight, LayoutDashboard, X } from 'lucide-react';
+import {
+    Drawer,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Box,
+    Typography,
+    IconButton,
+    useTheme,
+    useMediaQuery,
+    Divider,
+    Toolbar,
+    Tooltip,
+    alpha
+} from '@mui/material';
+import {
+    ChevronRight as ChevronRightIcon,
+    ChevronLeft as ChevronLeftIcon,
+    Close as CloseIcon,
+    School
+} from '@mui/icons-material';
 
 interface AppSidebarProps {
-    className?: string;
     isMobileOpen: boolean;
     onMobileClose: () => void;
 }
 
-export const AppSidebar: React.FC<AppSidebarProps> = ({ className, isMobileOpen, onMobileClose }) => {
+const drawerWidth = 260;
+const collapsedWidth = 80;
+
+export const AppSidebar: React.FC<AppSidebarProps> = ({ isMobileOpen, onMobileClose }) => {
     const { user } = useAuth();
     const location = useLocation();
-    const navItems = getNavItemsByRole(user?.role);
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [collapsed, setCollapsed] = useState(false);
 
-    // Close mobile menu on route change
+    const navItems = getNavItemsByRole(user?.role);
+
     useEffect(() => {
-        onMobileClose();
-    }, [location.pathname]);
+        if (isMobile) {
+            onMobileClose();
+        }
+    }, [location.pathname, isMobile, onMobileClose]);
+
+    const drawerContent = (
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Toolbar sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
+                px: 2,
+                gap: 1.5,
+                minHeight: '70px !important'
+            }}>
+                <School color="primary" sx={{ fontSize: 32 }} />
+                {(!collapsed || isMobile) && (
+                    <Typography
+                        variant="h6"
+                        noWrap
+                        sx={{
+                            fontWeight: 800,
+                            color: 'primary.main',
+                            letterSpacing: '-0.5px'
+                        }}
+                    >
+                        EduCenter
+                    </Typography>
+                )}
+                {isMobile && (
+                    <IconButton onClick={onMobileClose} sx={{ ml: 'auto' }}>
+                        <CloseIcon />
+                    </IconButton>
+                )}
+            </Toolbar>
+
+            <List sx={{ flexGrow: 1, px: 2, py: 2 }}>
+                {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname.startsWith(item.path);
+
+                    const itemContent = (
+                        <ListItemButton
+                            component={NavLink}
+                            to={item.path}
+                            sx={{
+                                borderRadius: 2,
+                                mb: 1,
+                                py: 1.2,
+                                px: collapsed && !isMobile ? 0 : 2,
+                                justifyContent: collapsed && !isMobile ? 'center' : 'initial',
+                                transition: 'all 0.2s',
+                                '&.active': {
+                                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                                    color: 'primary.main',
+                                    '& .MuiListItemIcon-root': {
+                                        color: 'primary.main',
+                                    },
+                                    '& .MuiTypography-root': {
+                                        fontWeight: 700,
+                                    }
+                                },
+                                '&:hover:not(.active)': {
+                                    bgcolor: alpha(theme.palette.action.hover, 0.5),
+                                }
+                            }}
+                        >
+                            <ListItemIcon sx={{
+                                minWidth: 0,
+                                mr: collapsed && !isMobile ? 0 : 2,
+                                justifyContent: 'center',
+                                color: isActive ? 'primary.main' : 'text.secondary'
+                            }}>
+                                <Icon sx={{ fontSize: 22 }} />
+                            </ListItemIcon>
+                            {(!collapsed || isMobile) && (
+                                <ListItemText
+                                    primary={item.label}
+                                    primaryTypographyProps={{
+                                        variant: 'body2',
+                                        sx: { fontWeight: isActive ? 700 : 500 }
+                                    }}
+                                />
+                            )}
+                        </ListItemButton>
+                    );
+
+                    if (collapsed && !isMobile) {
+                        return (
+                            <Tooltip key={item.path} title={item.label} placement="right">
+                                {itemContent}
+                            </Tooltip>
+                        );
+                    }
+
+                    return <React.Fragment key={item.path}>{itemContent}</React.Fragment>;
+                })}
+            </List>
+
+            <Divider sx={{ opacity: 0.6 }} />
+
+            <Box sx={{ p: 2 }}>
+                <ListItemButton
+                    onClick={() => setCollapsed(!collapsed)}
+                    sx={{
+                        borderRadius: 2,
+                        justifyContent: collapsed && !isMobile ? 'center' : 'initial',
+                        color: 'text.secondary',
+                        py: 1,
+                        px: collapsed && !isMobile ? 0 : 2,
+                    }}
+                >
+                    <ListItemIcon sx={{
+                        minWidth: 0,
+                        mr: collapsed && !isMobile ? 0 : 2,
+                        justifyContent: 'center'
+                    }}>
+                        {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                    </ListItemIcon>
+                    {(!collapsed || isMobile) && (
+                        <ListItemText
+                            primary="Thu gọn"
+                            primaryTypographyProps={{ variant: 'body2', sx: { fontWeight: 500 } }}
+                        />
+                    )}
+                </ListItemButton>
+            </Box>
+        </Box>
+    );
 
     return (
-        <>
-            {/* Mobile Overlay */}
-            {isMobileOpen && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity"
-                    onClick={onMobileClose}
-                />
-            )}
-
-            {/* Sidebar Container */}
-            <aside
-                className={cn(
-                    "fixed top-0 left-0 z-50 h-[100dvh] bg-white border-r border-gray-200 transition-all duration-300 ease-in-out md:static md:h-screen md:translate-x-0",
-                    isMobileOpen ? "translate-x-0 w-64 shadow-xl" : "-translate-x-full md:translate-x-0",
-                    collapsed ? "md:w-16" : "md:w-64",
-                    className
-                )}
+        <Box
+            component="nav"
+            sx={{
+                width: { md: collapsed ? collapsedWidth : drawerWidth },
+                flexShrink: { md: 0 },
+                transition: theme.transitions.create('width', {
+                    easing: theme.transitions.easing.sharp,
+                    duration: theme.transitions.duration.shorter,
+                }),
+            }}
+        >
+            <Drawer
+                variant={isMobile ? "temporary" : "permanent"}
+                open={isMobile ? isMobileOpen : true}
+                onClose={onMobileClose}
+                ModalProps={{ keepMounted: true }}
+                sx={{
+                    '& .MuiDrawer-paper': {
+                        boxSizing: 'border-box',
+                        width: isMobile ? drawerWidth : (collapsed ? collapsedWidth : drawerWidth),
+                        transition: theme.transitions.create('width', {
+                            easing: theme.transitions.easing.sharp,
+                            duration: theme.transitions.duration.shorter,
+                        }),
+                        borderRight: '1px solid',
+                        borderColor: 'divider',
+                        backgroundColor: 'background.paper',
+                        backgroundImage: 'none',
+                    },
+                }}
             >
-                {/* Sidebar Header */}
-                <div className="flex h-16 items-center justify-between border-b px-4">
-                    {!collapsed && (
-                        <div className="flex items-center gap-2 font-bold text-xl text-primary-600">
-                            {/* Replace with Logo if available */}
-                            <LayoutDashboard className="h-6 w-6" />
-                            <span className="truncate">EduCenter</span>
-                        </div>
-                    )}
-                    {collapsed && (
-                        <div className="mx-auto">
-                            <LayoutDashboard className="h-6 w-6 text-primary-600" />
-                        </div>
-                    )}
-
-                    {/* Mobile Close Button */}
-                    <button onClick={onMobileClose} className="md:hidden text-gray-500 hover:text-gray-700">
-                        <X size={24} />
-                    </button>
-
-                    {/* Desktop Collapse Toggle (Optional, can be moved to bottom or header) */}
-                    {/* For now, simplified: keeping static width on desktop or using a toggle if required. 
-                        User requirement: "collapse/expand trên desktop".
-                        Let's add a toggle button at the bottom.
-                    */}
-                </div>
-
-                {/* Navigation Items */}
-                <div className="flex flex-col gap-1 p-2 overflow-y-auto h-[calc(100vh-4rem-3rem)]">
-                    {navItems.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = location.pathname.startsWith(item.path);
-
-                        return (
-                            <NavLink
-                                key={item.path}
-                                to={item.path}
-                                className={({ isActive }) => cn(
-                                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-gray-100",
-                                    isActive ? "bg-blue-50 text-blue-700 hover:bg-blue-100" : "text-gray-700",
-                                    collapsed ? "justify-center px-2" : ""
-                                )}
-                                title={collapsed ? item.label : undefined}
-                            >
-                                <Icon size={20} className={cn("shrink-0", isActive && "text-blue-600")} />
-                                {!collapsed && <span>{item.label}</span>}
-                                {!collapsed && isActive && <ChevronRight className="ml-auto h-4 w-4 text-blue-500 opacity-50" />}
-                            </NavLink>
-                        );
-                    })}
-                </div>
-
-                {/* Sidebar Footer / Collapse Toggle */}
-                <div className="border-t p-3 hidden md:flex">
-                    <button
-                        onClick={() => setCollapsed(!collapsed)}
-                        className={cn(
-                            "flex w-full items-center justify-center rounded-md p-2 text-gray-500 hover:bg-gray-100 transition-colors",
-                            !collapsed && "justify-end"
-                        )}
-                    >
-                        {collapsed ? <ChevronRight size={20} /> : <ChevronRight size={20} className="rotate-180" />}
-                    </button>
-                </div>
-            </aside>
-        </>
+                {drawerContent}
+            </Drawer>
+        </Box>
     );
 };

@@ -5,26 +5,26 @@ import * as z from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '@/api/authApi';
 import {
-    Container,
     Box,
-    Typography,
     TextField,
     Button,
-    Paper,
     InputAdornment,
     IconButton,
     CircularProgress,
-    Alert
+    Alert,
+    Stack
 } from '@mui/material';
-import { Visibility, VisibilityOff, Key } from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { toast } from 'sonner';
+import FormCard from '@/components/common/FormCard';
+import PageHeader from '@/components/common/PageHeader';
 
 const changePasswordSchema = z.object({
-    old_password: z.string().min(1, 'Current password is required'),
-    new_password: z.string().min(6, 'Password must be at least 6 characters'),
+    old_password: z.string().min(1, 'Mật khẩu hiện tại là bắt buộc'),
+    new_password: z.string().min(6, 'Mật khẩu mới phải có ít nhất 6 ký tự'),
     confirm_password: z.string(),
 }).refine((data) => data.new_password === data.confirm_password, {
-    message: "New passwords don't match",
+    message: "Mật khẩu mới không khớp",
     path: ["confirm_password"],
 });
 
@@ -54,136 +54,130 @@ export const ChangePasswordPage = () => {
                 old_password_enc: data.old_password,
                 new_password_enc: data.new_password
             });
-            toast.success('Password changed successfully');
-            navigate('/profile'); // Redirect to profile instead of home
+            toast.success('Đổi mật khẩu thành công');
+            navigate('/app/profile');
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Failed to change password');
+            setErrorMsg(error.response?.data?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu cũ.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Container component="main" maxWidth="md">
-            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-                <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Box sx={{
-                        m: 1,
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        p: 1.5,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <Key />
-                    </Box>
-                    <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
-                        Change Password
-                    </Typography>
+        <Box>
+            <PageHeader
+                title="Đổi mật khẩu"
+                subtitle="Cập nhật mật khẩu định kỳ để bảo vệ tài khoản của bạn"
+                breadcrumbs={[
+                    { label: 'Hệ thống', path: '/app' },
+                    { label: 'Cá nhân', path: '/app/profile' },
+                    { label: 'Đổi mật khẩu' }
+                ]}
+            />
 
+            <Box sx={{ maxWidth: 600 }}>
+                <FormCard>
                     {errorMsg && (
-                        <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+                        <Alert severity="error" sx={{ mb: 3 }}>
                             {errorMsg}
                         </Alert>
                     )}
 
-                    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ width: '100%' }}>
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            id="old_password"
-                            label="Current Password"
-                            type={showOldPass ? 'text' : 'password'}
-                            error={!!errors.old_password}
-                            helperText={errors.old_password?.message}
-                            {...register('old_password')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="toggle password visibility"
-                                            onClick={() => setShowOldPass(!showOldPass)}
-                                            edge="end"
-                                        >
-                                            {showOldPass ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            id="new_password"
-                            label="New Password"
-                            type={showNewPass ? 'text' : 'password'}
-                            error={!!errors.new_password}
-                            helperText={errors.new_password?.message}
-                            {...register('new_password')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="toggle password visibility"
-                                            onClick={() => setShowNewPass(!showNewPass)}
-                                            edge="end"
-                                        >
-                                            {showNewPass ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            id="confirm_password"
-                            label="Confirm New Password"
-                            type={showConfirmPass ? 'text' : 'password'}
-                            error={!!errors.confirm_password}
-                            helperText={errors.confirm_password?.message}
-                            {...register('confirm_password')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="toggle password visibility"
-                                            onClick={() => setShowConfirmPass(!showConfirmPass)}
-                                            edge="end"
-                                        >
-                                            {showConfirmPass ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-                            <Button
+                    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+                        <Stack spacing={2}>
+                            <TextField
+                                required
                                 fullWidth
+                                id="old_password"
+                                label="Mật khẩu hiện tại"
+                                type={showOldPass ? 'text' : 'password'}
+                                error={!!errors.old_password}
+                                helperText={errors.old_password?.message}
+                                {...register('old_password')}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() => setShowOldPass(!showOldPass)}
+                                                edge="end"
+                                            >
+                                                {showOldPass ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+                            <TextField
+                                required
+                                fullWidth
+                                id="new_password"
+                                label="Mật khẩu mới"
+                                type={showNewPass ? 'text' : 'password'}
+                                error={!!errors.new_password}
+                                helperText={errors.new_password?.message}
+                                {...register('new_password')}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() => setShowNewPass(!showNewPass)}
+                                                edge="end"
+                                            >
+                                                {showNewPass ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+                            <TextField
+                                required
+                                fullWidth
+                                id="confirm_password"
+                                label="Xác nhận mật khẩu mới"
+                                type={showConfirmPass ? 'text' : 'password'}
+                                error={!!errors.confirm_password}
+                                helperText={errors.confirm_password?.message}
+                                {...register('confirm_password')}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                                                edge="end"
+                                            >
+                                                {showConfirmPass ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                        </Stack>
+
+                        <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+                            <Button
                                 variant="outlined"
-                                onClick={() => navigate('/profile')}
-                                disabled={loading}
+                                onClick={() => navigate(-1)}
+                                fullWidth
+                                sx={{ height: 48 }}
                             >
-                                Cancel
+                                Hủy
                             </Button>
                             <Button
                                 type="submit"
-                                fullWidth
                                 variant="contained"
+                                fullWidth
                                 disabled={loading}
+                                sx={{ height: 48 }}
                             >
-                                {loading ? <CircularProgress size={24} color="inherit" /> : 'Update Password'}
+                                {loading ? <CircularProgress size={24} color="inherit" /> : 'Cập nhật mật khẩu'}
                             </Button>
-                        </Box>
+                        </Stack>
                     </Box>
-                </Paper>
+                </FormCard>
             </Box>
-        </Container>
+        </Box>
     );
 };

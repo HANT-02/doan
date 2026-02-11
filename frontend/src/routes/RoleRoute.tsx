@@ -1,21 +1,17 @@
 
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Box, CircularProgress } from '@mui/material';
+import FullScreenLoader from '@/components/common/FullScreenLoader'; // Import the new component
 
 interface RoleRouteProps {
     allowedRoles: string[];
 }
 
 export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
-    const { user, isLoading } = useAuth();
+    const { user, isLoadingAuth } = useAuth();
 
-    if (isLoading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <CircularProgress />
-            </Box>
-        );
+    if (isLoadingAuth) {
+        return <FullScreenLoader />;
     }
 
     if (!user) {

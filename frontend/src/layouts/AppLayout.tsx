@@ -3,13 +3,13 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { AppFooter } from '@/components/layout/AppFooter';
+import { Box } from '@mui/material'; // Import Box
 
 export const AppLayout: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex min-h-screen bg-gray-50/50">
+        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
             {/* Sidebar */}
             <AppSidebar
                 isMobileOpen={sidebarOpen}
@@ -17,15 +17,32 @@ export const AppLayout: React.FC = () => {
             />
 
             {/* Main Content Area */}
-            <div className="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out md:ml-0">
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0, // Allow content to shrink
+                    transition: (theme) => theme.transitions.create('margin', {
+                        easing: theme.transitions.easing.sharp,
+                        duration: theme.transitions.duration.leavingScreen,
+                    }),
+                    // Adjust margin based on sidebar state later if needed
+                }}
+            >
                 <AppHeader onMobileOpen={() => setSidebarOpen(true)} />
 
-                <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+                <Box
+                    sx={{
+                        flexGrow: 1,
+                        p: { xs: 2, md: 3 }, // Responsive padding
+                        overflowY: 'auto',
+                    }}
+                >
                     <Outlet />
-                </main>
-
-                <AppFooter />
-            </div>
-        </div>
+                </Box>
+            </Box>
+        </Box>
     );
 };

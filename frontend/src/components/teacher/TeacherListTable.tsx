@@ -41,13 +41,13 @@ export const TeacherListTable = ({
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Code</TableCell>
-                            <TableCell>Name</TableCell>
+                            <TableCell>Mã số</TableCell>
+                            <TableCell>Tên</TableCell>
                             <TableCell>Email</TableCell>
-                            <TableCell>Phone</TableCell>
-                            <TableCell>Employment</TableCell>
-                            <TableCell>Status</TableCell>
-                            {showActions && <TableCell align="right">Actions</TableCell>}
+                            <TableCell>Điện thoại</TableCell>
+                            <TableCell>Loại hình</TableCell>
+                            <TableCell>Trạng thái</TableCell>
+                            {showActions && <TableCell align="right">Hành động</TableCell>}
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -72,10 +72,10 @@ export const TeacherListTable = ({
         return (
             <Paper sx={{ p: 4, textAlign: 'center' }}>
                 <Typography variant="h6" color="text.secondary">
-                    No teachers found
+                    Không tìm thấy giáo viên nào
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Try adjusting your filters or add a new teacher
+                    Hãy thử điều chỉnh bộ lọc hoặc thêm giáo viên mới
                 </Typography>
             </Paper>
         );
@@ -86,14 +86,14 @@ export const TeacherListTable = ({
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Code</TableCell>
-                        <TableCell>Name</TableCell>
+                        <TableCell>Mã số</TableCell>
+                        <TableCell>Tên</TableCell>
                         <TableCell>Email</TableCell>
-                        <TableCell>Phone</TableCell>
-                        <TableCell>Employment</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Created</TableCell>
-                        {showActions && <TableCell align="right">Actions</TableCell>}
+                        <TableCell>Điện thoại</TableCell>
+                        <TableCell>Loại hình</TableCell>
+                        <TableCell>Trạng thái</TableCell>
+                        <TableCell>Ngày tạo</TableCell>
+                        {showActions && <TableCell align="right">Hành động</TableCell>}
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -106,7 +106,7 @@ export const TeacherListTable = ({
                                 </Typography>
                                 {teacher.is_school_teacher && (
                                     <Typography variant="caption" color="text.secondary">
-                                        {teacher.school_name || 'School Teacher'}
+                                        {teacher.school_name || 'Giáo viên trường học'}
                                     </Typography>
                                 )}
                             </TableCell>
@@ -128,7 +128,7 @@ export const TeacherListTable = ({
                                             <IconButton
                                                 size="small"
                                                 onClick={() => onView(teacher)}
-                                                title="View details"
+                                                title="Xem chi tiết"
                                             >
                                                 <Visibility fontSize="small" />
                                             </IconButton>
@@ -137,7 +137,7 @@ export const TeacherListTable = ({
                                             <IconButton
                                                 size="small"
                                                 onClick={() => onEdit(teacher)}
-                                                title="Edit teacher"
+                                                title="Chỉnh sửa giáo viên"
                                             >
                                                 <Edit fontSize="small" />
                                             </IconButton>
@@ -146,7 +146,7 @@ export const TeacherListTable = ({
                                             <IconButton
                                                 size="small"
                                                 onClick={() => onDelete(teacher)}
-                                                title="Delete teacher"
+                                                title="Xóa giáo viên"
                                                 color="error"
                                             >
                                                 <Delete fontSize="small" />

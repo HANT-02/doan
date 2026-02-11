@@ -52,8 +52,8 @@ export const TeacherFilters = ({ filters, onChange }: TeacherFiltersProps) => {
                     <TextField
                         fullWidth
                         size="small"
-                        label="Search"
-                        placeholder="Name, email, phone, code..."
+                        label="Tìm kiếm"
+                        placeholder="Tên, email, điện thoại, mã..."
                         value={localFilters.search}
                         onChange={(e) => handleChange('search', e.target.value)}
                         InputProps={{
@@ -64,30 +64,30 @@ export const TeacherFilters = ({ filters, onChange }: TeacherFiltersProps) => {
 
                 <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
-                        <InputLabel>Status</InputLabel>
+                        <InputLabel>Trạng thái</InputLabel>
                         <Select
                             value={localFilters.status}
-                            label="Status"
+                            label="Trạng thái"
                             onChange={(e) => handleChange('status', e.target.value)}
                         >
-                            <MenuItem value="">All</MenuItem>
-                            <MenuItem value="ACTIVE">Active</MenuItem>
-                            <MenuItem value="INACTIVE">Inactive</MenuItem>
+                            <MenuItem value="">Tất cả</MenuItem>
+                            <MenuItem value="ACTIVE">Hoạt động</MenuItem>
+                            <MenuItem value="INACTIVE">Không hoạt động</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>
 
                 <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
-                        <InputLabel>Employment Type</InputLabel>
+                        <InputLabel>Loại hình làm việc</InputLabel>
                         <Select
                             value={localFilters.employment_type}
-                            label="Employment Type"
+                            label="Loại hình làm việc"
                             onChange={(e) => handleChange('employment_type', e.target.value)}
                         >
-                            <MenuItem value="">All</MenuItem>
-                            <MenuItem value="FULL_TIME">Full Time</MenuItem>
-                            <MenuItem value="PART_TIME">Part Time</MenuItem>
+                            <MenuItem value="">Tất cả</MenuItem>
+                            <MenuItem value="FULL_TIME">Toàn thời gian</MenuItem>
+                            <MenuItem value="PART_TIME">Bán thời gian</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>
@@ -100,7 +100,7 @@ export const TeacherFilters = ({ filters, onChange }: TeacherFiltersProps) => {
                         onClick={handleReset}
                         disabled={!hasActiveFilters}
                     >
-                        {hasActiveFilters ? 'Clear' : 'Filters'}
+                        {hasActiveFilters ? 'Xóa bộ lọc' : 'Bộ lọc'}
                     </Button>
                 </Grid>
             </Grid>

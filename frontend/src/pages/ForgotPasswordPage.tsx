@@ -10,14 +10,15 @@ import {
     Typography,
     TextField,
     Button,
-    Paper,
     CircularProgress,
-    Alert
+    Alert,
+    Stack
 } from '@mui/material';
-import { LockReset, ArrowBack } from '@mui/icons-material';
+import { ArrowBack, School } from '@mui/icons-material';
+import FormCard from '@/components/common/FormCard';
 
 const forgotPasswordSchema = z.object({
-    email: z.string().email('Invalid email address'),
+    email: z.string().email('Địa chỉ email không hợp lệ'),
 });
 
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
@@ -36,7 +37,7 @@ export const ForgotPasswordPage = () => {
     });
 
     useEffect(() => {
-        let interval: any;
+        let interval: ReturnType<typeof setInterval>;
         if (cooldown > 0) {
             interval = setInterval(() => {
                 setCooldown((prev) => prev - 1);
@@ -49,11 +50,9 @@ export const ForgotPasswordPage = () => {
         setLoading(true);
         try {
             await authApi.forgotPassword(data.email);
-            // Start cooldown
             setCooldown(60);
         } catch (error) {
             console.error(error);
-            // Always show success to prevent enumeration
         } finally {
             setLoading(false);
             setSuccess(true);
@@ -61,49 +60,51 @@ export const ForgotPasswordPage = () => {
     };
 
     return (
-        <Container component="main" maxWidth="xs">
-            <Box
-                sx={{
-                    marginTop: 8,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                }}
-            >
-                <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Box sx={{
-                        m: 1,
-                        bgcolor: 'warning.main',
-                        color: 'white',
-                        p: 1.5,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <LockReset />
-                    </Box>
-                    <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-                        Forgot Password
+        <Container maxWidth="xs">
+            <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 4, alignItems: 'center' }}>
+                    <School color="primary" sx={{ fontSize: 40 }} />
+                    <Typography variant="h4" component="h1" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                        EduCenter
                     </Typography>
+                </Stack>
 
-                    <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-                        Enter your email address and we'll send you a link to reset your password.
-                    </Typography>
-
+                <FormCard
+                    title="Quên mật khẩu"
+                    subtitle="Nhập email để nhận hướng dẫn đặt lại mật khẩu"
+                    sx={{ width: '100%' }}
+                >
                     {success ? (
-                        <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
-                            If an account exists for that email, we have sent password reset instructions.
-                            {cooldown > 0 && <Box component="span" display="block" mt={1} fontSize="0.875rem">Resend available in {cooldown}s</Box>}
-                        </Alert>
+                        <Box>
+                            <Alert severity="success" sx={{ mb: 3 }}>
+                                Nếu tài khoản tồn tại, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu tới email của bạn.
+                            </Alert>
+                            {cooldown > 0 && (
+                                <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
+                                    Bạn có thể yêu cầu gửi lại sau <strong>{cooldown}s</strong>
+                                </Typography>
+                            )}
+                            <Button
+                                fullWidth
+                                variant="outlined"
+                                onClick={() => setSuccess(false)}
+                                disabled={cooldown > 0}
+                            >
+                                Thử với email khác
+                            </Button>
+                        </Box>
                     ) : (
-                        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1, width: '100%' }}>
+                        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Một liên kết bảo mật sẽ được gửi đến email của bạn để giúp bạn đặt lại mật khẩu.
+                            </Typography>
+
                             <TextField
                                 margin="normal"
                                 required
                                 fullWidth
                                 id="email"
-                                label="Email Address"
+                                label="Địa chỉ Email"
                                 autoComplete="email"
                                 autoFocus
                                 error={!!errors.email}
@@ -114,25 +115,26 @@ export const ForgotPasswordPage = () => {
                                 type="submit"
                                 fullWidth
                                 variant="contained"
-                                color="primary"
-                                sx={{ mt: 3, mb: 2, py: 1.2 }}
+                                size="large"
+                                sx={{ mt: 4, mb: 2, height: 48 }}
                                 disabled={loading || cooldown > 0}
                             >
-                                {loading ? <CircularProgress size={24} color="inherit" /> : 'Send Reset Link'}
+                                {loading ? <CircularProgress size={24} color="inherit" /> : 'Gửi liên kết đặt lại'}
                             </Button>
                         </Box>
                     )}
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                         <Link to="/login" style={{ textDecoration: 'none' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <ArrowBack sx={{ fontSize: 16, mr: 0.5 }} color="primary" />
-                                <Typography variant="body2" color="primary">
-                                    Back to Login
+                            <Box sx={{ display: 'flex', alignItems: 'center', color: 'primary.main' }}>
+                                <ArrowBack sx={{ fontSize: 18, mr: 1 }} />
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    Quay lại Đăng nhập
                                 </Typography>
                             </Box>
                         </Link>
                     </Box>
-                </Paper>
+                </FormCard>
             </Box>
         </Container>
     );

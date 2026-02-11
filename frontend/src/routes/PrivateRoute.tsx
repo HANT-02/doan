@@ -1,17 +1,13 @@
 
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Box, CircularProgress } from '@mui/material';
+import FullScreenLoader from '@/components/common/FullScreenLoader'; // Import the new component
 
 export const PrivateRoute = () => {
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoadingAuth } = useAuth();
 
-    if (isLoading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <CircularProgress />
-            </Box>
-        );
+    if (isLoadingAuth) {
+        return <FullScreenLoader />;
     }
 
     // Attempt to keep the user on the requested page if feasible, otherwise redirect

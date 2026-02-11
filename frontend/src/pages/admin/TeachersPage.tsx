@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Container,
-    Typography,
     Button,
     Pagination,
     Alert,
     Stack,
+    Typography, // Keep Typography for pagination info
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { teacherApi, type Teacher, type ListTeachersParams } from '@/api/teacherApi';
@@ -16,6 +16,7 @@ import { TeacherFilters, type TeacherFiltersState } from '@/components/teacher/T
 import { DeleteTeacherDialog } from '@/components/teacher/DeleteTeacherDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import PageHeader from '@/components/common/PageHeader'; // Import PageHeader
 
 export const TeachersPage = () => {
     const navigate = useNavigate();
@@ -66,8 +67,8 @@ export const TeachersPage = () => {
             setTotalPages(response.pagination.total_pages);
             setTotalItems(response.pagination.total_items);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load teachers');
-            toast.error('Failed to load teachers');
+            setError(err instanceof Error ? err.message : 'Tải danh sách giáo viên thất bại');
+            toast.error('Tải danh sách giáo viên thất bại');
         } finally {
             setLoading(false);
         }
@@ -100,11 +101,11 @@ export const TeachersPage = () => {
         try {
             setDeleting(true);
             await teacherApi.delete(deleteDialog.teacher.id);
-            toast.success('Teacher deleted successfully');
+            toast.success('Xóa giáo viên thành công');
             setDeleteDialog({ open: false, teacher: null });
             fetchTeachers(); // Refresh list
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : 'Failed to delete teacher');
+            toast.error(err instanceof Error ? err.message : 'Xóa giáo viên thất bại');
         } finally {
             setDeleting(false);
         }
@@ -116,25 +117,21 @@ export const TeachersPage = () => {
 
     return (
         <Container maxWidth="xl" sx={{ py: 4 }}>
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                    <Typography variant="h4" component="h1" gutterBottom>
-                        Teachers
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Manage teachers and their information
-                    </Typography>
-                </Box>
-                {isAdmin && (
-                    <Button
-                        variant="contained"
-                        startIcon={<Add />}
-                        onClick={() => navigate('/app/admin/teachers/new')}
-                    >
-                        Add Teacher
-                    </Button>
-                )}
-            </Box>
+            <PageHeader
+                title="Danh sách Giáo viên"
+                subtitle="Quản lý giáo viên và thông tin của họ"
+                actions={
+                    isAdmin && (
+                        <Button
+                            variant="contained"
+                            startIcon={<Add />}
+                            onClick={() => navigate('/app/admin/teachers/new')}
+                        >
+                            Thêm Giáo viên
+                        </Button>
+                    )
+                }
+            />
 
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
@@ -157,7 +154,7 @@ export const TeachersPage = () => {
             {!loading && totalPages > 1 && (
                 <Stack spacing={2} alignItems="center" sx={{ mt: 3 }}>
                     <Typography variant="body2" color="text.secondary">
-                        Showing {teachers.length} of {totalItems} teachers
+                        Hiển thị {teachers.length} trên tổng số {totalItems} giáo viên
                     </Typography>
                     <Pagination
                         count={totalPages}

@@ -1,12 +1,4 @@
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions,
-    Button,
-} from '@mui/material';
-import { Warning } from '@mui/icons-material';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 interface DeleteTeacherDialogProps {
     open: boolean;
@@ -24,28 +16,15 @@ export const DeleteTeacherDialog = ({
     loading = false,
 }: DeleteTeacherDialogProps) => {
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Warning color="warning" />
-                Delete Teacher
-            </DialogTitle>
-            <DialogContent>
-                <DialogContentText>
-                    Are you sure you want to delete teacher <strong>{teacherName}</strong>?
-                </DialogContentText>
-                <DialogContentText sx={{ mt: 1 }}>
-                    This action will soft delete the teacher. The teacher will no longer appear in the
-                    list but can be restored by an administrator if needed.
-                </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} disabled={loading}>
-                    Cancel
-                </Button>
-                <Button onClick={onConfirm} color="error" variant="contained" disabled={loading}>
-                    {loading ? 'Deleting...' : 'Delete'}
-                </Button>
-            </DialogActions>
-        </Dialog>
+        <ConfirmDialog
+            open={open}
+            title="Xác nhận xóa Giáo viên"
+            message={`Bạn có chắc chắn muốn xóa giáo viên ${teacherName} không? Hành động này sẽ xóa mềm giáo viên. Giáo viên sẽ không còn xuất hiện trong danh sách nhưng có thể được khôi phục bởi quản trị viên nếu cần.`}
+            onConfirm={onConfirm}
+            onClose={onClose}
+            confirmText="Xóa"
+            cancelText="Hủy"
+            loading={loading}
+        />
     );
 };

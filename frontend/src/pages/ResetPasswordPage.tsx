@@ -10,20 +10,21 @@ import {
     Typography,
     TextField,
     Button,
-    Paper,
     InputAdornment,
     IconButton,
     CircularProgress,
-    Alert
+    Alert,
+    Stack
 } from '@mui/material';
-import { Visibility, VisibilityOff, LockReset, ErrorOutline } from '@mui/icons-material';
+import { Visibility, VisibilityOff, ErrorOutline, School } from '@mui/icons-material';
 import { toast } from 'sonner';
+import FormCard from '@/components/common/FormCard';
 
 const schema = z.object({
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
     confirm_password: z.string(),
 }).refine((data) => data.password === data.confirm_password, {
-    message: "Passwords don't match",
+    message: "Mật khẩu không khớp",
     path: ["confirm_password"],
 });
 
@@ -53,139 +54,128 @@ export const ResetPasswordPage = () => {
         try {
             await authApi.resetPassword({
                 token: token,
-                new_password_enc: data.password // Backend handles plain/enc
+                new_password_enc: data.password
             });
-            toast.success('Password reset successfully');
+            toast.success('Đặt lại mật khẩu thành công');
             navigate('/login');
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Failed to reset password. The link may be expired.');
+            setErrorMsg(error.response?.data?.message || 'Không thể đặt lại mật khẩu. Liên kết có thể đã hết hạn.');
         } finally {
             setLoading(false);
         }
     };
 
-    if (!token) {
-        return (
-            <Container component="main" maxWidth="xs">
-                <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                        <ErrorOutline color="error" sx={{ fontSize: 60, mb: 2 }} />
-                        <Typography variant="h6" gutterBottom color="error">
-                            Invalid Link
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                            This password reset link is invalid or has expired.
-                        </Typography>
-                        <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
-                            <Button variant="outlined">Request a new one</Button>
-                        </Link>
-                    </Paper>
-                </Box>
-            </Container>
-        );
-    }
-
     return (
-        <Container component="main" maxWidth="xs">
-            <Box
-                sx={{
-                    marginTop: 8,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                }}
-            >
-                <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Box sx={{
-                        m: 1,
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        p: 1.5,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <LockReset />
-                    </Box>
-                    <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-                        Reset Password
+        <Container maxWidth="xs">
+            <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 4, alignItems: 'center' }}>
+                    <School color="primary" sx={{ fontSize: 40 }} />
+                    <Typography variant="h4" component="h1" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                        EduCenter
                     </Typography>
+                </Stack>
 
-                    {errorMsg && (
-                        <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-                            {errorMsg}
-                        </Alert>
-                    )}
-
-                    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1, width: '100%' }}>
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            label="New Password"
-                            type={showPassword ? 'text' : 'password'}
-                            id="password"
-                            error={!!errors.password}
-                            helperText={errors.password?.message}
-                            {...register('password')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="toggle password visibility"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            edge="end"
-                                        >
-                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            label="Confirm New Password"
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            id="confirm_password"
-                            error={!!errors.confirm_password}
-                            helperText={errors.confirm_password?.message}
-                            {...register('confirm_password')}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="toggle password visibility"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            edge="end"
-                                        >
-                                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
+                {!token ? (
+                    <FormCard
+                        title="Liên kết không hợp lệ"
+                        sx={{ width: '100%', textAlign: 'center' }}
+                    >
+                        <ErrorOutline color="error" sx={{ fontSize: 60, mb: 2 }} />
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                            Liên kết đặt lại mật khẩu này không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu một liên kết mới.
+                        </Typography>
                         <Button
-                            type="submit"
                             fullWidth
                             variant="contained"
-                            sx={{ mt: 3, mb: 2, py: 1.2 }}
-                            disabled={loading}
+                            component={Link}
+                            to="/forgot-password"
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Reset Password'}
+                            Yêu cầu liên kết mới
                         </Button>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                            <Link to="/login" style={{ textDecoration: 'none' }}>
-                                <Typography variant="body2" color="primary">
-                                    Back to Login
-                                </Typography>
-                            </Link>
+                    </FormCard>
+                ) : (
+                    <FormCard
+                        title="Đặt lại mật khẩu"
+                        subtitle="Tạo mật khẩu mới cho tài khoản của bạn"
+                        sx={{ width: '100%' }}
+                    >
+                        {errorMsg && (
+                            <Alert severity="error" sx={{ mb: 3 }}>
+                                {errorMsg}
+                            </Alert>
+                        )}
+
+                        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+                            <TextField
+                                margin="normal"
+                                required
+                                fullWidth
+                                label="Mật khẩu mới"
+                                type={showPassword ? 'text' : 'password'}
+                                id="password"
+                                error={!!errors.password}
+                                helperText={errors.password?.message}
+                                {...register('password')}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                aria-label="toggle password visibility"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                edge="end"
+                                            >
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                            <TextField
+                                margin="normal"
+                                required
+                                fullWidth
+                                label="Xác nhận mật khẩu mới"
+                                type={showConfirmPassword ? 'text' : 'password'}
+                                id="confirm_password"
+                                error={!!errors.confirm_password}
+                                helperText={errors.confirm_password?.message}
+                                {...register('confirm_password')}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                aria-label="toggle password visibility"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                edge="end"
+                                            >
+                                                {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                            <Button
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                size="large"
+                                sx={{ mt: 4, mb: 2, height: 48 }}
+                                disabled={loading}
+                            >
+                                {loading ? <CircularProgress size={24} color="inherit" /> : 'Đặt lại mật khẩu'}
+                            </Button>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                                <Link to="/login" style={{ textDecoration: 'none' }}>
+                                    <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                                        Quay lại Đăng nhập
+                                    </Typography>
+                                </Link>
+                            </Box>
                         </Box>
-                    </Box>
-                </Paper>
+                    </FormCard>
+                )}
             </Box>
         </Container>
     );
