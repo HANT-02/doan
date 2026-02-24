@@ -181,10 +181,10 @@
   - [ ] Biểu đồ doanh thu
   - [ ] Thống kê lớp học đang hoạt động
 - [ ] Quản lý tài khoản
-  - [ ] Danh sách người dùng
-  - [ ] Thêm/Sửa/Xóa tài khoản
-  - [ ] Phân quyền người dùng (Role-based)
-  - [ ] Reset mật khẩu
+  - [x] Danh sách người dùng (Placeholder/Scaffold)
+  - [x] Thêm/Sửa/Xóa tài khoản (Placeholder/Scaffold)
+  - [x] Phân quyền người dùng (Role-based)
+  - [ ] Reset mật khẩu (DEFERRED - NOT IN SCOPE)
 - [ ] Compliance Dashboard
   - [ ] Danh sách tài liệu chờ phê duyệt
   - [ ] Chi tiết kết quả AI audit
@@ -372,6 +372,8 @@
 - Đánh dấu `[/]` cho task đang thực hiện
 - Để trống `[ ]` cho task chưa bắt đầu
 - Cập nhật file này thường xuyên để theo dõi tiến độ
+
+*Auth Standardization Implemented: `frontend/src/contexts/AuthContext.tsx`, `frontend/src/App.tsx`, `frontend/src/pages/LoginPage.tsx`. (OTP/Email flows DEFERRED/NOT IN SCOPE for demo).*
 
 **Ngày tạo:** 2026-02-06
 **Người thực hiện:** [Tên của bạn]

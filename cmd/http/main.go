@@ -2,6 +2,8 @@ package main
 
 import (
 	httpConfig "doan/cmd/http/config"
+	"doan/cmd/http/controllers/class"
+	"doan/cmd/http/controllers/room"
 	"doan/cmd/http/controllers/teacher"
 	"doan/cmd/http/controllers/user"
 	_ "doan/cmd/http/docs"
@@ -27,6 +29,8 @@ type App struct {
 	restConfig          httpConfig.RestServer
 	userControllerV1    user.Controller
 	userControllerV2    user.Controller
+	classControllerV1   class.Controller
+	roomControllerV1    room.Controller
 	teacherControllerV1 teacher.Controller
 }
 
@@ -73,17 +77,24 @@ func (a *App) registerRoute() {
 
 	user.RegisterRoutesV1(api, a.userControllerV1)
 	user.RegisterRoutesV2(api, a.userControllerV2)
+	class.RegisterRoutesV1(api, a.classControllerV1, config.GetManager())
+	room.RegisterRoutesV1(api, a.roomControllerV1, config.GetManager())
 	teacher.RegisterRoutesV1(api, a.teacherControllerV1, config.GetManager())
+
 }
 
 func inject(
 	app *App,
 	userControllerV1 *user.ControllerV1,
 	userControllerV2 *user.ControllerV2,
+	classControllerV1 *class.ControllerV1,
+	roomControllerV1 *room.ControllerV1,
 	teacherControllerV1 teacher.Controller,
 ) error {
 	app.userControllerV1 = userControllerV1
 	app.userControllerV2 = userControllerV2
+	app.classControllerV1 = classControllerV1
+	app.roomControllerV1 = roomControllerV1
 	app.teacherControllerV1 = teacherControllerV1
 	return nil
 }

@@ -7,9 +7,9 @@ import { AppLayout } from '@/layouts/AppLayout';
 
 // Public Pages
 import { LoginPage } from '@/pages/LoginPage';
-import { RegisterPage } from '@/pages/RegisterPage';
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+// import { RegisterPage } from '@/pages/RegisterPage';
+// import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+// import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 
 // Protected Pages
 import { ProfilePage } from '@/pages/ProfilePage';
@@ -66,9 +66,10 @@ function App() {
           {/* Public Routes wrapped in AuthLayout */}
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            {/* Disabled for Demo */}
+            {/* <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} /> */}
           </Route>
 
           {/* Protected Dashboard Routes */}

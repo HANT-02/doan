@@ -131,17 +131,13 @@ export const LoginPage = () => {
                             {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
                         </Button>
 
-                        <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
-                            <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
+                        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
+                            {/* Disabled OTP/Email flows for Demo */}
+                            {/* <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
                                 <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
                                     Quên mật khẩu?
                                 </Typography>
-                            </Link>
-                            <Link to="/register" style={{ textDecoration: 'none' }}>
-                                <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-                                    Đăng ký tài khoản
-                                </Typography>
-                            </Link>
+                            </Link> */}
                         </Stack>
                     </Box>
                 </FormCard>

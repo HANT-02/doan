@@ -2,7 +2,6 @@ package services
 
 import (
 	_interface "doan/internal/infrastructure/queue/interface"
-	"doan/internal/infrastructure/queue/noop"
 	"doan/internal/services/mailer"
 	"doan/internal/services/security"
 	"doan/internal/services/user"
@@ -11,11 +10,17 @@ import (
 	"github.com/google/wire"
 )
 
-var UserServiceProvider = wire.NewSet(
+// ServiceProviders provides all application services
+// Including: Auth, Security, Mailer
+var ServiceProviders = wire.NewSet(
+	// Auth & User services
 	user.NewAuthService,
+
+	// Security services
 	NewPasswordCipher,
 	NewPasswordHasher,
-	ProvideQueue,
+
+	// Mailer service
 	NewMailer,
 )
 
@@ -23,10 +28,11 @@ var UserServiceProvider = wire.NewSet(
 func NewPasswordCipher(cfg config.Manager) security.PasswordCipher {
 	return security.NewPasswordCipher(cfg)
 }
+
 func NewPasswordHasher(cfg config.Manager) security.PasswordHasher {
 	return security.NewPasswordHasher(cfg)
 }
-func ProvideQueue() _interface.Queue { return noop.New() }
+
 func NewMailer(q _interface.Queue, log logger.Logger, cfg config.Manager) mailer.Mailer {
 	return mailer.NewMailer(q, log, cfg)
 }

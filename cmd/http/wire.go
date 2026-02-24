@@ -6,7 +6,7 @@ package main
 import (
 	"context"
 	"doan/cmd/http/controllers"
-	"doan/internal/infrastructure/database"
+	"doan/internal/infrastructure"
 	"doan/internal/services"
 	"doan/internal/usecases"
 	"doan/pkg/config"
@@ -15,35 +15,37 @@ import (
 	"github.com/google/wire"
 )
 
+// wireApp wires all dependencies using Clean Architecture layers:
+// App Layer -> Controllers -> UseCases -> Services -> Infrastructure
 func wireApp(app *App) error {
 	wire.Build(
-		// Provide context
-		provideContext,
+		// Layer 1: Application fundamentals (Context, Config, Logger)
+		AppProviders,
 
-		// Provide config manager
-		provideConfigManager,
+		// Layer 2: Infrastructure (Database, Queue, External services)
+		infrastructure.InfrastructureProviders,
 
-		// Provide logger
-		provideLogger,
+		// Layer 3: Services (Domain services, Security, Mailer)
+		services.ServiceProviders,
 
-		// Database providers (includes GetDBContext + NewUserRepository)
-		database.DBProvider,
+		// Layer 4: Use Cases (Business logic)
+		usecases.UseCaseProviders,
 
-		// Service providers
-		services.UserServiceProvider,
-
-		// UseCase providers
-		usecases.UserUseCaseProviders,
-		usecases.TeacherUseCaseProviders,
-
-		// Controller providers
+		// Layer 5: Controllers (HTTP handlers)
 		controllers.ControllerProviders,
 
-		// Inject
+		// Layer 6: Application injection
 		inject,
 	)
 	return nil
 }
+
+// AppProviders provides application-level dependencies
+var AppProviders = wire.NewSet(
+	provideContext,
+	provideConfigManager,
+	provideLogger,
+)
 
 // provideContext creates application context
 func provideContext() context.Context {
