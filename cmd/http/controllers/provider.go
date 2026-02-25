@@ -3,6 +3,7 @@ package controllers
 import (
 	"doan/cmd/http/controllers/class"
 	"doan/cmd/http/controllers/room"
+	"doan/cmd/http/controllers/student"
 	"doan/cmd/http/controllers/teacher"
 	"doan/cmd/http/controllers/user"
 
@@ -26,4 +27,8 @@ var ControllerProviders = wire.NewSet(
 	// Teacher controller
 	teacher.NewTeacherControllerV1,
 	wire.Bind(new(teacher.Controller), new(*teacher.ControllerV1)),
+
+	// Student controller
+	student.NewStudentControllerV1,
+	wire.Bind(new(student.Controller), new(*student.ControllerV1)),
 )

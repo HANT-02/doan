@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { authApi } from '@/api/authApi';
+import { useResetPasswordMutation } from '@/api/authApi';
 import {
     Container,
     Box,
@@ -34,7 +34,7 @@ export const ResetPasswordPage = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+    const [resetPassword, { isLoading: loading }] = useResetPasswordMutation();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -49,20 +49,17 @@ export const ResetPasswordPage = () => {
 
     const onSubmit = async (data: FormValues) => {
         if (!token) return;
-        setLoading(true);
         setErrorMsg(null);
         try {
-            await authApi.resetPassword({
+            await resetPassword({
                 token: token,
                 new_password_enc: data.password
-            });
+            }).unwrap();
             toast.success('Đặt lại mật khẩu thành công');
             navigate('/login');
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Không thể đặt lại mật khẩu. Liên kết có thể đã hết hạn.');
-        } finally {
-            setLoading(false);
+            setErrorMsg(error?.data?.message || 'Không thể đặt lại mật khẩu. Liên kết có thể đã hết hạn.');
         }
     };
 
@@ -90,6 +87,7 @@ export const ResetPasswordPage = () => {
                             variant="contained"
                             component={Link}
                             to="/forgot-password"
+                            sx={{ borderRadius: 2 }}
                         >
                             Yêu cầu liên kết mới
                         </Button>
@@ -160,7 +158,7 @@ export const ResetPasswordPage = () => {
                                 fullWidth
                                 variant="contained"
                                 size="large"
-                                sx={{ mt: 4, mb: 2, height: 48 }}
+                                sx={{ mt: 4, mb: 2, height: 48, borderRadius: 2 }}
                                 disabled={loading}
                             >
                                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Đặt lại mật khẩu'}

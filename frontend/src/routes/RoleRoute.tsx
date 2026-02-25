@@ -1,14 +1,13 @@
-
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import FullScreenLoader from '@/components/common/FullScreenLoader'; // Import the new component
+import { useAppSelector } from '@/store';
+import FullScreenLoader from '@/components/common/FullScreenLoader';
 
 interface RoleRouteProps {
     allowedRoles: string[];
 }
 
 export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
-    const { user, isLoadingAuth } = useAuth();
+    const { user, isLoadingAuth } = useAppSelector((state) => state.auth);
 
     if (isLoadingAuth) {
         return <FullScreenLoader />;

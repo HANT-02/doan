@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '@/api/authApi';
+import { useChangePasswordMutation } from '@/api/authApi';
 import {
     Box,
     TextField,
@@ -12,9 +12,10 @@ import {
     IconButton,
     CircularProgress,
     Alert,
-    Stack
+    Stack,
+    Container
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, ArrowBack } from '@mui/icons-material';
 import { toast } from 'sonner';
 import FormCard from '@/components/common/FormCard';
 import PageHeader from '@/components/common/PageHeader';
@@ -32,7 +33,7 @@ type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
 export const ChangePasswordPage = () => {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+    const [changePassword, { isLoading }] = useChangePasswordMutation();
     const [showOldPass, setShowOldPass] = useState(false);
     const [showNewPass, setShowNewPass] = useState(false);
     const [showConfirmPass, setShowConfirmPass] = useState(false);
@@ -47,36 +48,36 @@ export const ChangePasswordPage = () => {
     });
 
     const onSubmit = async (data: ChangePasswordFormValues) => {
-        setLoading(true);
         setErrorMsg(null);
         try {
-            await authApi.changePassword({
+            await changePassword({
                 old_password_enc: data.old_password,
                 new_password_enc: data.new_password
-            });
+            }).unwrap();
             toast.success('Đổi mật khẩu thành công');
             navigate('/app/profile');
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu cũ.');
-        } finally {
-            setLoading(false);
+            setErrorMsg(error?.data?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu cũ.');
         }
     };
 
     return (
-        <Box>
+        <Container maxWidth="md" sx={{ py: 4 }}>
             <PageHeader
                 title="Đổi mật khẩu"
                 subtitle="Cập nhật mật khẩu định kỳ để bảo vệ tài khoản của bạn"
-                breadcrumbs={[
-                    { label: 'Hệ thống', path: '/app' },
-                    { label: 'Cá nhân', path: '/app/profile' },
-                    { label: 'Đổi mật khẩu' }
-                ]}
             />
 
-            <Box sx={{ maxWidth: 600 }}>
+            <Box sx={{ maxWidth: 600, mt: 3 }}>
+                <Button
+                    startIcon={<ArrowBack />}
+                    onClick={() => navigate(-1)}
+                    sx={{ mb: 2 }}
+                >
+                    Quay lại
+                </Button>
+
                 <FormCard>
                     {errorMsg && (
                         <Alert severity="error" sx={{ mb: 3 }}>
@@ -85,11 +86,10 @@ export const ChangePasswordPage = () => {
                     )}
 
                     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-                        <Stack spacing={2}>
+                        <Stack spacing={3}>
                             <TextField
                                 required
                                 fullWidth
-                                id="old_password"
                                 label="Mật khẩu hiện tại"
                                 type={showOldPass ? 'text' : 'password'}
                                 error={!!errors.old_password}
@@ -112,7 +112,6 @@ export const ChangePasswordPage = () => {
                             <TextField
                                 required
                                 fullWidth
-                                id="new_password"
                                 label="Mật khẩu mới"
                                 type={showNewPass ? 'text' : 'password'}
                                 error={!!errors.new_password}
@@ -135,7 +134,6 @@ export const ChangePasswordPage = () => {
                             <TextField
                                 required
                                 fullWidth
-                                id="confirm_password"
                                 label="Xác nhận mật khẩu mới"
                                 type={showConfirmPass ? 'text' : 'password'}
                                 error={!!errors.confirm_password}
@@ -161,7 +159,8 @@ export const ChangePasswordPage = () => {
                                 variant="outlined"
                                 onClick={() => navigate(-1)}
                                 fullWidth
-                                sx={{ height: 48 }}
+                                sx={{ height: 48, borderRadius: 2 }}
+                                disabled={isLoading}
                             >
                                 Hủy
                             </Button>
@@ -169,15 +168,15 @@ export const ChangePasswordPage = () => {
                                 type="submit"
                                 variant="contained"
                                 fullWidth
-                                disabled={loading}
-                                sx={{ height: 48 }}
+                                disabled={isLoading}
+                                sx={{ height: 48, borderRadius: 2 }}
                             >
-                                {loading ? <CircularProgress size={24} color="inherit" /> : 'Cập nhật mật khẩu'}
+                                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Cập nhật mật khẩu'}
                             </Button>
                         </Stack>
                     </Box>
                 </FormCard>
             </Box>
-        </Box>
+        </Container>
     );
 };

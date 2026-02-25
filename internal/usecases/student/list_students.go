@@ -1,4 +1,4 @@
-package class
+package student
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"doan/pkg/logger"
 )
 
-type ListClassesInput struct {
+type ListStudentsInput struct {
 	Search    string
 	Status    string
 	Page      int
@@ -18,8 +18,8 @@ type ListClassesInput struct {
 	SortOrder string
 }
 
-type ListClassesOutput struct {
-	Classes    []entities.Class
+type ListStudentsOutput struct {
+	Students   []entities.Student
 	Pagination struct {
 		CurrentPage  int
 		ItemsPerPage int
@@ -28,27 +28,27 @@ type ListClassesOutput struct {
 	}
 }
 
-type ListClassesUseCase interface {
-	Execute(ctx context.Context, input ListClassesInput) (*ListClassesOutput, error)
+type ListStudentsUseCase interface {
+	Execute(ctx context.Context, input ListStudentsInput) (*ListStudentsOutput, error)
 }
 
-type listClassesUseCase struct {
-	classRepo repointerface.ClassRepository
+type listStudentsUseCase struct {
+	studentRepo repointerface.StudentRepository
 }
 
-func NewListClassesUseCase(classRepo repointerface.ClassRepository) ListClassesUseCase {
-	return &listClassesUseCase{
-		classRepo: classRepo,
+func NewListStudentsUseCase(studentRepo repointerface.StudentRepository) ListStudentsUseCase {
+	return &listStudentsUseCase{
+		studentRepo: studentRepo,
 	}
 }
 
-func (uc *listClassesUseCase) Execute(ctx context.Context, input ListClassesInput) (*ListClassesOutput, error) {
+func (uc *listStudentsUseCase) Execute(ctx context.Context, input ListStudentsInput) (*ListStudentsOutput, error) {
 	ctxLogger := logger.NewLogger(ctx)
 
 	commonCond := repositories.NewCommonCondition()
 
 	if input.Search != "" {
-		commonCond.AddCondition("name ILIKE ?", "%"+input.Search+"%", repositories.Like)
+		commonCond.AddCondition("full_name ILIKE ? OR code ILIKE ?", "%"+input.Search+"%", repositories.Like)
 	}
 
 	if input.Status != "" {
@@ -69,25 +69,25 @@ func (uc *listClassesUseCase) Execute(ctx context.Context, input ListClassesInpu
 	}
 	commonCond.AddSorting(orderBy, repositories.Asc)
 
-	result, err := uc.classRepo.GetByCondition(ctx, commonCond)
+	result, err := uc.studentRepo.GetByCondition(ctx, commonCond)
 	if err != nil {
-		ctxLogger.Errorf("Failed to list classes: %v", err)
+		ctxLogger.Errorf("Failed to list students: %v", err)
 		return nil, err
 	}
 
-	var classes []entities.Class
+	var students []entities.Student
 	total := int64(0)
 	totalPages := 0
 	if result != nil {
 		for _, ptr := range result.Data {
-			classes = append(classes, *ptr)
+			students = append(students, *ptr)
 		}
 		total = int64(result.Meta.TotalItems)
 		totalPages = int(result.Meta.TotalPages)
 	}
 
-	return &ListClassesOutput{
-		Classes: classes,
+	return &ListStudentsOutput{
+		Students: students,
 		Pagination: struct {
 			CurrentPage  int
 			ItemsPerPage int

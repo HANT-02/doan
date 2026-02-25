@@ -90,28 +90,32 @@
 - [ ] Setup CI/CD cơ bản
   - [ ] Cấu hình linting (golangci-lint)
   - [ ] Cấu hình testing framework
+- [x] Cấu hình Dependency Injection (Google Wire) *(Hoàn thành: Implemented in cmd/http/wire.go)*
 
 ### Task 2.2: Xây dựng Module Quản lý Đào tạo (Core)
-- [x] API quản lý Giáo viên *(Hoàn thành: 2026-02-06)*
+- [x] API quản lý Giáo viên *(Hoàn thành: 2026-02-06, Implemented in: cmd/http/controllers/teacher)*
   - [x] CRUD Teacher (POST/GET/PUT/DELETE `/api/v1/teachers`)
   - [x] API lấy danh sách giáo viên theo bộ lọc (GET `/api/v1/teachers?search=&status=&employment_type=&page=&limit=`)
   - [x] API lấy lịch dạy của giáo viên (GET `/api/v1/teachers/:id/timetable?from=&to=`)
   - [x] API thống kê giờ dạy (GET `/api/v1/teachers/:id/stats/teaching-hours?from=&to=&group_by=`)
-- [ ] API quản lý Học sinh
-  - [ ] CRUD Student
+- [x] API quản lý Học sinh *(Hoàn thành: 2026-02-25, Implemented in: cmd/http/controllers/student)*
+  - [x] CRUD Student
   - [ ] API đăng ký khóa học
   - [ ] API xem lịch học
   - [ ] API xem điểm và chuyên cần
-- [ ] API quản lý Lớp học
-  - [ ] CRUD Class
+- [x] API quản lý Lớp học *(Hoàn thành: 2026-02-25, Implemented in: cmd/http/controllers/class)*
+  - [x] CRUD Class
   - [ ] API thêm/xóa học sinh khỏi lớp
   - [ ] API gán giáo viên cho lớp
   - [ ] API kiểm tra sĩ số
-- [ ] API quản lý Chương trình đào tạo
+- [ ] API quản lý Chương trình đào tạo *(Missing: usecases, repositories, controllers)*
   - [ ] CRUD Program
   - [ ] CRUD Course
   - [ ] API liên kết Course với Program
-- [ ] API quản lý Phòng học
+- [x] API quản lý Phòng học *(Hoàn thành: 2026-02-25, Implemented in: cmd/http/controllers/room)*
+  - [x] CRUD Room
+  - [x] API kiểm tra sức chứa
+  - [x] API kiểm tra tình trạng phòng học
   - [ ] CRUD Room
   - [ ] API kiểm tra sức chứa
   - [ ] API kiểm tra tình trạng phòng
@@ -169,12 +173,12 @@
 ## 🎨 Giai đoạn 3: Phát triển Frontend (ReactJS + TypeScript) (Tuần 7-11)
 
 ### Task 3.1: Giao diện Quản trị & Dashboard
-- [ ] Setup project ReactJS + TypeScript
-  - [ ] Cấu hình Vite/Create React App
-  - [ ] Cài đặt Material UI (MUI)
-  - [ ] Cấu hình Redux Toolkit
-  - [ ] Setup React Router
-  - [ ] Cấu hình Axios/Fetch API
+- [x] Setup project ReactJS + TypeScript
+  - [x] Cấu hình Vite/Create React App
+  - [x] Cài đặt Material UI (MUI)
+  - [x] Cấu hình Redux Toolkit
+  - [x] Setup React Router
+  - [x] Cấu hình Axios/Fetch API (RTK Query)
 - [ ] Dashboard Admin
   - [ ] Trang tổng quan thống kê
   - [ ] Biểu đồ số lượng học sinh/giáo viên
@@ -209,10 +213,22 @@
   - [ ] Confirm và lưu thay đổi
 
 ### Task 3.3: Module Giáo viên & Học vụ
-- [ ] Quản lý hồ sơ giáo viên
-  - [ ] Danh sách giáo viên
-  - [ ] Form thêm/sửa giáo viên
-  - [ ] Xem chi tiết hồ sơ
+- [x] Quản lý Phòng học *(Completed: frontend/src/pages/admin/RoomsPage.tsx)*
+  - [x] Danh sách phòng học
+  - [x] Form thêm/sửa phòng học
+  - [x] Xem chi tiết phòng học
+- [x] Quản lý Lớp học *(Completed: frontend/src/pages/admin/ClassesPage.tsx)*
+  - [x] Danh sách lớp học
+  - [x] Form thêm/sửa lớp học
+  - [x] Xem chi tiết lớp học
+- [x] Quản lý Học sinh *(Completed: frontend/src/pages/admin/StudentsPage.tsx)*
+  - [x] Danh sách học sinh
+  - [x] Form thêm/sửa học sinh
+  - [x] Xem chi tiết hồ sơ học sinh
+- [x] Quản lý hồ sơ giáo viên
+  - [x] Danh sách giáo viên
+  - [x] Form thêm/sửa giáo viên
+  - [x] Xem chi tiết hồ sơ
   - [ ] Quản lý chứng chỉ/bằng cấp
 - [ ] Tải và quản lý tài liệu
   - [ ] Upload giáo án/tài liệu giảng dạy

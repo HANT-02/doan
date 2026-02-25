@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Link } from 'react-router-dom';
-import { authApi } from '@/api/authApi';
+import { useForgotPasswordMutation } from '@/api/authApi';
 import {
     Container,
     Box,
@@ -24,7 +24,7 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export const ForgotPasswordPage = () => {
-    const [loading, setLoading] = useState(false);
+    const [forgotPassword, { isLoading: loading }] = useForgotPasswordMutation();
     const [success, setSuccess] = useState(false);
     const [cooldown, setCooldown] = useState(0);
 
@@ -47,14 +47,13 @@ export const ForgotPasswordPage = () => {
     }, [cooldown]);
 
     const onSubmit = async (data: ForgotPasswordFormValues) => {
-        setLoading(true);
         try {
-            await authApi.forgotPassword(data.email);
+            await forgotPassword(data.email).unwrap();
             setCooldown(60);
+            setSuccess(true);
         } catch (error) {
             console.error(error);
-        } finally {
-            setLoading(false);
+            // Even if it fails, we usually show success for security or handle specific errors
             setSuccess(true);
         }
     };
@@ -116,7 +115,7 @@ export const ForgotPasswordPage = () => {
                                 fullWidth
                                 variant="contained"
                                 size="large"
-                                sx={{ mt: 4, mb: 2, height: 48 }}
+                                sx={{ mt: 4, mb: 2, height: 48, borderRadius: 2 }}
                                 disabled={loading || cooldown > 0}
                             >
                                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Gửi liên kết đặt lại'}

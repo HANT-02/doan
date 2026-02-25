@@ -4,6 +4,7 @@ import (
 	httpConfig "doan/cmd/http/config"
 	"doan/cmd/http/controllers/class"
 	"doan/cmd/http/controllers/room"
+	"doan/cmd/http/controllers/student"
 	"doan/cmd/http/controllers/teacher"
 	"doan/cmd/http/controllers/user"
 	_ "doan/cmd/http/docs"
@@ -32,6 +33,7 @@ type App struct {
 	classControllerV1   class.Controller
 	roomControllerV1    room.Controller
 	teacherControllerV1 teacher.Controller
+	studentControllerV1 student.Controller
 }
 
 func (a *App) initFlag() {
@@ -80,6 +82,7 @@ func (a *App) registerRoute() {
 	class.RegisterRoutesV1(api, a.classControllerV1, config.GetManager())
 	room.RegisterRoutesV1(api, a.roomControllerV1, config.GetManager())
 	teacher.RegisterRoutesV1(api, a.teacherControllerV1, config.GetManager())
+	student.RegisterRoutesV1(api, a.studentControllerV1, config.GetManager())
 
 }
 
@@ -90,12 +93,14 @@ func inject(
 	classControllerV1 *class.ControllerV1,
 	roomControllerV1 *room.ControllerV1,
 	teacherControllerV1 teacher.Controller,
+	studentControllerV1 student.Controller,
 ) error {
 	app.userControllerV1 = userControllerV1
 	app.userControllerV2 = userControllerV2
 	app.classControllerV1 = classControllerV1
 	app.roomControllerV1 = roomControllerV1
 	app.teacherControllerV1 = teacherControllerV1
+	app.studentControllerV1 = studentControllerV1
 	return nil
 }
 

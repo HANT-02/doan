@@ -3,28 +3,30 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi } from '@/api/authApi';
+import { useRegisterMutation } from '@/api/authApi';
 import {
     Container,
     Box,
     Typography,
     TextField,
     Button,
-    Paper,
     InputAdornment,
     IconButton,
     CircularProgress,
-    Alert
+    Alert,
+    Stack
 } from '@mui/material';
-import { Visibility, VisibilityOff, PersonAdd } from '@mui/icons-material';
+import { Visibility, VisibilityOff, School } from '@mui/icons-material';
+import FormCard from '@/components/common/FormCard';
+import { toast } from 'sonner';
 
 const registerSchema = z.object({
-    full_name: z.string().min(2, 'Full name must be at least 2 characters'),
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    full_name: z.string().min(2, 'Họ và tên ít nhất 2 ký tự'),
+    email: z.string().email('Địa chỉ email không hợp lệ'),
+    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
     confirm_password: z.string(),
 }).refine((data) => data.password === data.confirm_password, {
-    message: "Passwords don't match",
+    message: "Mật khẩu không khớp",
     path: ["confirm_password"],
 });
 
@@ -32,7 +34,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const RegisterPage = () => {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+    const [registerUser, { isLoading: loading }] = useRegisterMutation();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -46,52 +48,36 @@ export const RegisterPage = () => {
     });
 
     const onSubmit = async (data: RegisterFormValues) => {
-        setLoading(true);
         setErrorMsg(null);
         try {
-            await authApi.register({
+            await registerUser({
                 email: data.email,
                 full_name: data.full_name,
-                password_enc: data.password // Backend expects already encrypted or plain via TLS, using plain for now as per previous code
-            });
-            // Show success via Snackbar or Toast? For now just navigate with state or simple alert
-            // Ideally we replace sonner with MUI Snackbar, but let's stick to page logic
+                password_enc: data.password
+            }).unwrap();
+            toast.success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
             navigate('/login');
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Registration failed.');
-        } finally {
-            setLoading(false);
+            setErrorMsg(error?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại sau.');
         }
     };
 
     return (
-        <Container component="main" maxWidth="xs">
-            <Box
-                sx={{
-                    marginTop: 8,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                }}
-            >
-                <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Box sx={{
-                        m: 1,
-                        bgcolor: 'secondary.main',
-                        color: 'white',
-                        p: 1.5,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <PersonAdd />
-                    </Box>
-                    <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-                        Sign Up
+        <Container maxWidth="xs">
+            <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Stack direction="row" spacing={1} sx={{ mb: 4, alignItems: 'center' }}>
+                    <School color="primary" sx={{ fontSize: 40 }} />
+                    <Typography variant="h4" component="h1" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                        EduCenter
                     </Typography>
+                </Stack>
 
+                <FormCard
+                    title="Đăng ký tài khoản"
+                    subtitle="Bắt đầu quản lý trung tâm của bạn"
+                    sx={{ width: '100%' }}
+                >
                     {errorMsg && (
                         <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
                             {errorMsg}
@@ -104,7 +90,7 @@ export const RegisterPage = () => {
                             required
                             fullWidth
                             id="full_name"
-                            label="Full Name"
+                            label="Họ và tên"
                             autoFocus
                             error={!!errors.full_name}
                             helperText={errors.full_name?.message}
@@ -115,7 +101,7 @@ export const RegisterPage = () => {
                             required
                             fullWidth
                             id="email"
-                            label="Email Address"
+                            label="Địa chỉ Email"
                             autoComplete="email"
                             error={!!errors.email}
                             helperText={errors.email?.message}
@@ -125,7 +111,7 @@ export const RegisterPage = () => {
                             margin="normal"
                             required
                             fullWidth
-                            label="Password"
+                            label="Mật khẩu"
                             type={showPassword ? 'text' : 'password'}
                             id="password"
                             autoComplete="new-password"
@@ -136,7 +122,6 @@ export const RegisterPage = () => {
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton
-                                            aria-label="toggle password visibility"
                                             onClick={() => setShowPassword(!showPassword)}
                                             edge="end"
                                         >
@@ -150,7 +135,7 @@ export const RegisterPage = () => {
                             margin="normal"
                             required
                             fullWidth
-                            label="Confirm Password"
+                            label="Xác nhận mật khẩu"
                             type={showConfirmPassword ? 'text' : 'password'}
                             id="confirm_password"
                             error={!!errors.confirm_password}
@@ -160,7 +145,6 @@ export const RegisterPage = () => {
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton
-                                            aria-label="toggle password visibility"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                             edge="end"
                                         >
@@ -174,21 +158,21 @@ export const RegisterPage = () => {
                             type="submit"
                             fullWidth
                             variant="contained"
-                            color="secondary"
-                            sx={{ mt: 3, mb: 2, py: 1.2 }}
+                            size="large"
+                            sx={{ mt: 3, mb: 2, height: 48, borderRadius: 2 }}
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign Up'}
+                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng ký ngay'}
                         </Button>
                         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                             <Link to="/login" style={{ textDecoration: 'none' }}>
-                                <Typography variant="body2" color="primary">
-                                    Already have an account? Sign in
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                                    Đã có tài khoản? Đăng nhập
                                 </Typography>
                             </Link>
                         </Box>
                     </Box>
-                </Paper>
+                </FormCard>
             </Box>
         </Container>
     );

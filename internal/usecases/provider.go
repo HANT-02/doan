@@ -3,6 +3,7 @@ package usecases
 import (
 	"doan/internal/usecases/class"
 	"doan/internal/usecases/room"
+	"doan/internal/usecases/student"
 	"doan/internal/usecases/teacher"
 	"doan/internal/usecases/user"
 
@@ -47,9 +48,18 @@ var ClassUseCaseProviders = wire.NewSet(
 	class.NewListClassesUseCase,
 )
 
+var StudentUseCaseProviders = wire.NewSet(
+	student.NewCreateStudentUseCase,
+	student.NewGetStudentUseCase,
+	student.NewUpdateStudentUseCase,
+	student.NewDeleteStudentUseCase,
+	student.NewListStudentsUseCase,
+)
+
 var UseCaseProviders = wire.NewSet(
 	UserUseCaseProviders,
 	TeacherUseCaseProviders,
 	RoomUseCaseProviders,
 	ClassUseCaseProviders,
+	StudentUseCaseProviders,
 )

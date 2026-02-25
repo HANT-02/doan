@@ -1,16 +1,13 @@
-
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import FullScreenLoader from '@/components/common/FullScreenLoader'; // Import the new component
+import { useAppSelector } from '@/store';
+import FullScreenLoader from '@/components/common/FullScreenLoader';
 
 export const PrivateRoute = () => {
-    const { isAuthenticated, isLoadingAuth } = useAuth();
+    const { isAuthenticated, isLoadingAuth } = useAppSelector((state) => state.auth);
 
     if (isLoadingAuth) {
         return <FullScreenLoader />;
     }
 
-    // Attempt to keep the user on the requested page if feasible, otherwise redirect
-    // Use 'replace' to avoid history stack issues
     return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };

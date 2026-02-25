@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLogoutAccountMutation } from '@/api/authApi';
 import { useNavigate } from 'react-router-dom';
 import {
     AppBar,
@@ -33,7 +34,8 @@ interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ onMobileOpen }) => {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
+    const [logoutMutation] = useLogoutAccountMutation();
     const navigate = useNavigate();
     const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -48,7 +50,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onMobileOpen }) => {
 
     const handleLogout = async () => {
         handleMenuClose();
-        await logout();
+        try {
+            await logoutMutation({}).unwrap();
+        } catch (e) { /* Redux slice logout handled in api */ }
         navigate('/login');
     };
 

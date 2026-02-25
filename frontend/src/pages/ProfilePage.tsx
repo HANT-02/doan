@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
     Container,
@@ -13,108 +11,107 @@ import {
     ListItemText,
     Button,
     Chip,
-    CircularProgress
 } from '@mui/material';
 import { AccountCircle, Email, VpnKey, Logout as LogoutIcon } from '@mui/icons-material';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { logout } from '@/store/authSlice';
+import { useLogoutAccountMutation } from '@/api/authApi';
+import { toast } from 'sonner';
 
 export const ProfilePage = () => {
-    const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-
-    // If we wanted to fetch fresh profile data, we could do it here
-    // For now, use context user
+    const dispatch = useAppDispatch();
+    const { user } = useAppSelector((state) => state.auth);
+    const [logoutAccount, { isLoading: isLoggingOut }] = useLogoutAccountMutation();
 
     const handleLogout = async () => {
-        setLoading(true);
         try {
-            await logout();
+            await logoutAccount(undefined).unwrap();
+            dispatch(logout());
+            toast.success('Đã đăng xuất');
             navigate('/login');
         } catch (e) {
             console.error(e);
-        } finally {
-            setLoading(false);
+            dispatch(logout()); // Ensure logout even on fail
+            navigate('/login');
         }
     }
 
     if (!user) {
-        return (
-            <Container>
-                <Box display="flex" justifyContent="center" mt={4}>
-                    <CircularProgress />
-                </Box>
-            </Container>
-        )
+        return null;
     }
 
     return (
-        <Container component="main" maxWidth="md">
-            <Box sx={{ mt: 4, mb: 4 }}>
-                <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+        <Container component="main" maxWidth="md" sx={{ py: 4 }}>
+            <Box>
+                <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: '1px solid #e2e8f0' }}>
                     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 3, mb: 4 }}>
                         <Avatar
-                            sx={{ width: 100, height: 100, bgcolor: 'primary.main', fontSize: 40 }}
+                            sx={{ width: 100, height: 100, bgcolor: 'primary.main', fontSize: 40, fontWeight: 700 }}
                         >
                             {user.full_name?.charAt(0) || 'U'}
                         </Avatar>
                         <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-                            <Typography variant="h4" gutterBottom>
+                            <Typography variant="h4" sx={{ fontWeight: 700 }} gutterBottom>
                                 {user.full_name}
                             </Typography>
                             <Chip
-                                label={user.role || 'Member'}
-                                color={user.role === 'ADMIN' ? 'error' : 'default'}
+                                label={user.role?.toUpperCase() || 'MEMBER'}
+                                color={user.role === 'admin' ? 'primary' : 'default'}
                                 size="small"
+                                sx={{ fontWeight: 600 }}
                             />
                         </Box>
                     </Box>
 
-                    <Divider sx={{ mb: 2 }} />
+                    <Divider sx={{ mb: 4 }} />
 
-                    <Typography variant="h6" gutterBottom color="text.secondary">
-                        Account Information
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}>
+                        Thông tin tài khoản
                     </Typography>
 
-                    <List>
-                        <ListItem>
-                            <Box sx={{ mr: 2, color: 'text.secondary' }}> <Email /> </Box>
+                    <List sx={{ mb: 4 }}>
+                        <ListItem sx={{ px: 0 }}>
+                            <Box sx={{ mr: 2, p: 1, color: 'primary.main', bgcolor: 'primary.lighter', borderRadius: 1.5 }}> <Email /> </Box>
                             <ListItemText
-                                primary="Email Address"
-                                secondary={user.email}
+                                primary={<Typography variant="caption" color="text.secondary">Địa chỉ Email</Typography>}
+                                secondary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{user.email}</Typography>}
                             />
                         </ListItem>
-                        <ListItem>
-                            <Box sx={{ mr: 2, color: 'text.secondary' }}> <AccountCircle /> </Box>
+                        <ListItem sx={{ px: 0 }}>
+                            <Box sx={{ mr: 2, p: 1, color: 'primary.main', bgcolor: 'primary.lighter', borderRadius: 1.5 }}> <AccountCircle /> </Box>
                             <ListItemText
-                                primary="User ID"
-                                secondary={user.id}
+                                primary={<Typography variant="caption" color="text.secondary">ID Người dùng</Typography>}
+                                secondary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{user.id}</Typography>}
                             />
                         </ListItem>
-                        <ListItem>
-                            <Box sx={{ mr: 2, color: 'text.secondary' }}> <VpnKey /> </Box>
+                        <ListItem sx={{ px: 0 }}>
+                            <Box sx={{ mr: 2, p: 1, color: 'primary.main', bgcolor: 'primary.lighter', borderRadius: 1.5 }}> <VpnKey /> </Box>
                             <ListItemText
-                                primary="User Code"
-                                secondary={user.code}
+                                primary={<Typography variant="caption" color="text.secondary">Mã nhân viên/giáo viên</Typography>}
+                                secondary={<Typography variant="body1" sx={{ fontWeight: 500 }}>{user.code || 'N/A'}</Typography>}
                             />
                         </ListItem>
                     </List>
 
-                    <Box sx={{ mt: 4, display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                         <Button
                             variant="outlined"
                             startIcon={<VpnKey />}
-                            onClick={() => navigate('/change-password')}
+                            onClick={() => navigate('/app/change-password')}
+                            sx={{ borderRadius: 2 }}
                         >
-                            Change Password
+                            Đổi mật khẩu
                         </Button>
                         <Button
                             variant="contained"
                             color="error"
                             startIcon={<LogoutIcon />}
                             onClick={handleLogout}
-                            disabled={loading}
+                            disabled={isLoggingOut}
+                            sx={{ borderRadius: 2 }}
                         >
-                            {loading ? 'Logging out...' : 'Sign Out'}
+                            {isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
                         </Button>
                     </Box>
                 </Paper>

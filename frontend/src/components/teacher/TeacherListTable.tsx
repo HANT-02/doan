@@ -1,20 +1,23 @@
+import { useMemo } from 'react';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    IconButton,
+    DataGrid,
+    type GridColDef,
+    type GridRenderCellParams,
+    GridActionsCellItem,
+} from '@mui/x-data-grid';
+import {
     Chip,
     Typography,
     Box,
-    Skeleton,
+    Paper,
 } from '@mui/material';
-import { Visibility, Edit, Delete } from '@mui/icons-material';
+import {
+    Visibility,
+    Edit,
+    Delete,
+} from '@mui/icons-material';
 import { type Teacher } from '@/api/teacherApi';
-import { getStatusColor, getEmploymentTypeLabel, formatDate } from '@/utils/teacherHelpers';
+import { getStatusColor, getEmploymentTypeLabel } from '@/utils/teacherHelpers';
 
 interface TeacherListTableProps {
     teachers: Teacher[];
@@ -24,6 +27,9 @@ interface TeacherListTableProps {
     onDelete?: (teacher: Teacher) => void;
     showActions?: boolean;
     isAdmin?: boolean;
+    paginationModel: { page: number; pageSize: number };
+    onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
+    rowCount: number;
 }
 
 export const TeacherListTable = ({
@@ -34,131 +40,136 @@ export const TeacherListTable = ({
     onDelete,
     showActions = true,
     isAdmin = false,
+    paginationModel,
+    onPaginationModelChange,
+    rowCount,
 }: TeacherListTableProps) => {
-    if (loading) {
-        return (
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Mã số</TableCell>
-                            <TableCell>Tên</TableCell>
-                            <TableCell>Email</TableCell>
-                            <TableCell>Điện thoại</TableCell>
-                            <TableCell>Loại hình</TableCell>
-                            <TableCell>Trạng thái</TableCell>
-                            {showActions && <TableCell align="right">Hành động</TableCell>}
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {[1, 2, 3, 4, 5].map((i) => (
-                            <TableRow key={i}>
-                                <TableCell><Skeleton /></TableCell>
-                                <TableCell><Skeleton /></TableCell>
-                                <TableCell><Skeleton /></TableCell>
-                                <TableCell><Skeleton /></TableCell>
-                                <TableCell><Skeleton /></TableCell>
-                                <TableCell><Skeleton /></TableCell>
-                                {showActions && <TableCell><Skeleton /></TableCell>}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        );
-    }
 
-    if (teachers.length === 0) {
-        return (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary">
-                    Không tìm thấy giáo viên nào
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Hãy thử điều chỉnh bộ lọc hoặc thêm giáo viên mới
-                </Typography>
-            </Paper>
-        );
-    }
+    const columns = useMemo<GridColDef<Teacher>[]>(() => {
+        const cols: GridColDef<Teacher>[] = [
+            {
+                field: 'code',
+                headerName: 'Mã số',
+                width: 100,
+                renderCell: (params) => params.value || '-'
+            },
+            {
+                field: 'full_name',
+                headerName: 'Họ và tên',
+                flex: 1,
+                minWidth: 200,
+                renderCell: (params: GridRenderCellParams<Teacher>) => (
+                    <Box sx={{ py: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {params.row.full_name}
+                        </Typography>
+                        {params.row.is_school_teacher && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                {params.row.school_name || 'Giáo viên trường'}
+                            </Typography>
+                        )}
+                    </Box>
+                )
+            },
+            {
+                field: 'email',
+                headerName: 'Email',
+                width: 200,
+                renderCell: (params) => params.value || '-'
+            },
+            {
+                field: 'phone',
+                headerName: 'Điện thoại',
+                width: 150,
+                renderCell: (params) => params.value || '-'
+            },
+            {
+                field: 'employment_type',
+                headerName: 'Loại hình',
+                width: 150,
+                renderCell: (params) => (
+                    <Typography variant="body2">
+                        {getEmploymentTypeLabel(params.value)}
+                    </Typography>
+                )
+            },
+            {
+                field: 'status',
+                headerName: 'Trạng thái',
+                width: 150,
+                renderCell: (params) => (
+                    <Chip
+                        label={params.value}
+                        color={getStatusColor(params.value)}
+                        size="small"
+                        sx={{ fontWeight: 500 }}
+                    />
+                )
+            }
+        ];
+
+        if (showActions) {
+            cols.push({
+                field: 'actions',
+                type: 'actions',
+                headerName: 'Hành động',
+                width: 120,
+                getActions: (params) => {
+                    const actions = [];
+                    if (onView) {
+                        actions.push(
+                            <GridActionsCellItem
+                                icon={<Visibility />}
+                                label="Xem"
+                                onClick={() => onView(params.row)}
+                            />
+                        );
+                    }
+                    if (isAdmin && onEdit) {
+                        actions.push(
+                            <GridActionsCellItem
+                                icon={<Edit />}
+                                label="Sửa"
+                                onClick={() => onEdit(params.row)}
+                            />
+                        );
+                    }
+                    if (isAdmin && onDelete) {
+                        actions.push(
+                            <GridActionsCellItem
+                                icon={<Delete color="error" />}
+                                label="Xóa"
+                                onClick={() => onDelete(params.row)}
+                            />
+                        );
+                    }
+                    return actions;
+                }
+            });
+        }
+
+        return cols;
+    }, [onView, onEdit, onDelete, isAdmin, showActions]);
 
     return (
-        <TableContainer component={Paper}>
-            <Table>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>Mã số</TableCell>
-                        <TableCell>Tên</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Điện thoại</TableCell>
-                        <TableCell>Loại hình</TableCell>
-                        <TableCell>Trạng thái</TableCell>
-                        <TableCell>Ngày tạo</TableCell>
-                        {showActions && <TableCell align="right">Hành động</TableCell>}
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {teachers.map((teacher) => (
-                        <TableRow key={teacher.id} hover>
-                            <TableCell>{teacher.code || '-'}</TableCell>
-                            <TableCell>
-                                <Typography variant="body2" fontWeight="medium">
-                                    {teacher.full_name}
-                                </Typography>
-                                {teacher.is_school_teacher && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        {teacher.school_name || 'Giáo viên trường học'}
-                                    </Typography>
-                                )}
-                            </TableCell>
-                            <TableCell>{teacher.email || '-'}</TableCell>
-                            <TableCell>{teacher.phone || '-'}</TableCell>
-                            <TableCell>{getEmploymentTypeLabel(teacher.employment_type)}</TableCell>
-                            <TableCell>
-                                <Chip
-                                    label={teacher.status}
-                                    color={getStatusColor(teacher.status)}
-                                    size="small"
-                                />
-                            </TableCell>
-                            <TableCell>{formatDate(teacher.created_at)}</TableCell>
-                            {showActions && (
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                                        {onView && (
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => onView(teacher)}
-                                                title="Xem chi tiết"
-                                            >
-                                                <Visibility fontSize="small" />
-                                            </IconButton>
-                                        )}
-                                        {isAdmin && onEdit && (
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => onEdit(teacher)}
-                                                title="Chỉnh sửa giáo viên"
-                                            >
-                                                <Edit fontSize="small" />
-                                            </IconButton>
-                                        )}
-                                        {isAdmin && onDelete && (
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => onDelete(teacher)}
-                                                title="Xóa giáo viên"
-                                                color="error"
-                                            >
-                                                <Delete fontSize="small" />
-                                            </IconButton>
-                                        )}
-                                    </Box>
-                                </TableCell>
-                            )}
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </TableContainer>
+        <Paper sx={{ height: 600, width: '100%', borderRadius: 3, overflow: 'hidden' }}>
+            <DataGrid
+                rows={teachers}
+                columns={columns}
+                loading={loading}
+                rowCount={rowCount}
+                paginationMode="server"
+                paginationModel={paginationModel}
+                onPaginationModelChange={onPaginationModelChange}
+                pageSizeOptions={[10, 25, 50]}
+                disableRowSelectionOnClick
+                sx={{
+                    border: 'none',
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                        fontWeight: 700,
+                    },
+                }}
+            />
+        </Paper>
     );
 };

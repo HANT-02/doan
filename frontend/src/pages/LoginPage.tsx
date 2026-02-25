@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useLoginMutation } from '@/api/authApi';
 import {
     Container,
     Box,
@@ -29,8 +29,10 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export const LoginPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { login } = useAuth();
-    const [loading, setLoading] = useState(false);
+
+    // Replace Context with RTK Mutation
+    const [loginMutation, { isLoading }] = useLoginMutation();
+
     const [showPassword, setShowPassword] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -47,17 +49,17 @@ export const LoginPage = () => {
     });
 
     const onSubmit = async (data: LoginFormValues) => {
-        setLoading(true);
         setErrorMsg(null);
         try {
-            await login(data);
-            const from = location.state?.from?.pathname || '/app';
-            navigate(from, { replace: true });
+            const result = await loginMutation(data).unwrap();
+
+            if (result.success) {
+                const from = location.state?.from?.pathname || '/app';
+                navigate(from, { replace: true });
+            }
         } catch (error: any) {
             console.error(error);
-            setErrorMsg(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
-        } finally {
-            setLoading(false);
+            setErrorMsg(error.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
         }
     };
 
@@ -126,18 +128,13 @@ export const LoginPage = () => {
                             variant="contained"
                             size="large"
                             sx={{ mt: 4, mb: 2, height: 48 }}
-                            disabled={loading}
+                            disabled={isLoading}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
+                            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
                         </Button>
 
                         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
                             {/* Disabled OTP/Email flows for Demo */}
-                            {/* <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
-                                <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-                                    Quên mật khẩu?
-                                </Typography>
-                            </Link> */}
                         </Stack>
                     </Box>
                 </FormCard>

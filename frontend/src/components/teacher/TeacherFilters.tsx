@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-    Box,
     TextField,
     Select,
     MenuItem,
@@ -48,7 +47,7 @@ export const TeacherFilters = ({ filters, onChange }: TeacherFiltersProps) => {
     return (
         <Paper sx={{ p: 2, mb: 3 }}>
             <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
                         fullWidth
                         size="small"
@@ -56,19 +55,21 @@ export const TeacherFilters = ({ filters, onChange }: TeacherFiltersProps) => {
                         placeholder="Tên, email, điện thoại, mã..."
                         value={localFilters.search}
                         onChange={(e) => handleChange('search', e.target.value)}
-                        InputProps={{
-                            startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                        slotProps={{
+                            input: {
+                                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                            }
                         }}
                     />
                 </Grid>
 
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <FormControl fullWidth size="small">
                         <InputLabel>Trạng thái</InputLabel>
                         <Select
                             value={localFilters.status}
                             label="Trạng thái"
-                            onChange={(e) => handleChange('status', e.target.value)}
+                            onChange={(e) => handleChange('status', e.target.value as string)}
                         >
                             <MenuItem value="">Tất cả</MenuItem>
                             <MenuItem value="ACTIVE">Hoạt động</MenuItem>
@@ -77,13 +78,13 @@ export const TeacherFilters = ({ filters, onChange }: TeacherFiltersProps) => {
                     </FormControl>
                 </Grid>
 
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <FormControl fullWidth size="small">
                         <InputLabel>Loại hình làm việc</InputLabel>
                         <Select
                             value={localFilters.employment_type}
                             label="Loại hình làm việc"
-                            onChange={(e) => handleChange('employment_type', e.target.value)}
+                            onChange={(e) => handleChange('employment_type', e.target.value as string)}
                         >
                             <MenuItem value="">Tất cả</MenuItem>
                             <MenuItem value="FULL_TIME">Toàn thời gian</MenuItem>
@@ -92,7 +93,7 @@ export const TeacherFilters = ({ filters, onChange }: TeacherFiltersProps) => {
                     </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={2}>
+                <Grid size={{ xs: 12, md: 2 }}>
                     <Button
                         fullWidth
                         variant="outlined"

@@ -17,6 +17,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   isDanger?: boolean;
+  loading?: boolean;
 }
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -27,7 +28,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   message,
   confirmText = 'Xác nhận',
   cancelText = 'Hủy',
-  isDanger = false
+  isDanger = false,
+  loading = false
 }) => {
   return (
     <Dialog open={open} onClose={onClose}>
@@ -42,13 +44,14 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <Button
           onClick={() => {
             onConfirm();
-            onClose();
+            if (!loading) onClose();
           }}
           color={isDanger ? 'error' : 'primary'}
           variant="contained"
           autoFocus
+          disabled={loading}
         >
-          {confirmText}
+          {loading ? 'Đang xử lý...' : confirmText}
         </Button>
       </DialogActions>
     </Dialog>
