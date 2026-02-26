@@ -8,23 +8,17 @@ import {
     IconButton,
     Box,
     Typography,
-    InputBase,
     Avatar,
     Menu,
     MenuItem,
     ListItemIcon,
     ListItemText,
-    Badge,
-    Tooltip,
-    alpha,
     useTheme
 } from '@mui/material';
 import {
     Menu as MenuIcon,
-    NotificationsNone as BellIcon,
     Logout as LogoutIcon,
     Key as KeyIcon,
-    Search as SearchIcon,
     School,
     PersonOutline
 } from '@mui/icons-material';
@@ -100,45 +94,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onMobileOpen }) => {
                     </Box>
                 </Box>
 
-                {/* Search Bar */}
-                <Box
-                    sx={{
-                        display: { xs: 'none', sm: 'flex' },
-                        alignItems: 'center',
-                        backgroundColor: alpha(theme.palette.action.hover, 0.08),
-                        borderRadius: 2,
-                        px: 2,
-                        width: { sm: 250, md: 350 },
-                        height: 40,
-                        transition: theme.transitions.create(['width', 'background-color']),
-                        '&:focus-within': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.04),
-                            width: { sm: 300, md: 400 },
-                            border: '1px solid',
-                            borderColor: alpha(theme.palette.primary.main, 0.2),
-                        }
-                    }}
-                >
-                    <SearchIcon sx={{ color: 'text.secondary', fontSize: 20, mr: 1 }} />
-                    <InputBase
-                        placeholder="Tìm kiếm thông tin..."
-                        fullWidth
-                        sx={{
-                            fontSize: '0.875rem',
-                            color: 'text.primary'
-                        }}
-                    />
-                </Box>
-
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Tooltip title="Thông báo">
-                        <IconButton size="large" sx={{ color: 'text.secondary' }}>
-                            <Badge badgeContent={4} color="error" overlap="circular">
-                                <BellIcon />
-                            </Badge>
-                        </IconButton>
-                    </Tooltip>
-
                     <Box
                         onClick={handleMenuOpen}
                         sx={{
@@ -235,6 +191,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onMobileOpen }) => {
                     </Menu>
                 </Box>
             </Toolbar>
-        </AppBar>
+        </AppBar >
     );
 };

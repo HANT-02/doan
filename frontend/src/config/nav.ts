@@ -1,4 +1,3 @@
-
 import {
     Group,
     Description,
@@ -15,155 +14,160 @@ import {
     Security,
     AssignmentOutlined,
     MeetingRoom,
-    Person
+    Person,
+    Dashboard,
+    Build
 } from '@mui/icons-material';
 
 export interface NavItem {
-    label: string;
+    key: string;
     path: string;
-    icon: any; // Type remains 'any' or can be refined to React.ElementType<SvgIconProps>
+    labelVi: string;
+    labelEn?: string;
+    icon: any;
     roles: string[];
-    children?: NavItem[];
 }
 
 export const NAV_ITEMS: NavItem[] = [
-    // Admin Module
+    // --- Admin Module ---
     {
-        label: "Accounts & Roles",
-        path: "/app/admin/accounts",
+        key: "admin-overview",
+        labelVi: "Tổng quan",
+        labelEn: "Overview",
+        path: "/app/admin/overview",
+        icon: Dashboard,
+        roles: ["ADMIN", "SUPER_ADMIN"]
+    },
+    {
+        key: "admin-teachers",
+        labelVi: "Quản lý giáo viên",
+        path: "/app/admin/teachers",
         icon: Group,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
-        label: "Legal & Profiles",
-        path: "/app/admin/legal",
-        icon: Description,
-        roles: ["ADMIN", "SUPER_ADMIN"]
-    },
-    {
-        label: "Teachers",
-        path: "/app/admin/teachers",
-        icon: Group, // Using Group for teachers as well
-        roles: ["ADMIN", "SUPER_ADMIN"]
-    },
-    {
-        label: "Programs & Courses",
-        path: "/app/admin/programs",
-        icon: Book,
-        roles: ["ADMIN", "SUPER_ADMIN"]
-    },
-    {
-        label: "Classes",
-        path: "/app/admin/classes",
-        icon: School,
-        roles: ["ADMIN", "SUPER_ADMIN"]
-    },
-    {
-        label: "Students",
+        key: "admin-students",
+        labelVi: "Quản lý học sinh",
         path: "/app/admin/students",
         icon: Person,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
-        label: "Rooms",
+        key: "admin-classes",
+        labelVi: "Quản lý lớp học",
+        path: "/app/admin/classes",
+        icon: School,
+        roles: ["ADMIN", "SUPER_ADMIN"]
+    },
+    {
+        key: "admin-rooms",
+        labelVi: "Quản lý phòng học",
         path: "/app/admin/rooms",
         icon: MeetingRoom,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
-        label: "Auto Scheduling",
+        key: "admin-programs",
+        labelVi: "Chương trình / Khóa học",
+        path: "/app/admin/programs",
+        icon: Book,
+        roles: ["ADMIN", "SUPER_ADMIN"]
+    },
+    {
+        key: "admin-scheduling",
+        labelVi: "Xếp lịch (CSP)",
         path: "/app/admin/scheduling",
         icon: CalendarMonth,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
-        label: "Conflict Resolution",
-        path: "/app/admin/conflicts",
-        icon: Warning,
+        key: "admin-ai-audit",
+        labelVi: "Kiểm duyệt tài liệu (AI)",
+        path: "/app/admin/audit",
+        icon: Security,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
-        label: "Reports & Analytics",
-        path: "/app/admin/reports",
-        icon: BarChart,
+        key: "admin-accounts",
+        labelVi: "Quản lý tài khoản",
+        path: "/app/admin/accounts",
+        icon: ManageAccounts,
+        roles: ["ADMIN", "SUPER_ADMIN"]
+    },
+    {
+        key: "admin-devtools",
+        labelVi: "Công cụ kiểm thử (DevTools)",
+        path: "/app/admin/devtools",
+        icon: Build,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
 
-    // Teacher Module
+    // --- Teacher Module ---
     {
-        label: "My Schedule",
+        key: "teacher-schedule",
+        labelVi: "Lịch giảng dạy",
         path: "/app/teacher/schedule",
         icon: CalendarMonth,
         roles: ["TEACHER"]
     },
     {
-        label: "Attendance",
+        key: "teacher-attendance",
+        labelVi: "Điểm danh",
         path: "/app/teacher/attendance",
         icon: AssignmentTurnedIn,
         roles: ["TEACHER"]
     },
     {
-        label: "Lesson Journal",
+        key: "teacher-journal",
+        labelVi: "Sổ đầu bài",
         path: "/app/teacher/journal",
         icon: Book,
         roles: ["TEACHER"]
     },
     {
-        label: "Upload Documents",
+        key: "teacher-documents",
+        labelVi: "Tài liệu giảng dạy",
         path: "/app/teacher/documents",
         icon: UploadFile,
         roles: ["TEACHER"]
     },
-    {
-        label: "Substitute Request",
-        path: "/app/teacher/substitute",
-        icon: ManageAccounts,
-        roles: ["TEACHER"]
-    },
 
-    // Student/Parent Module
+    // --- Student/Parent Module ---
     {
-        label: "My Timetable",
+        key: "student-timetable",
+        labelVi: "Thời khóa biểu",
         path: "/app/student/timetable",
         icon: AccessTime,
         roles: ["STUDENT", "PARENT"]
     },
     {
-        label: "Learning Results",
+        key: "student-results",
+        labelVi: "Kết quả học tập",
         path: "/app/student/results",
         icon: School,
         roles: ["STUDENT", "PARENT"]
     },
     {
-        label: "Leave Requests",
+        key: "student-leaves",
+        labelVi: "Đơn xin nghỉ",
         path: "/app/student/leaves",
         icon: Description,
         roles: ["STUDENT", "PARENT"]
     },
-    {
-        label: "Course Consulting",
-        path: "/app/student/consulting",
-        icon: ChatBubble,
-        roles: ["STUDENT", "PARENT"]
-    },
-    {
-        label: "AI Assistant",
-        path: "/app/student/ai-chat",
-        icon: ChatBubble, // Using ChatBubble for AI Assistant as well
-        roles: ["STUDENT", "PARENT"]
-    },
 
-    // Compliance Module
+    // --- Compliance Module ---
     {
-        label: "Content Alerts",
-        path: "/app/compliance/alerts",
-        icon: Security,
+        key: "compliance-approvals",
+        labelVi: "Tài liệu cần duyệt",
+        path: "/app/compliance/approvals",
+        icon: AssignmentOutlined,
         roles: ["COMPLIANCE"]
     },
     {
-        label: "Approvals",
-        path: "/app/compliance/approvals",
-        icon: AssignmentOutlined,
+        key: "compliance-history",
+        labelVi: "Lịch sử kiểm duyệt",
+        path: "/app/compliance/history",
+        icon: Description,
         roles: ["COMPLIANCE"]
     }
 ];

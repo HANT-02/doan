@@ -120,7 +120,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isMobileOpen, onMobileCl
                             </ListItemIcon>
                             {(!collapsed || isMobile) && (
                                 <ListItemText
-                                    primary={item.label}
+                                    primary={item.labelVi}
                                     primaryTypographyProps={{
                                         variant: 'body2',
                                         sx: { fontWeight: isActive ? 700 : 500 }
@@ -132,7 +132,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isMobileOpen, onMobileCl
 
                     if (collapsed && !isMobile) {
                         return (
-                            <Tooltip key={item.path} title={item.label} placement="right">
+                            <Tooltip key={item.path} title={item.labelVi} placement="right">
                                 {itemContent}
                             </Tooltip>
                         );

@@ -188,6 +188,7 @@ export const StudentsPage = () => {
                     pageSizeOptions={[10, 25, 50]}
                     disableRowSelectionOnClick
                     autoHeight
+                    getRowId={(row) => row.id || row.code || Math.random().toString()}
                     sx={{
                         border: 'none',
                         '& .MuiDataGrid-columnHeaders': {

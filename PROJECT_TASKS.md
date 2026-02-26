@@ -116,9 +116,7 @@
   - [x] CRUD Room
   - [x] API kiểm tra sức chứa
   - [x] API kiểm tra tình trạng phòng học
-  - [ ] CRUD Room
-  - [ ] API kiểm tra sức chứa
-  - [ ] API kiểm tra tình trạng phòng
+
 
 ### Task 2.3: Triển khai thuật toán Xếp lịch tự động (CSP)
 - [ ] Thiết kế cấu trúc dữ liệu CSP
@@ -179,6 +177,14 @@
   - [x] Cấu hình Redux Toolkit
   - [x] Setup React Router
   - [x] Cấu hình Axios/Fetch API (RTK Query)
+- [x] Phase 0: ENDPOINT MAP *(Hoàn thành: Implemented in frontend/src/api/ENDPOINTS.md)*
+- [x] Phase 1: FOUNDATION UI *(Hoàn thành)*
+  - [x] Cấu hình Theme MUI, Typography, Component overrides
+  - [x] AppLayout, PageHeader, ErrorBoundary, Loader
+- [x] Phase 2: AUTH & ROUTING *(Hoàn thành)*
+  - [x] Store access_token/refresh_token in localStorage
+  - [x] Tích hợp API call với Bearer token (RTK Query)
+  - [x] Handle unauth redirection
 - [ ] Dashboard Admin
   - [ ] Trang tổng quan thống kê
   - [ ] Biểu đồ số lượng học sinh/giáo viên
@@ -212,20 +218,21 @@
   - [ ] Kiểm tra xung đột real-time
   - [ ] Confirm và lưu thay đổi
 
-### Task 3.3: Module Giáo viên & Học vụ
-- [x] Quản lý Phòng học *(Completed: frontend/src/pages/admin/RoomsPage.tsx)*
+### Task 3.3: Module Giáo viên & Học vụ (Phase 3 MVP)
+- [x] Phase 4: DEV TEST PANEL *(Hoàn thành: frontend/src/pages/admin/DevToolsPage.tsx)*
+- [x] Quản lý Phòng học *(Đã fix getRowId & Normalize response)*
   - [x] Danh sách phòng học
   - [x] Form thêm/sửa phòng học
   - [x] Xem chi tiết phòng học
-- [x] Quản lý Lớp học *(Completed: frontend/src/pages/admin/ClassesPage.tsx)*
+- [x] Quản lý Lớp học *(Đã fix getRowId & Normalize response)*
   - [x] Danh sách lớp học
   - [x] Form thêm/sửa lớp học
   - [x] Xem chi tiết lớp học
-- [x] Quản lý Học sinh *(Completed: frontend/src/pages/admin/StudentsPage.tsx)*
+- [x] Quản lý Học sinh *(Đã fix getRowId & Normalize response)*
   - [x] Danh sách học sinh
   - [x] Form thêm/sửa học sinh
   - [x] Xem chi tiết hồ sơ học sinh
-- [x] Quản lý hồ sơ giáo viên
+- [x] Quản lý hồ sơ giáo viên *(Đã fix getRowId & Normalize response)*
   - [x] Danh sách giáo viên
   - [x] Form thêm/sửa giáo viên
   - [x] Xem chi tiết hồ sơ
@@ -394,3 +401,20 @@
 **Ngày tạo:** 2026-02-06
 **Người thực hiện:** [Tên của bạn]
 **Giảng viên hướng dẫn:** [Tên GVHD]
+
+---
+
+## 🚀 Next Tasks (Top 10 Ưu tiên Demo)
+
+| Ưu tiên | Trạng thái | Module | Tên Task | Phân loại |
+|---|---|---|---|---|
+| 1 | [/] | Program/Course | CRUD Program/Course + Link Course->Program | Backend |
+| 2 | [ ] | Program/Course | Giao diện quản lý Program/Course (Table + Dialog) | Frontend |
+| 3 | [ ] | Class | API thêm/xóa học sinh, gán giáo viên, check sức chứa | Backend |
+| 4 | [ ] | Class | Giao diện quản lý roster (danh sách học sinh) + gán GV | Frontend |
+| 5 | [x] | Student | Cố định màn hình Student (lỗi hiện thị danh sách, trắng trang) | Frontend |
+| 6 | [x] | Room | Xử lý trạng thái deleted_at đồng bộ BE/FE | Frontend |
+| 7 | [ ] | Scheduling (CSP) | Scaffold cấu trúc dữ liệu + Hard constraints (base) | Backend |
+| 8 | [ ] | Scheduling (CSP) | Giao diện Scheduling Trigger & Preview | Frontend |
+| 9 | [ ] | AI Audit | Scaffold luồng Upload tài liệu + Audit log + Phê duyệt | Backend |
+| 10 | [ ] | AI Audit | Giao diện màn hình upload cho Giáo viên & Compliance queue | Frontend |

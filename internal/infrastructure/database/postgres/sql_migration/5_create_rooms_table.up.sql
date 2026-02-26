@@ -5,5 +5,6 @@ CREATE TABLE IF NOT EXISTS rooms (
     capacity INTEGER,
     address TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE
+    updated_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE
 );

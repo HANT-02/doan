@@ -163,6 +163,7 @@ export const TeacherListTable = ({
                 onPaginationModelChange={onPaginationModelChange}
                 pageSizeOptions={[10, 25, 50]}
                 disableRowSelectionOnClick
+                getRowId={(row) => row.id || row.code || Math.random().toString()}
                 sx={{
                     border: 'none',
                     '& .MuiDataGrid-columnHeaderTitle': {

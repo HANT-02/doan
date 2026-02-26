@@ -30,6 +30,7 @@ import { TeacherFormPage } from '@/pages/admin/TeacherFormPage';
 import { RoomsPage } from '@/pages/admin/RoomsPage';
 import { ClassesPage } from '@/pages/admin/ClassesPage';
 import { StudentsPage } from '@/pages/admin/StudentsPage';
+import { DevToolsPage } from '@/pages/admin/DevToolsPage';
 
 // Placeholder & Error Pages
 import { PlaceholderPage } from '@/components/layout/PlaceholderPage';
@@ -104,6 +105,7 @@ function App() {
                     <Route path="admin/classes" element={<ClassesPage />} />
                     <Route path="admin/students" element={<StudentsPage />} />
                     <Route path="admin/rooms" element={<RoomsPage />} />
+                    <Route path="admin/devtools" element={<DevToolsPage />} />
                     <Route path="admin/scheduling" element={<PlaceholderPage title="Auto Scheduling" />} />
                     <Route path="admin/conflicts" element={<PlaceholderPage title="Conflict Resolution" />} />
                     <Route path="admin/reports" element={<PlaceholderPage title="Reports & Analytics" />} />

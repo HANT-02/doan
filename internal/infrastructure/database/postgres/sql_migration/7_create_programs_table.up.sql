@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS programs (
     approval_note TEXT,
     published_at TIMESTAMP,
     archived_at TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'ACTIVE',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE,
     deleted_at TIMESTAMP WITH TIME ZONE
