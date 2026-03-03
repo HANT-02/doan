@@ -12,36 +12,36 @@
 
 ## 📋 Giai đoạn 1: Phân tích & Đặc tả hệ thống (Tuần 3-4)
 
-### Task 1.1: Đặc tả chi tiết bài toán Xếp lịch (CSP)
-- [ ] Xác định tập hợp biến số
-  - [ ] Định nghĩa biến Lớp học (Class)
-  - [ ] Định nghĩa biến Giáo viên (Teacher)
-  - [ ] Định nghĩa biến Phòng học (Room)
-  - [ ] Định nghĩa biến Khung giờ (TimeSlot)
-- [ ] Định nghĩa chi tiết Ràng buộc cứng (Hard Constraints)
-  - [ ] Chống trùng lịch giáo viên
-  - [ ] Chống trùng lịch phòng học
-  - [ ] Giới hạn sĩ số phòng học
-  - [ ] Chặn khung giờ sau 22h (Thông tư 29)
-  - [ ] Ràng buộc về thời gian làm việc tối đa của giáo viên
-- [ ] Định nghĩa Ràng buộc mềm (Soft Constraints)
-  - [ ] Ưu tiên lịch dạy liên tiếp cho giáo viên
-  - [ ] Tối ưu khoảng cách giữa các buổi học
-  - [ ] Ưu tiên phòng học phù hợp với môn học
+### Task 1.1: Đặc tả chi tiết bài toán Xếp lịch (CSP) *(Hoàn thành: Implemented in docs/modeling/scheduling/)*
+- [x] Xác định tập hợp biến số
+  - [x] Định nghĩa biến Lớp học (Class)
+  - [x] Định nghĩa biến Giáo viên (Teacher)
+  - [x] Định nghĩa biến Phòng học (Room)
+  - [x] Định nghĩa biến Khung giờ (TimeSlot)
+- [x] Định nghĩa chi tiết Ràng buộc cứng (Hard Constraints)
+  - [x] Chống trùng lịch giáo viên
+  - [x] Chống trùng lịch phòng học
+  - [x] Giới hạn sĩ số phòng học
+  - [x] Chặn khung giờ sau 22h (Thông tư 29)
+  - [x] Ràng buộc về thời gian làm việc tối đa của giáo viên
+- [x] Định nghĩa Ràng buộc mềm (Soft Constraints)
+  - [x] Ưu tiên lịch dạy liên tiếp cho giáo viên
+  - [x] Tối ưu khoảng cách giữa các buổi học
+  - [x] Ưu tiên phòng học phù hợp với môn học
 
-### Task 1.2: Thiết kế sơ đồ Use Case & Luồng nghiệp vụ
-- [ ] Vẽ sơ đồ Use Case tổng quan
-  - [ ] Use case cho Admin
-  - [ ] Use case cho Giáo viên
-  - [ ] Use case cho Học sinh/Phụ huynh
-  - [ ] Use case cho Compliance Officer
-  - [ ] Use case tương tác với AI Agent
-- [ ] Mô tả luồng nghiệp vụ phê duyệt tài liệu
-  - [ ] Luồng tải file của Giáo viên
-  - [ ] Luồng AI quét (OCR & Inference)
-  - [ ] Luồng gán nhãn tự động
-  - [ ] Luồng Compliance Officer phê duyệt
-  - [ ] Luồng phản hồi kết quả cho Giáo viên
+### Task 1.2: Thiết kế sơ đồ Use Case & Luồng nghiệp vụ *(Hoàn thành: Implemented in docs/modeling/usecase/*)*
+- [x] Vẽ sơ đồ Use Case tổng quan
+  - [x] Use case cho Admin
+  - [x] Use case cho Giáo viên
+  - [x] Use case cho Học sinh/Phụ huynh
+  - [x] Use case cho Compliance Officer
+  - [x] Use case tương tác với AI Agent
+- [x] Mô tả luồng nghiệp vụ phê duyệt tài liệu
+  - [x] Luồng tải file của Giáo viên
+  - [x] Luồng AI quét (OCR & Inference)
+  - [x] Luồng gán nhãn tự động
+  - [x] Luồng Compliance Officer phê duyệt
+  - [x] Luồng phản hồi kết quả cho Giáo viên
 
 ### Task 1.3: Thiết kế cơ sở dữ liệu (ERD)
 - [ ] Thiết kế bảng dữ liệu Core
@@ -352,8 +352,8 @@
 ## 📊 Theo dõi tiến độ
 
 ### Tuần 3-4: Phân tích & Đặc tả
-- [ ] Hoàn thành Task 1.1
-- [ ] Hoàn thành Task 1.2
+- [x] Hoàn thành Task 1.1
+- [x] Hoàn thành Task 1.2
 - [ ] Hoàn thành Task 1.3
 
 ### Tuần 5-6: Backend Core

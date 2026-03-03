@@ -1,0 +1,473 @@
+VI. CÁC SƠ ĐỒ MÔ HÌNH HÓA BỔ SUNG (CẬP NHẬT TUẦN 2)
+Mô hình hóa Use Case theo từng vai trò (Role-based Use Case)
+
+
+• Nhằm làm rõ phạm vi quyền hạn và trách nhiệm của từng nhóm người dùng, em xây dựng các sơ đồ Use Case chi tiết theo vai trò sau:
+4.1. Use Case cho Admin (Quản trị viên)
+Chức năng chính: Quản lý tài khoản & phân quyền, quản lý chương trình đào tạo, lớp học, phòng học, kích hoạt xếp lịch tự động và theo dõi báo cáo.
+
+
+Điểm nhấn compliance: Kiểm soát khung giờ cấm theo Thông tư 29 và hỗ trợ can thiệp xử lý xung đột lịch.
+
+
+Sơ đồ Use Case Admin
+
+4.2. Use Case cho Giáo viên (Teacher)
+Chức năng chính: Xem lịch giảng dạy, điểm danh, nhập sổ đầu bài, tải tài liệu để AI kiểm duyệt, đề xuất đổi giáo viên khi cần.
+
+
+Điểm nhấn chất lượng: Dữ liệu sổ đầu bài và điểm danh tạo thành cơ sở đánh giá chất lượng đào tạo.
+
+
+Sơ đồ Use Case Teacher
+
+4.3. Use Case cho Học sinh/Phụ huynh (Student/Parent)
+Chức năng chính: Xem thời khóa biểu, tra cứu kết quả học tập và chuyên cần, tạo đơn xin nghỉ/đi muộn/về sớm, đăng ký tư vấn khóa học.
+
+
+Điểm nhấn trải nghiệm: Minh bạch hóa thông tin học tập và giảm thủ tục hành chính qua số hóa.
+
+
+Sơ đồ Use Case Student/Parent
+
+4.4. Use Case cho Cán bộ kiểm duyệt (Compliance Officer)
+Chức năng chính: Tiếp nhận cảnh báo từ AI, phê duyệt/từ chối tài liệu, theo dõi lịch sử kiểm duyệt.
+
+
+Điểm nhấn quản trị: Đảm bảo tài liệu giảng dạy tuân thủ và hạn chế rủi ro nội dung.
+
+
+Sơ đồ Use Case Compliance Officer
+
+
+4.5. Use Case cho AI Agent (System Actor)
+Chức năng chính: OCR trích xuất văn bản, phân tích ngữ nghĩa bằng Gemini, gán nhãn (An toàn/Cảnh báo), hỗ trợ tính toán lịch học tối ưu.
+
+
+Điểm nhấn khoa học: AI đóng vai trò “bộ lọc” tự động và CSP đóng vai trò “bộ tối ưu” lập lịch.
+
+
+Sơ đồ Use Case AI Agent
+
+
+
+
+Mô hình hóa thiết kế hệ thống bằng Biểu đồ lớp (Class Diagram)
+
+
+5.1. Biểu đồ lớp miền nghiệp vụ (Core Domain)
+Mục tiêu: Mô tả cấu trúc dữ liệu chính của hệ thống quản lý đào tạo (User, Teacher, Student, Class, Room, Program, Course, Lesson, Schedule…).
+
+
+Ý nghĩa: Đây là cơ sở để thiết kế ERD, triển khai Entities (Domain layer) trong Clean Architecture.
+
+
+Biểu đồ lớp Core Domain
+
+5.2. Biểu đồ lớp AI Audit (Material, AuditLog, Label)
+Mục tiêu: Mô hình hóa pipeline kiểm duyệt tài liệu: tài liệu → log quét → nhãn cảnh báo → quyết định phê duyệt.
+
+
+Ý nghĩa: Tách bạch dữ liệu “tài liệu gốc” và dữ liệu “kết quả phân tích” giúp audit trail minh bạch.
+
+
+Biểu đồ lớp AI Audit
+
+
+5.3. Biểu đồ lớp cho Scheduling CSP
+Mục tiêu: Mô hình hóa các thành phần thuật toán: Variable, Domain, Constraint, Solver, Heuristics, Forward Checking…
+
+
+Ý nghĩa: Là nền tảng thiết kế module xếp lịch ở giai đoạn triển khai (Tuần 7–11).
+
+
+Biểu đồ lớp Scheduling (CSP)
+
+
+Mô hình hóa luồng xử lý bằng Biểu đồ tuần tự (Sequence Diagram)
+
+
+6.1. Luồng đăng nhập (Login)
+Mục tiêu: Mô tả tương tác giữa Frontend → Auth API → phát hành token → lưu phiên đăng nhập.
+
+
+Lưu ý: Tuần này tập trung mô hình hóa, chưa triển khai đầy đủ các luồng email/OTP.
+Sequence Diagram Login
+
+
+6.2. Luồng CRUD Giáo viên (Admin quản lý)
+Mục tiêu: Mô tả luồng từ UI quản trị → controller → usecase → repository → DB.
+
+
+Ý nghĩa: Minh họa rõ kiến trúc Clean Architecture đã chọn.
+Sequence Diagram Teacher CRUD
+
+
+
+
+Sequence Class Enroll Assign Teacher CRUD
+
+
+6.3. Luồng kích hoạt xếp lịch tự động (Auto Scheduling CSP)
+Mục tiêu: Mô tả bước load dữ liệu ràng buộc → solver backtracking + forward checking → preview kết quả → commit lịch.
+
+
+Ý nghĩa: Là luồng cốt lõi thể hiện giá trị khoa học của đề tài (CLO1).
+
+
+Sequence Diagram Auto Scheduling CSP
+
+
+6.4. Luồng tải tài liệu → AI Audit → Compliance phê duyệt
+Mục tiêu: Mô tả pipeline: upload → OCR → Gemini inference → label → compliance approve/reject.
+
+
+Ý nghĩa: Thể hiện ứng dụng AI để kiểm soát chất lượng nội dung đào tạo (CLO3).
+
+
+Sequence Diagram Material Audit & Approval
+
+
+Sequence Diagram Student, Parent Leave Request
+
+
+
+Mô hình hóa thuật toán xếp lịch (CSP) — tài liệu hóa cấu trúc & chiến lược
+
+
+7.1. Mô hình CSP (Variables, Domains, Constraints)
+Mô tả: Tài liệu hóa cấu trúc bài toán CSP ở mức formal, bao gồm định nghĩa biến, miền giá trị và hệ ràng buộc.
+
+
+Output: Đây là “hợp đồng” kỹ thuật để triển khai module scheduling ở giai đoạn 7–11.
+
+
+Mô hình CSP(Phụ lục):
+Mục tiêu của tài liệu này là định nghĩa chính thức bài toán Xếp lịch của hệ thống dưới góc độ một Bài toán Thỏa mãn Ràng buộc (CSP).
+
+1. Biến số (Variables - $V$)
+Mỗi Variable $v \in V$ đại diện cho một buổi học (ClassSession/Lesson) cần được xếp lịch. Một Class có thể bao gồm nhiều Sessions (ví dụ: Lớp Toán 12 yêu cầu 2 buổi/tuần).
+$V = {v_1, v_2, …, v_n}$
+Trong đó, mỗi $v_i$ mang các thuộc tính:
+class_id: Định danh lớp học.
+teacher_id: (Có thể đã fix sẵn hoặc cần tìm).
+duration: Thời lượng của buổi học (VD: 90 phút, 120 phút).
+capacity: Sĩ số dự kiến của lớp học.
+2. Miền giá trị (Domains - $D$)
+Mỗi biến $v_i$ sẽ lấy một giá trị $d \in D_i$. Giá trị $d$ là một bộ tuple kết hợp của Thời gian (TimeSlot) và Không gian (Room).
+$d = (TimeSlot, Room)$
+$D_i = { (t_1, r_1), (t_1, r_2), …, (t_k, r_m) }$
+(Chú ý: Nếu teacher_id chưa được fix cứng cho Lớp, giá trị $d$ sẽ mở rộng thành tuple 3: (TimeSlot, Room, Teacher))
+3. Ràng buộc cứng (Hard Constraints - $C_{hard}$)
+Một giải pháp (Assignment) chỉ hợp lệ nếu thỏa mãn TẤT CẢ các ràng buộc cứng:
+Teacher Conflict ($C_{teacher}$): Một giáo viên không thể dạy 2 lớp cùng một lúc.
+$\forall v_i, v_j \in V: (teacher(v_i) == teacher(v_j)) \implies (timeslot(v_i) \neq timeslot(v_j))$
+Room Conflict ($C_{room}$): Một phòng học không thể diễn ra 2 lớp cùng một lúc.
+$\forall v_i, v_j \in V: (room(v_i) == room(v_j)) \implies (timeslot(v_i) \neq timeslot(v_j))$
+Room Capacity ($C_{capacity}$): Sức chứa của phòng học phải $\ge$ Sĩ số lớp.
+$\forall v_i \in V: capacity(room(v_i)) \ge capacity(v_i)$
+Time Rule - Thông tư 29 ($C_{tt29}$): Không có ca học nào kết thúc sau 22h00.
+$\forall v_i \in V: end_time(timeslot(v_i)) \le 22:00$
+
+
+4. Ràng buộc mềm (Soft Constraints - $C_{soft}$) & Hàm Mục Tiêu (Objective Function)
+Thay vì chỉ tìm ra một lịch hợp lệ, Backtracking Solver sẽ cố gắng tối ưu hóa điểm số dựa trên các ràng buộc mềm:
+Liên tiếp ($SC_{consecutive}$): Ưu tiên xếp lịch cho giáo viên dạy các ca liên tiếp nhau (tránh khoảng trống vô ích).
+Tránh Gap dài ($SC_{gap}$): Phạt điểm (Penalty) nếu giáo viên có khoảng trống $> 2$ tiếng giữa 2 ca dạy trong ngày.
+Phân bổ đều ($SC_{spread}$): Các buổi học của cùng 1 Class nên cách nhau hợp lý (VD: Thứ 2 - Thứ 5, thay vì Thứ 2 - Thứ 3 liền nhau).
+Hàm mục tiêu:
+Maximize $Score(Assignment) = \sum (w_k \times SC_k)$
+$w_k$: Trọng số (weight) của từng loại Soft Constraint.
+
+5. Chiến lược tối ưu (Heuristics & Pruning)
+MRV (Minimum Remaining Values): Luôn chọn Variable có ít Domain values nhất để gán trước (Fail-First). Thường là các lớp học có yêu cầu phòng lab đặc biệt hoặc giáo viên cực kỳ bận.
+LCV (Least Constraining Value): Với Variable đã chọn, thử assign Domain value ít gây cản trở nhất cho các Variable khác chưa được gán.
+Forward Checking: Sau mỗi lần assign thành công $v_i = d$, duyệt qua tất cả các $v_{unassigned}$ liên quan, loại bỏ các giá trị ra khỏi miền $D_{unassigned}$ nếu chúng vi phạm Hard Constraints với $d$. Nếu bất kỳ $D_{unassigned}$ nào rỗng, lập tức Backtrack.
+
+
+7.2. Flow Backtracking + Heuristics + Forward Checking
+Mô tả: Sơ đồ hóa quy trình giải: chọn biến (MRV/Degree) → chọn giá trị (LCV) → kiểm tra ràng buộc → forward checking → backtrack nếu bế tắc.
+
+
+Ý nghĩa: Tối ưu khả năng tìm nghiệm hợp lệ và giảm không gian tìm kiếm.
+
+
+Sơ đồ flow thuật toán Backtracking CSP(Phụ lục)
+Mục tiêu của tài liệu này là cung cấp giả mã (Pseudocode) chi tiết cho thuật toán cốt lõi điều phối thời khóa biểu.
+
+1. Hàm chính: SolveCSP
+Hàm khởi tạo và kích hoạt Backtracking:
+function SolveCSP(Variables, Domains):
+    Initialize empty Assignment = {}
+    return Backtrack(Assignment, Variables, Domains)
+
+
+2. Hàm Đệ quy: Backtrack
+Đây là lõi thuật toán tìm kiếm theo chiều sâu (DFS search) qua cây trạng thái gán.
+function Backtrack(Assignment, Variables, Domains):
+    // Cơ sở đệ quy: Nếu mọi lớp đều đã được gán lịch
+    if isValidAndComplete(Assignment) == true:
+        return Assignment
+
+
+    // Heuristic MRV: Chọn biến (Class/Session) có số lượng Domain (Option) ít nhất
+    variable = SelectUnassignedVariable(Variables, Assignment, Domains)
+
+
+    // Iteration qua các Domain Values
+    // Heuristic LCV: Ưu tiên thử các giá trị ít gây xung đột nhất cho các biến khác
+    for each value in OrderDomainValues(variable, Domains, Assignment):
+
+
+        // Hard Constraint Check (Không trùng phòng, không trùng giáo viên, <= 22h, v.v)
+        if CheckHardConstraints(variable, value, Assignment) == true:
+
+
+            // Tạm thời gán giá trị
+            Add {variable = value} to Assignment
+
+
+            // Tạm thời thu hẹp (Pruning) miền giá trị của các biến liên quan để loại bỏ xung đột (Forward Checking)
+            inferences = ForwardCheck(variable, value, Variables, Domains, Assignment)
+
+
+            // Nếu việc thu hẹp không làm bất kỳ biến nào bị rỗng Domain (nghĩa là không dẫn tới Failure vô vọng)
+            if inferences != FAILURE:
+
+
+                // Cập nhật Domain và tiếp tục đi sâu xuống nhánh này
+                ApplyInferences(Domains, inferences)
+                result = Backtrack(Assignment, Variables, Domains)
+
+
+                if result != FAILURE:
+                    return result
+
+
+                // Undo Domain nếu nhánh phân giải thất bại
+                RemoveInferences(Domains, inferences)
+
+
+            // Undo gán giá trị (Quay lui - Backtrack)
+            Remove {variable = value} from Assignment
+
+
+    return FAILURE
+
+
+3. Hàm Heuristics: SelectUnassignedVariable (MRV)
+Mininum Remaining Values (MRV).
+function SelectUnassignedVariable(Variables, Assignment, Domains):
+    min_domain_size = INFINITY
+    best_variable = NULL
+
+
+    for each v in Variables:
+        if v not in Assignment:
+            current_domain_size = countValidValues(v, Domains[v], Assignment)
+            if current_domain_size < min_domain_size:
+                min_domain_size = current_domain_size
+                best_variable = v
+            // Bẻ khóa (tie breaker) bằng Degree Heuristic nếu cần
+            else if current_domain_size == min_domain_size:
+                best_variable = DegreeHeuristic(v, best_variable)
+
+
+    return best_variable
+
+
+4. Hàm Forward Checking: ForwardCheck
+Kiểm tra xem khi gán v = d, liệu có Variable láng giềng nào mất hoàn toàn Options không.
+function ForwardCheck(variable, assigned_value, Variables, Domains, Assignment):
+    inferences = Initialize Empty Map
+
+
+    // Tìm các Session có khả năng xung đột (Ví dụ: cùng Room, cùng Teacher)
+    neighbors = GetNeighbors(variable) 
+
+
+    for each neighbor in neighbors:
+        if neighbor not in Assignment:
+            valid_values_for_neighbor = []
+
+
+            for each value in Domains[neighbor]:
+                // Giả lập đưa vào và kiểm tra
+                if CheckHardConstraints(neighbor, value, Assignment U {variable=assigned_value}):
+                    valid_values_for_neighbor.add(value)
+
+
+            if valid_values_for_neighbor is EMPTY:
+                // Một biến láng giềng không còn lựa chọn nào -> Nhánh này vô hiệu hoá
+                return FAILURE
+
+
+            // Ghi nhận miền giá trị được thu hẹp
+            inferences[neighbor] = valid_values_for_neighbor
+
+
+    return inferences
+
+
+5. Hàm Tính điểm Ràng buộc Mềm (Soft Constraint Scoring)
+Hàm này chạy ngầm phía dưới khi OrderDomainValues gọi đến để ưu tiên gán LCV.
+function ScoreSoftConstraints(Assignment):
+    score = 0
+
+
+    // Phân tích giáo viên
+    for each teacher in AllTeachers():
+        sessions = GetSessionsForTeacher(Assignment, teacher)
+        sessions = SortByTime(sessions)
+
+
+        for i = 0 to length(sessions) - 2:
+            gap = sessions[i+1].startTime - sessions[i].endTime
+
+
+            if gap <= 30 minutes:
+                score += 10 // Thưởng (Liên tiếp)
+            else if gap > 120 minutes:
+                score -= round(gap / 60) * 5 // Phạt (Trống lịch quá dài)
+
+
+    return score
+
+
+
+
+
+
+
+7.3. Mô hình hóa hệ ràng buộc (Constraints Pipeline)
+Mô tả: Tách các bộ kiểm tra ràng buộc theo nhóm (Teacher conflict, Room conflict, Capacity, Time forbidden…).
+
+
+Ý nghĩa: Dễ mở rộng và dễ kiểm thử từng constraint độc lập.
+
+
+Sơ đồ constraints pipeline
+
+
+7.4. Pseudocode thuật toán
+Mô tả: Pseudocode hóa các hàm chính để phục vụ viết báo cáo và triển khai sau này.
+
+
+Output: Làm cơ sở cho phần “Thiết kế giải thuật” trong báo cáo đồ án.
+
+
+Pseudocode (phụ lục)
+
+Mục tiêu của tài liệu này là cung cấp giả mã (Pseudocode) chi tiết cho thuật toán cốt lõi điều phối thời khóa biểu.
+
+1. Hàm chính: SolveCSP
+Hàm khởi tạo và kích hoạt Backtracking:
+function SolveCSP(Variables, Domains):
+    Initialize empty Assignment = {}
+    return Backtrack(Assignment, Variables, Domains)
+
+2. Hàm Đệ quy: Backtrack
+Đây là lõi thuật toán tìm kiếm theo chiều sâu (DFS search) qua cây trạng thái gán.
+function Backtrack(Assignment, Variables, Domains):
+    // Cơ sở đệ quy: Nếu mọi lớp đều đã được gán lịch
+    if isValidAndComplete(Assignment) == true:
+        return Assignment
+
+    // Heuristic MRV: Chọn biến (Class/Session) có số lượng Domain (Option) ít nhất
+    variable = SelectUnassignedVariable(Variables, Assignment, Domains)
+
+    // Iteration qua các Domain Values
+    // Heuristic LCV: Ưu tiên thử các giá trị ít gây xung đột nhất cho các biến khác
+    for each value in OrderDomainValues(variable, Domains, Assignment):
+
+        // Hard Constraint Check (Không trùng phòng, không trùng giáo viên, <= 22h, v.v)
+        if CheckHardConstraints(variable, value, Assignment) == true:
+
+            // Tạm thời gán giá trị
+            Add {variable = value} to Assignment
+
+            // Tạm thời thu hẹp (Pruning) miền giá trị của các biến liên quan để loại bỏ xung đột (Forward Checking)
+            inferences = ForwardCheck(variable, value, Variables, Domains, Assignment)
+
+            // Nếu việc thu hẹp không làm bất kỳ biến nào bị rỗng Domain (nghĩa là không dẫn tới Failure vô vọng)
+            if inferences != FAILURE:
+
+                // Cập nhật Domain và tiếp tục đi sâu xuống nhánh này
+                ApplyInferences(Domains, inferences)
+                result = Backtrack(Assignment, Variables, Domains)
+
+                if result != FAILURE:
+                    return result
+
+                // Undo Domain nếu nhánh phân giải thất bại
+                RemoveInferences(Domains, inferences)
+
+            // Undo gán giá trị (Quay lui - Backtrack)
+            Remove {variable = value} from Assignment
+
+    return FAILURE
+
+3. Hàm Heuristics: SelectUnassignedVariable (MRV)
+Mininum Remaining Values (MRV).
+function SelectUnassignedVariable(Variables, Assignment, Domains):
+    min_domain_size = INFINITY
+    best_variable = NULL
+
+    for each v in Variables:
+        if v not in Assignment:
+            current_domain_size = countValidValues(v, Domains[v], Assignment)
+            if current_domain_size < min_domain_size:
+                min_domain_size = current_domain_size
+                best_variable = v
+            // Bẻ khóa (tie breaker) bằng Degree Heuristic nếu cần
+            else if current_domain_size == min_domain_size:
+                best_variable = DegreeHeuristic(v, best_variable)
+
+    return best_variable
+
+4. Hàm Forward Checking: ForwardCheck
+Kiểm tra xem khi gán v = d, liệu có Variable láng giềng nào mất hoàn toàn Options không.
+function ForwardCheck(variable, assigned_value, Variables, Domains, Assignment):
+    inferences = Initialize Empty Map
+
+    // Tìm các Session có khả năng xung đột (Ví dụ: cùng Room, cùng Teacher)
+    neighbors = GetNeighbors(variable) 
+
+    for each neighbor in neighbors:
+        if neighbor not in Assignment:
+            valid_values_for_neighbor = []
+
+            for each value in Domains[neighbor]:
+                // Giả lập đưa vào và kiểm tra
+                if CheckHardConstraints(neighbor, value, Assignment U {variable=assigned_value}):
+                    valid_values_for_neighbor.add(value)
+
+            if valid_values_for_neighbor is EMPTY:
+                // Một biến láng giềng không còn lựa chọn nào -> Nhánh này vô hiệu hoá
+                return FAILURE
+
+            // Ghi nhận miền giá trị được thu hẹp
+            inferences[neighbor] = valid_values_for_neighbor
+
+    return inferences
+
+5. Hàm Tính điểm Ràng buộc Mềm (Soft Constraint Scoring)
+Hàm này chạy ngầm phía dưới khi OrderDomainValues gọi đến để ưu tiên gán LCV.
+function ScoreSoftConstraints(Assignment):
+    score = 0
+
+    // Phân tích giáo viên
+    for each teacher in AllTeachers():
+        sessions = GetSessionsForTeacher(Assignment, teacher)
+        sessions = SortByTime(sessions)
+
+        for i = 0 to length(sessions) - 2:
+            gap = sessions[i+1].startTime - sessions[i].endTime
+
+            if gap <= 30 minutes:
+                score += 10 // Thưởng (Liên tiếp)
+            else if gap > 120 minutes:
+                score -= round(gap / 60) * 5 // Phạt (Trống lịch quá dài)
+
+    return score
+

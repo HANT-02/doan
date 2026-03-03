@@ -1,0 +1,55 @@
+@startuml 02_admin
+/' 
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Mô tả chi tiết các Use Case dành riêng cho vai trò Admin trong hệ thống.
+Phạm vi: Tập trung vào các nghiệp vụ quản lý lõi (Core Management) và tương tác với module xếp lịch.
+Assumptions:
+- Admin có quyền cao nhất để thiết lập số liệu gốc bản quyền (Tài khoản, Hồ sơ, Chương trình, Khóa học, Lớp, Phòng).
+- Mọi tương tác xếp lịch đều bắt nguồn từ quản trị viên sau khi chuẩn bị xong dữ liệu.
+'/
+
+title Use Case Diagram - Role Admin
+
+left to right direction
+
+actor Admin as admin
+actor "AI Agent" as ai
+
+usecase "Đăng nhập" as uc_login
+
+package "Báo cáo & Phân quyền" {
+  usecase "Xem Dashboard tổng quan" as uc_reports
+  usecase "Quản lý Tài khoản & Phân quyền" as uc_acc
+}
+
+package "Quản lý Core Modules" {
+  usecase "Quản lý Hồ sơ & Pháp lý" as uc_legal
+  usecase "Quản lý Chương trình & Khóa học" as uc_prog
+  usecase "Quản lý Lớp học" as uc_class
+  usecase "Quản lý Phòng học" as uc_room
+}
+
+package "Cấu hình Xếp lịch (Scheduling)" {
+  usecase "Khởi chạy Xếp lịch tự động" as uc_trigger
+  usecase "Giải quyết xung đột (Conflict Resolution)" as uc_conflict
+  usecase "Xem Preview Lịch" as uc_preview
+}
+
+admin --> uc_login
+admin --> uc_reports
+admin --> uc_acc
+admin --> uc_legal
+admin --> uc_prog
+admin --> uc_class
+admin --> uc_room
+
+admin --> uc_trigger
+admin --> uc_conflict
+admin --> uc_preview
+
+uc_trigger ..> (Cơ chế Backtracking & CSP) : <<include>>
+(Cơ chế Backtracking & CSP) <-- ai
+
+uc_conflict ..> uc_preview : <<extend>>
+
+@enduml

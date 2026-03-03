@@ -1,0 +1,55 @@
+@startuml 03_constraints
+/'
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Mô hình hóa các Component thực thi kiểm tra Ràng buộc (Constraints Validation Pipeline).
+Phạm vi: Các Checker Component riêng biệt được Engine gọi trong vòng lặp CSP.
+Assumptions:
+- Tách biệt Hard Constraints (trả rề False nếu vi phạm) và Soft Constraints (trả về Negative Score/Penalty).
+'/
+
+title Component Diagram - Constraints Evaluation Pipeline
+
+package "CSP Core Engine" {
+  [Backtracking Solver] as Search
+}
+
+package "Constraint Evaluators (Strategy Pattern)" {
+  
+  interface "SystemConstraint" as IConstraint
+  
+  package "Hard Constraints (Must Pass)" {
+    [Teacher Conflict Checker] as TC
+    [Room Conflict Checker] as RC
+    [Room Capacity Validator] as CapC
+    [Time Rule (TT29) Validator] as TimeC
+  }
+  
+  package "Soft Constraints (Scoring)" {
+    [Soft Constraint Scorer] as Scorer
+    [Consecutive Session Analyzer] as CSA
+    [Gap Minimizer Penalty] as GapP
+  }
+}
+
+Search --> IConstraint : calls `.evaluate(assignment)`
+
+IConstraint <|-- TC
+IConstraint <|-- RC
+IConstraint <|-- CapC
+IConstraint <|-- TimeC
+
+IConstraint <|-- Scorer
+Scorer *-- CSA : internal
+Scorer *-- GapP : internal
+
+note top of Scorer
+  Không block assignment, 
+  nhưng trả về Heuristic Score âm 
+  nếu vi phạm.
+end note
+
+note bottom of TimeC
+  Đảm bảo EndTime(Session) <= 22:00
+end note
+
+@enduml

@@ -1,0 +1,78 @@
+@startuml 04_auto_scheduling_csp
+/'
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Trực quan hóa tiến trình kích hoạt và xử lý thuật toán Xếp lịch bằng CSP.
+Phạm vi: Frontend gọi API trigger, Usecase lấy dữ liệu chuẩn bị Domains và Constraints rồi gọi giải thuật.
+Assumptions:
+- CSP Engine (Backtracking Solver) được tích hợp trực tiếp hoặc qua Message Queue. Ở đây sơ đồ biểu diễn bằng Internal Logic (Usecase trực tiếp gọi core algorithm package).
+'/
+
+title Sequence Diagram - 04. Auto Scheduling Workflow (CSP Base)
+
+actor Admin as admin
+participant "Frontend" as fe
+participant "SchedulingController" as ctrl
+participant "SchedulingUsecase" as uc
+participant "BacktrackingSolver\n(Engine CSP)" as solver
+participant "ConstraintChecker" as checker
+database "Database" as db
+
+admin -> fe : Chọn Tham số (Khoảng thời gian, Chọn Lớp) -> Nhấn "Chạy Xếp Lịch"
+activate fe
+fe -> ctrl : POST /api/v1/scheduling/auto-run {params}
+activate ctrl
+
+ctrl -> uc : RunAutoScheduler(ctx, params)
+activate uc
+
+uc -> db : Load Data (Classes, Teachers, Rooms, TimeSlots)
+activate db
+db --> uc : Master Data
+deactivate db
+
+uc -> solver : InitializeSolver(Variables, Domains)
+activate solver
+
+loop Trả về kết quả tốt nhất (Best Candidate)
+    solver -> solver : SelectUnassignedVariable (MRV)
+    solver -> solver : OrderDomainValues (LCV)
+    
+    solver -> checker : Evaluate Hard/Soft Constraints(Assignment)
+    activate checker
+    checker --> solver : Valid / Invalid
+    deactivate checker
+    
+    alt If Valid
+        solver -> solver : ForwardChecking(Prune Domains)
+        solver -> solver : Backtrack(NextLevel)
+    else Invalid
+        solver -> solver : Undo Assignment
+    end
+end
+
+solver --> uc : Trả về Lịch học dự thảo (Candidate Schedule) & Xung đột
+deactivate solver
+
+uc -> db : Lưu trữ nháp vào mảng Schedule (Status: PREVIEW)
+activate db
+db --> uc : Success
+deactivate db
+
+uc --> ctrl : Trả về Schedule Draft DTO
+ctrl --> fe : 200 OK (Schedule Payload)
+
+fe --> admin : Hiển thị Lịch Preview (Có highlight chỗ xung đột để sửa tay)
+
+opt Nhánh Resolve
+    admin -> fe : Chỉnh sửa kéo thả xung đột (Resolve)
+    fe -> ctrl : POST /api/v1/scheduling/commit
+    ctrl -> db : UPDATE Status -> ACTIVE
+    db --> ctrl : OK
+    ctrl --> fe : 200 OK
+end
+
+deactivate uc
+deactivate ctrl
+deactivate fe
+
+@enduml

@@ -1,0 +1,54 @@
+@startuml 02_backtracking_flow
+/'
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Mô hình hóa tiến trình chạy của thuật toán Backtracking Search kết hợp Forward Checking.
+Phạm vi: Luồng đi từ lúc bắt đầu (rỗng) cho đến khi tìm được Assignment hoàn chỉnh hoặc trả về Failure.
+Assumptions:
+- Cấu trúc Recursive Backtracking.
+- Áp dụng các rules cơ bản của MRV heuristic và LCV ordering.
+'/
+
+title Activity Diagram - Backtracking CSP Flow
+
+start
+:Initialize Assignment = {};
+:Load Variables(V) and Domains(D);
+
+partition "Backtracking Recursive Function" {
+  label loop_start
+  if (Assignment is Complete?) then (Yes)
+    :Return Assignment (Success);
+    stop
+  else (No)
+    :Select Unassigned Variable **V**\n(Using MRV Heuristic);
+    
+    :Order Values in Domain(V)\n(Using LCV Heuristic);
+    
+    while (More values to try for V?) is (Yes)
+      :Pick value **val**;
+      
+      if (Is **val** consistent with Assignment?) then (Yes)
+        :Add {V = val} to Assignment;
+        
+        :Run Forward Checking\n(Prune Domains of neighbors);
+        if (Any Domain becomes Empty?) then (Yes)
+           :Undo Forward Checking (Restore Domains);
+        else (No)
+           :Recursive Call Backtracking();
+           if (Result is Success?) then (Yes)
+              :Return Assignment;
+              stop
+           endif
+        endif
+        
+        :Remove {V = val} from Assignment\n(Backtrack step);
+      else (No/Conflict)
+        :Ignore **val**;
+      endif
+    endwhile (No more values)
+  endif
+}
+:Return Failure (Cannot resolve);
+stop
+
+@enduml

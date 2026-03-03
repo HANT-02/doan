@@ -1,0 +1,42 @@
+@startuml 04_student_parent
+/' 
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Thể hiện các tính năng cổng thông tin phục vụ cho Học sinh và Phụ huynh.
+Phạm vi: Tra cứu thông tin, tương tác hỗ trợ, đóng học phí (Deferred) và Chatbot scaffolding.
+Assumptions:
+- Học sinh và Phụ huynh được gộp chung do chung nhu cầu theo dõi kết quả, lịch học.
+- Chatbot là một AI Assistant được tích hợp sớm (scaffold) để tư vấn thông tin và hỏi đáp tự động.
+'/
+
+title Use Case Diagram - Role Student & Parent
+
+left to right direction
+
+actor "Học sinh / Phụ huynh" as sp
+actor "AI Chatbot" as ai
+
+usecase "Đăng nhập" as uc_login
+
+package "Cổng thông tin Học vụ (Portal)" {
+  usecase "Xem thời khóa biểu" as uc_timetable
+  usecase "Xem kết quả học tập" as uc_result
+  usecase "Xem lịch sử điểm danh" as uc_attendance
+  usecase "Yêu cầu xin phép nghỉ" as uc_leave
+  usecase "Tư vấn & Xem báo cáo học phí" as uc_fee
+}
+
+package "Hỗ trợ (Scaffold)" {
+  usecase "Hỏi đáp với AI Chatbot" as uc_chat
+}
+
+sp --> uc_login
+sp --> uc_timetable
+sp --> uc_result
+sp --> uc_attendance
+sp --> uc_leave
+sp --> uc_fee
+
+sp --> uc_chat
+uc_chat <-- ai
+
+@enduml

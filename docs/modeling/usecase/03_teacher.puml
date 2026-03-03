@@ -1,0 +1,46 @@
+@startuml 03_teacher
+/' 
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Đặc tả các nghiệp vụ liên quan trực tiếp đến Giáo viên trong quá trình giảng dạy.
+Phạm vi: Các thao tác học vụ hàng ngày (lịch, điểm danh, sổ đầu bài) và tương tác với AI Audit.
+Assumptions:
+- Giáo viên phải tương tác thường xuyên với hệ thống để điểm danh, viết sổ đầu bài.
+- Mọi tài liệu giáo viên dùng dạy học bắt buộc tải lên để AI Audit và hệ thống duyệt.
+'/
+
+title Use Case Diagram - Role Teacher
+
+left to right direction
+
+actor "Giáo viên" as teacher
+actor "Học sinh" as student
+
+usecase "Đăng nhập" as uc_login
+
+package "Quản lý Học vụ" {
+  usecase "Xem thời khóa biểu" as uc_timetable
+  usecase "Điểm danh" as uc_attendance
+  usecase "Ghi sổ đầu bài & Nhận xét" as uc_journal
+  usecase "Yêu cầu dạy thay / Xin nghỉ" as uc_substitute
+}
+
+package "Tài liệu & Kiểm duyệt (AI Audit)" {
+  usecase "Tải tài liệu giảng dạy" as uc_upload
+  usecase "Xem trạng thái kiểm duyệt" as uc_view_status
+  usecase "Tiếp nhận phản hồi Audit" as uc_feedback
+}
+
+teacher --> uc_login
+teacher --> uc_timetable
+teacher --> uc_attendance
+teacher --> uc_journal
+teacher --> uc_substitute
+
+teacher --> uc_upload
+teacher --> uc_view_status
+teacher --> uc_feedback
+
+uc_attendance <-- student : tham gia
+uc_journal ..> uc_attendance : <<include>>
+
+@enduml

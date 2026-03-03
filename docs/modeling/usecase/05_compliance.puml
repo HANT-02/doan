@@ -1,0 +1,40 @@
+@startuml 05_compliance
+/' 
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Đặc tả nghiệp vụ của nhân viên Compliance (Kiểm soát chất lượng đào tạo).
+Phạm vi: Xử lý các tài liệu đã được AI dán nhãn rủi ro và các báo cáo liên quan.
+Assumptions:
+- Tương tác chủ yếu qua danh sách tài liệu chờ duyệt do AI tự động flag.
+- Quyết định phê duyệt/từ chối của Compliance có quyền sinh định hướng cuối cùng về tài liệu được dùng giảng dạy.
+'/
+
+title Use Case Diagram - Role Compliance Officer
+
+left to right direction
+actor "Compliance Officer" as co
+actor "AI Agent" as ai
+actor "Giáo viên" as teacher
+
+usecase "Đăng nhập" as uc_login
+
+package "Quản lý Chấp hành (Compliance Dashboard)" {
+  usecase "Xem danh sách tài liệu bị cảnh báo" as uc_flagged
+  usecase "Phê duyệt / Từ chối tài liệu" as uc_approve
+  usecase "Xem lịch sử quét (Audit Logs)" as uc_logs
+  usecase "Xem Báo cáo Tuân thủ (Scaffold)" as uc_reports
+}
+
+usecase "Nhận Thông báo Quyết định" as uc_notify
+
+co --> uc_login
+co --> uc_flagged
+co --> uc_approve
+co --> uc_logs
+co --> uc_reports
+
+uc_approve ..> uc_notify : <<include>>
+uc_notify --> teacher
+
+uc_flagged <-- ai : Cập nhật rủi ro tự động
+
+@enduml

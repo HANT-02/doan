@@ -1,0 +1,86 @@
+@startuml 02_ai_audit
+/'
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Mô hình hóa các thực thể liên quan đến quy trình AI Audit tài liệu giảng dạy.
+Phạm vi: Quản lý tài liệu (Material), Lịch sử phân tích AI, Nhãn cảnh báo và Quyết định phê duyệt.
+Assumptions:
+- Mỗi Material có thể được quét nhiều lần tạo ra nhiều AuditLog.
+- Kết quả AI Analysis sẽ chỉ định 1 Label cho Material/AuditLog.
+- ComplianceOfficer tạo ApprovalDecision dựa trên AuditLog.
+'/
+
+title Class Diagram - Material & AI Audit
+
+enum MaterialStatus {
+  UPLOADED
+  SCANNING
+  AI_REVIEWED
+  APPROVED
+  REJECTED
+}
+
+enum LabelSeverity {
+  SAFE
+  WARNING
+  DANGER
+}
+
+class Teacher {
+  + id : UUID
+}
+
+class ComplianceOfficer {
+  + user_id : UUID
+}
+
+class Material {
+  + id : UUID
+  + teacher_id : UUID
+  + file_url : String
+  + file_type : String
+  + uploaded_at : DateTime
+  + status : MaterialStatus
+}
+
+class AuditLog {
+  + id : UUID
+  + material_id : UUID
+  + triggered_at : DateTime
+  + completed_at : DateTime
+  + raw_ocr_text : String
+}
+
+class AIAnalysisResult {
+  + id : UUID
+  + audit_log_id : UUID
+  + confidence_score : Float
+  + reasoning : String
+  + detected_issues : List<String>
+}
+
+class Label {
+  + id : UUID
+  + code : String
+  + name : String
+  + severity : LabelSeverity
+  + description : String
+}
+
+class ApprovalDecision {
+  + id : UUID
+  + audit_log_id : UUID
+  + compliance_officer_id : UUID
+  + is_approved : Boolean
+  + reject_reason : String
+  + decided_at : DateTime
+}
+
+' Relationships
+Teacher "1" -- "0..*" Material : uploads
+Material "1" *-- "0..*" AuditLog : has history
+AuditLog "1" *-- "1" AIAnalysisResult : generates
+AIAnalysisResult "0..*" -- "1" Label : assigns
+AuditLog "1" -- "0..1" ApprovalDecision : receives
+ComplianceOfficer "1" -- "0..*" ApprovalDecision : makes
+
+@enduml

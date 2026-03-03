@@ -1,0 +1,36 @@
+@startuml 07_scheduling_flow
+/' 
+MÔ TẢ SƠ ĐỒ
+Mục tiêu: Trình bày trình tự nghiệp vụ cho luồng Phân công Giảng dạy (Scheduling Flow).
+Phạm vi: Quy trình từ việc chuẩn bị tham số đầu vào đến khi ra một thời khóa biểu hoàn chỉnh.
+Assumptions:
+- Admin đã cấu hình đủ ràng buộc cơ sở (lớp, phòng, GV, ca học).
+- Thuật toán CSP có thể không giải quyêt 100% Conflict, yêu cầu Admin phải Preview và Resolve thủ công ở bước cuối.
+'/
+
+title Use Case Flow - Scheduling Process
+
+actor Admin as admin
+actor "AI Scheduler (System)" as ai
+
+package "Quy trình Xếp lịch Tự động" {
+  usecase "Nhập tham số & Kích hoạt (Trigger)" as step1
+  usecase "Chạy Engine xếp lịch (CSP)" as step2
+  usecase "Xem bản dựng lịch tạm (Preview)" as step3
+  usecase "Giải quyết xung đột (Conflict Resolution)" as step4
+  usecase "Xác nhận & Ban hành lịch (Commit Schedule)" as step5
+}
+
+admin --> step1
+step1 ..> step2 : <<include>>
+ai ---> step2
+
+step2 --> step3 : Cập nhật UI
+admin --> step3
+
+step4 .down.> step3 : <<extend>>
+admin --> step4
+
+admin --> step5
+
+@enduml
