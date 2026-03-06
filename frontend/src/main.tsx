@@ -7,11 +7,15 @@ import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme';
 import { Toaster } from 'sonner'; // Import Toaster
 
+import ErrorBoundary from './components/common/ErrorBoundary';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
       <Toaster richColors position="top-right" /> {/* Add Toaster component */}
     </ThemeProvider>
   </StrictMode>,

@@ -1,4 +1,6 @@
 import { baseApi } from './baseApi';
+import { normalizeDetailEnvelope, normalizeListEnvelope } from './responseUtils';
+import type { Student } from './studentApi';
 
 export interface Class {
     id: string;
@@ -37,6 +39,70 @@ export interface ClassResponse {
     data: Class;
 }
 
+export interface ClassRoster {
+    class_id: string;
+    max_students: number;
+    capacity_limit: number;
+    current_count: number;
+    students: Student[];
+}
+
+export interface ClassRosterResponse {
+    success: boolean;
+    message: string;
+    data: ClassRoster;
+}
+
+interface RawClassListResponse {
+    success?: boolean;
+    message?: string;
+    data?: {
+        classes?: Class[];
+        Classes?: Class[];
+        pagination?: {
+            items_per_page?: number;
+            total_items?: number;
+            current_page?: number;
+            total_pages?: number;
+        };
+        Pagination?: {
+            items_per_page?: number;
+            total_items?: number;
+            current_page?: number;
+            total_pages?: number;
+            ItemsPerPage?: number;
+            TotalItems?: number;
+            CurrentPage?: number;
+            TotalPages?: number;
+        };
+    };
+}
+
+interface RawClassResponse {
+    success?: boolean;
+    message?: string;
+    data?: {
+        Class?: Class;
+    } | Class;
+}
+
+interface RawClassRosterResponse {
+    success?: boolean;
+    message?: string;
+    data?: {
+        class_id?: string;
+        max_students?: number;
+        capacity_limit?: number;
+        current_count?: number;
+        students?: Student[];
+        ClassID?: string;
+        MaxStudents?: number;
+        CapacityLimit?: number;
+        CurrentCount?: number;
+        Students?: Student[];
+    };
+}
+
 export const classApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getClasses: builder.query<ListClassesResponse, { page?: number; limit?: number; search?: string; status?: string; sortBy?: string; sortOrder?: string }>({
@@ -44,19 +110,15 @@ export const classApi = baseApi.injectEndpoints({
                 url: '/v1/classes',
                 params,
             }),
-            transformResponse: (response: any) => {
+            transformResponse: (response: RawClassListResponse) => {
+                const normalized = normalizeListEnvelope<Class>(response, ['classes', 'Classes']);
                 return {
-                    success: response.success,
-                    message: response.message,
+                    success: normalized.success,
+                    message: normalized.message,
                     data: {
-                        classes: response.data?.Classes || [],
-                        pagination: {
-                            items_per_page: response.data?.Pagination?.ItemsPerPage || 10,
-                            total_items: response.data?.Pagination?.TotalItems || 0,
-                            current_page: response.data?.Pagination?.CurrentPage || 1,
-                            total_pages: response.data?.Pagination?.TotalPages || 1,
-                        }
-                    }
+                        classes: normalized.items,
+                        pagination: normalized.pagination,
+                    },
                 };
             },
             providesTags: (result) =>
@@ -69,11 +131,23 @@ export const classApi = baseApi.injectEndpoints({
         }),
         getClassById: builder.query<ClassResponse, string>({
             query: (id) => `/v1/classes/${id}`,
-            transformResponse: (response: any) => ({
-                ...response,
-                data: response.data?.Class || response.data
-            }),
+            transformResponse: (response: RawClassResponse) => normalizeDetailEnvelope<Class>(response, ['Class']) as ClassResponse,
             providesTags: (_result, _error, id) => [{ type: 'Class', id }],
+        }),
+        getClassRoster: builder.query<ClassRosterResponse, string>({
+            query: (id) => `/v1/classes/${id}/students`,
+            transformResponse: (response: RawClassRosterResponse) => ({
+                success: response.success ?? false,
+                message: response.message ?? '',
+                data: {
+                    class_id: response.data?.class_id || response.data?.ClassID || '',
+                    max_students: response.data?.max_students || response.data?.MaxStudents || 0,
+                    capacity_limit: response.data?.capacity_limit || response.data?.CapacityLimit || 0,
+                    current_count: response.data?.current_count || response.data?.CurrentCount || 0,
+                    students: response.data?.students || response.data?.Students || [],
+                },
+            }),
+            providesTags: (_result, _error, id) => [{ type: 'Class', id }, { type: 'Class', id: `ROSTER-${id}` }],
         }),
         createClass: builder.mutation<ClassResponse, Partial<Class>>({
             query: (body) => ({
@@ -98,13 +172,41 @@ export const classApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: [{ type: 'Class', id: 'LIST' }],
         }),
+        enrollStudents: builder.mutation<{ success: boolean; message: string; data?: { enrolled?: number } }, { id: string; student_ids: string[] }>({
+            query: ({ id, student_ids }) => ({
+                url: `/v1/classes/${id}/students`,
+                method: 'POST',
+                body: { student_ids },
+            }),
+            invalidatesTags: (_result, _error, { id }) => [{ type: 'Class', id }, { type: 'Class', id: `ROSTER-${id}` }, { type: 'Student', id: 'LIST' }],
+        }),
+        removeStudents: builder.mutation<{ success: boolean; message: string }, { id: string; student_ids: string[] }>({
+            query: ({ id, student_ids }) => ({
+                url: `/v1/classes/${id}/students`,
+                method: 'DELETE',
+                body: { student_ids },
+            }),
+            invalidatesTags: (_result, _error, { id }) => [{ type: 'Class', id }, { type: 'Class', id: `ROSTER-${id}` }, { type: 'Student', id: 'LIST' }],
+        }),
+        assignTeacher: builder.mutation<{ success: boolean; message: string }, { id: string; teacher_id: string }>({
+            query: ({ id, teacher_id }) => ({
+                url: `/v1/classes/${id}/teacher`,
+                method: 'PUT',
+                body: { teacher_id },
+            }),
+            invalidatesTags: (_result, _error, { id }) => [{ type: 'Class', id }, { type: 'Class', id: 'LIST' }, { type: 'Teacher', id: 'LIST' }],
+        }),
     }),
 });
 
 export const {
     useGetClassesQuery,
     useGetClassByIdQuery,
+    useGetClassRosterQuery,
     useCreateClassMutation,
     useUpdateClassMutation,
     useDeleteClassMutation,
+    useEnrollStudentsMutation,
+    useRemoveStudentsMutation,
+    useAssignTeacherMutation,
 } = classApi;

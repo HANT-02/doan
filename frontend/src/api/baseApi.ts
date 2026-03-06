@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import type { RootState } from '../store';
 import { logout } from '../store/authSlice';
 
@@ -16,8 +17,12 @@ const baseQuery = fetchBaseQuery({
 });
 
 // Create custom baseQuery that handles 401s auto-logout
-const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
-    let result = await baseQuery(args, api, extraOptions);
+const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+    args,
+    api,
+    extraOptions
+) => {
+    const result = await baseQuery(args, api, extraOptions);
 
     if (result.error && result.error.status === 401) {
         // Dispatch logout on 401
@@ -32,5 +37,5 @@ export const baseApi = createApi({
     reducerPath: 'api',
     baseQuery: baseQueryWithReauth,
     endpoints: () => ({}),
-    tagTypes: ['Teacher', 'User', 'Class', 'Room', 'Student']
+    tagTypes: ['Teacher', 'User', 'Class', 'Room', 'Student', 'Program', 'Course', 'Scheduling', 'Audit', 'Material', 'Dashboard']
 });

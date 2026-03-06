@@ -12,8 +12,7 @@ import {
     Menu,
     MenuItem,
     ListItemIcon,
-    ListItemText,
-    useTheme
+    ListItemText
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -31,7 +30,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onMobileOpen }) => {
     const { user } = useAuth();
     const [logoutMutation] = useLogoutAccountMutation();
     const navigate = useNavigate();
-    const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {

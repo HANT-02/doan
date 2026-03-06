@@ -39,7 +39,7 @@ const RoomDialog = ({ open, onClose, onSubmit, room, isLoading }: RoomDialogProp
         reset,
         formState: { errors },
     } = useForm<RoomFormValues>({
-        resolver: zodResolver(roomSchema) as any,
+        resolver: zodResolver(roomSchema),
         defaultValues: {
             name: '',
             capacity: 30,
@@ -53,8 +53,8 @@ const RoomDialog = ({ open, onClose, onSubmit, room, isLoading }: RoomDialogProp
             reset({
                 name: room.name,
                 capacity: room.capacity,
-                location: room.location || '',
-                status: room.status,
+                location: room.location || room.address || '',
+                status: room.status || 'ACTIVE',
             });
         } else {
             reset({
@@ -115,7 +115,7 @@ const RoomDialog = ({ open, onClose, onSubmit, room, isLoading }: RoomDialogProp
                     <Grid size={12}>
                         <TextField
                             fullWidth
-                            label="Vị trí"
+                            label="Vị trí / địa chỉ"
                             multiline
                             rows={2}
                             {...register('location')}

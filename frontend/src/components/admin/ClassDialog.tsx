@@ -21,9 +21,9 @@ const classSchema = z.object({
     name: z.string().min(1, 'Tên lớp không được để trống'),
     start_date: z.string().min(1, 'Ngày bắt đầu không được để trống'),
     end_date: z.string().optional(),
-    max_students: z.coerce.number().min(1, 'Sĩ số tối đa phải lớn hơn 0'),
+    max_students: z.number().min(1, 'Sĩ số tối đa phải lớn hơn 0'),
     status: z.enum(['OPEN', 'CLOSED', 'CANCELLED']),
-    price: z.coerce.number().min(0, 'Học phí không được âm'),
+    price: z.number().min(0, 'Học phí không được âm'),
     teacher_id: z.string().optional(),
     program_id: z.string().optional(),
     course_id: z.string().optional(),
@@ -31,17 +31,23 @@ const classSchema = z.object({
 });
 
 type ClassFormValues = z.infer<typeof classSchema>;
+type ClassDialogSubmitValues = Omit<ClassFormValues, 'teacher_id' | 'program_id' | 'course_id'> & {
+    teacher_id?: string;
+    program_id?: string;
+    course_id?: string;
+};
 
 interface ClassDialogProps {
     open: boolean;
     onClose: () => void;
-    onSubmit: (data: ClassFormValues) => Promise<void>;
+    onSubmit: (data: ClassDialogSubmitValues) => Promise<void>;
     classData?: Class | null;
     isLoading?: boolean;
 }
 
 const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDialogProps) => {
     const { data: teachersData } = useGetTeachersQuery({ limit: 100 });
+    const teachers = teachersData?.data?.teachers || [];
     // Note: Program and Course APIs are missing in current repo evidence, 
     // using placeholder selectors for now or simple text IDs.
 
@@ -51,7 +57,7 @@ const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDia
         reset,
         formState: { errors },
     } = useForm<ClassFormValues>({
-        resolver: zodResolver(classSchema) as any,
+        resolver: zodResolver(classSchema),
         defaultValues: {
             code: '',
             name: '',
@@ -98,11 +104,11 @@ const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDia
         // Clean up empty strings for optional IDs
         const cleanedData = {
             ...data,
-            teacher_id: data.teacher_id || null,
-            program_id: data.program_id || null,
-            course_id: data.course_id || null,
+            teacher_id: data.teacher_id || undefined,
+            program_id: data.program_id || undefined,
+            course_id: data.course_id || undefined,
         };
-        await onSubmit(cleanedData as any);
+        await onSubmit(cleanedData);
         onClose();
     };
 
@@ -158,7 +164,7 @@ const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDia
                             fullWidth
                             label="Sĩ số tối đa"
                             type="number"
-                            {...register('max_students')}
+                            {...register('max_students', { valueAsNumber: true })}
                             error={!!errors.max_students}
                             helperText={errors.max_students?.message}
                         />
@@ -168,7 +174,7 @@ const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDia
                             fullWidth
                             label="Học phí"
                             type="number"
-                            {...register('price')}
+                            {...register('price', { valueAsNumber: true })}
                             error={!!errors.price}
                             helperText={errors.price?.message}
                         />
@@ -197,9 +203,9 @@ const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDia
                             defaultValue=""
                         >
                             <MenuItem value=""><em>Chưa gán</em></MenuItem>
-                            {teachersData?.data?.teachers?.map((t: any) => (
+                            {teachers.map((t) => (
                                 <MenuItem key={t.id} value={t.id}>
-                                    {t.user?.full_name || 'N/A'} ({t.teacher_code || 'N/A'})
+                                    {t.full_name || 'N/A'} ({t.code || 'N/A'})
                                 </MenuItem>
                             ))}
                         </TextField>

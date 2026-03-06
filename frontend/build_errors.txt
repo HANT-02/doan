@@ -1,0 +1,96 @@
+
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+src/api/classApi.ts(112,13): error TS2322: Type '(response: RawClassListResponse) => { success: boolean | undefined; message: string | undefined; data: { classes: Class[]; pagination: { items_per_page: number; total_items: number; current_page: number; total_pages: number; }; }; }' is not assignable to type '(baseQueryReturnValue: unknown, meta: {} | undefined, arg: { page?: number | undefined; limit?: number | undefined; search?: string | undefined; status?: string | undefined; sortBy?: string | undefined; sortOrder?: string | undefined; }) => ListClassesResponse | Promise<...>'.
+  Type '{ success: boolean | undefined; message: string | undefined; data: { classes: Class[]; pagination: { items_per_page: number; total_items: number; current_page: number; total_pages: number; }; }; }' is not assignable to type 'ListClassesResponse | Promise<ListClassesResponse>'.
+    Type '{ success: boolean | undefined; message: string | undefined; data: { classes: Class[]; pagination: { items_per_page: number; total_items: number; current_page: number; total_pages: number; }; }; }' is not assignable to type 'ListClassesResponse'.
+      Types of property 'success' are incompatible.
+        Type 'boolean | undefined' is not assignable to type 'boolean'.
+          Type 'undefined' is not assignable to type 'boolean'.
+src/api/classApi.ts(137,13): error TS2322: Type '(response: RawClassResponse) => { data: Class; success?: boolean; message?: string; }' is not assignable to type '(baseQueryReturnValue: unknown, meta: {} | undefined, arg: string) => ClassResponse | Promise<ClassResponse>'.
+  Type '{ data: Class; success?: boolean; message?: string; }' is not assignable to type 'ClassResponse | Promise<ClassResponse>'.
+    Type '{ data: Class; success?: boolean; message?: string; }' is not assignable to type 'ClassResponse'.
+      Types of property 'success' are incompatible.
+        Type 'boolean | undefined' is not assignable to type 'boolean'.
+          Type 'undefined' is not assignable to type 'boolean'.
+src/api/classApi.ts(145,13): error TS2322: Type '(response: RawClassRosterResponse) => { success: boolean | undefined; message: string | undefined; data: { class_id: string; max_students: number; capacity_limit: number; current_count: number; students: Student[]; }; }' is not assignable to type '(baseQueryReturnValue: unknown, meta: {} | undefined, arg: string) => ClassRosterResponse | Promise<ClassRosterResponse>'.
+  Type '{ success: boolean | undefined; message: string | undefined; data: { class_id: string; max_students: number; capacity_limit: number; current_count: number; students: Student[]; }; }' is not assignable to type 'ClassRosterResponse | Promise<ClassRosterResponse>'.
+    Type '{ success: boolean | undefined; message: string | undefined; data: { class_id: string; max_students: number; capacity_limit: number; current_count: number; students: Student[]; }; }' is not assignable to type 'ClassRosterResponse'.
+      Types of property 'success' are incompatible.
+        Type 'boolean | undefined' is not assignable to type 'boolean'.
+          Type 'undefined' is not assignable to type 'boolean'.
+src/api/courseApi.ts(45,13): error TS2322: Type '(params: void | ListCoursesParams) => { url: string; params: void | ListCoursesParams; }' is not assignable to type '(arg: void | ListCoursesParams) => string | FetchArgs'.
+  Type '{ url: string; params: void | ListCoursesParams; }' is not assignable to type 'string | FetchArgs'.
+    Type '{ url: string; params: void | ListCoursesParams; }' is not assignable to type 'FetchArgs'.
+      Types of property 'params' are incompatible.
+        Type 'void | ListCoursesParams' is not assignable to type 'Record<string, any> | undefined'.
+          Type 'void' is not assignable to type 'Record<string, any> | undefined'.
+src/api/programApi.ts(2,10): error TS1484: 'Course' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/api/programApi.ts(41,13): error TS2322: Type '(params: void | ListProgramsParams) => { url: string; params: void | ListProgramsParams; }' is not assignable to type '(arg: void | ListProgramsParams) => string | FetchArgs'.
+  Type '{ url: string; params: void | ListProgramsParams; }' is not assignable to type 'string | FetchArgs'.
+    Type '{ url: string; params: void | ListProgramsParams; }' is not assignable to type 'FetchArgs'.
+      Types of property 'params' are incompatible.
+        Type 'void | ListProgramsParams' is not assignable to type 'Record<string, any> | undefined'.
+          Type 'void' is not assignable to type 'Record<string, any> | undefined'.
+src/api/teacherApi.ts(74,13): error TS2322: Type '(response: RawTeacherListResponse) => { success: boolean | undefined; message: string | undefined; data: { teachers: Teacher[]; pagination: { total_pages: number; total_items: number; current_page: number; items_per_page: number; }; }; }' is not assignable to type '(baseQueryReturnValue: unknown, meta: {} | undefined, arg: ListTeachersParams) => ListTeachersResponse | Promise<ListTeachersResponse>'.
+  Type '{ success: boolean | undefined; message: string | undefined; data: { teachers: Teacher[]; pagination: { total_pages: number; total_items: number; current_page: number; items_per_page: number; }; }; }' is not assignable to type 'ListTeachersResponse | Promise<ListTeachersResponse>'.
+    Type '{ success: boolean | undefined; message: string | undefined; data: { teachers: Teacher[]; pagination: { total_pages: number; total_items: number; current_page: number; items_per_page: number; }; }; }' is not assignable to type 'ListTeachersResponse'.
+      Types of property 'success' are incompatible.
+        Type 'boolean | undefined' is not assignable to type 'boolean'.
+          Type 'undefined' is not assignable to type 'boolean'.
+src/components/admin/ClassDialog.tsx(60,9): error TS2322: Type 'Resolver<{ code: string; name: string; start_date: string; max_students: unknown; status: "OPEN" | "CLOSED" | "CANCELLED"; price: unknown; end_date?: string | undefined; teacher_id?: string | undefined; program_id?: string | undefined; course_id?: string | undefined; notes?: string | undefined; }, any, { ...; }>' is not assignable to type 'Resolver<{ code: string; name: string; start_date: string; max_students: number; status: "OPEN" | "CLOSED" | "CANCELLED"; price: number; end_date?: string | undefined; teacher_id?: string | undefined; program_id?: string | undefined; course_id?: string | undefined; notes?: string | undefined; }, any, { ...; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ code: string; name: string; start_date: string; max_students: number; status: "OPEN" | "CLOSED" | "CANCELLED"; price: number; end_date?: string | undefined; teacher_id?: string | undefined; program_id?: string | undefined; course_id?: string | undefined; notes?: string | undefined; }>' is not assignable to type 'ResolverOptions<{ code: string; name: string; start_date: string; max_students: unknown; status: "OPEN" | "CLOSED" | "CANCELLED"; price: unknown; end_date?: string | undefined; teacher_id?: string | undefined; program_id?: string | undefined; course_id?: string | undefined; notes?: string | undefined; }>'.
+      Type 'unknown' is not assignable to type 'number'.
+src/components/admin/ClassDialog.tsx(230,43): error TS2345: Argument of type '(data: ClassFormValues) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ code: string; name: string; start_date: string; max_students: number; status: "OPEN" | "CLOSED" | "CANCELLED"; price: number; end_date?: string | undefined; teacher_id?: string | undefined; program_id?: string | undefined; course_id?: string | undefined; notes?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ code: string; name: string; start_date: string; max_students: number; status: "OPEN" | "CLOSED" | "CANCELLED"; price: number; end_date?: string | undefined; teacher_id?: string | undefined; program_id?: string | undefined; course_id?: string | undefined; notes?: string | undefined; }': code, name, start_date, max_students, and 2 more.
+src/components/layout/AppHeader.tsx(34,11): error TS6133: 'theme' is declared but its value is never read.
+src/components/material/MaterialDetailDialog.tsx(80,48): error TS2322: Type '"error" | "default" | "success" | "warning"' is not assignable to type 'OverridableStringUnion<AlertColor, AlertPropsColorOverrides> | undefined'.
+  Type '"default"' is not assignable to type 'OverridableStringUnion<AlertColor, AlertPropsColorOverrides> | undefined'.
+src/config/nav.ts(7,5): error TS6133: 'Warning' is declared but its value is never read.
+src/config/nav.ts(8,5): error TS6133: 'BarChart' is declared but its value is never read.
+src/config/nav.ts(13,5): error TS6133: 'ChatBubble' is declared but its value is never read.
+src/pages/admin/AdminOverview.tsx(121,83): error TS18048: 'percent' is possibly 'undefined'.
+src/pages/admin/AdminOverview.tsx(126,66): error TS6133: 'entry' is declared but its value is never read.
+src/pages/admin/ClassesPage.tsx(422,17): error TS2322: Type '(formData: Partial<Class>) => Promise<void>' is not assignable to type '(data: ClassDialogSubmitValues) => Promise<void>'.
+  Types of parameters 'formData' and 'data' are incompatible.
+    Type 'ClassDialogSubmitValues' is not assignable to type 'Partial<Class>'.
+      Types of property 'program_id' are incompatible.
+        Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+          Type 'null' is not assignable to type 'string | undefined'.
+src/pages/admin/CoursePage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/pages/admin/CoursePage.tsx(17,20): error TS1484: 'GridColDef' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/CoursePage.tsx(17,32): error TS1484: 'GridRenderCellParams' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/CoursePage.tsx(17,54): error TS1484: 'GridPaginationModel' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/CoursePage.tsx(23,5): error TS1484: 'Course' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/CoursePage.tsx(39,25): error TS6133: 'course' is declared but its value is never read.
+src/pages/admin/DevToolsPage.tsx(41,35): error TS2339: Property 'pingCustom' does not exist on type '{} & {}'.
+src/pages/admin/DevToolsPage.tsx(42,41): error TS2339: Property 'internal_fetchBaseQuery' does not exist on type 'InternalActions'.
+src/pages/admin/DevToolsPage.tsx(90,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; md: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element; item: true; xs: number; md: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/admin/DevToolsPage.tsx(114,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; md: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element; item: true; xs: number; md: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/admin/DevToolsPage.tsx(141,22): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element; item: true; xs: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/admin/ProgramPage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/pages/admin/ProgramPage.tsx(18,20): error TS1484: 'GridColDef' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/ProgramPage.tsx(18,32): error TS1484: 'GridRenderCellParams' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/ProgramPage.tsx(18,54): error TS1484: 'GridPaginationModel' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/ProgramPage.tsx(24,5): error TS1484: 'Program' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/admin/ProgramPage.tsx(40,25): error TS6133: 'program' is declared but its value is never read.
+src/pages/admin/ProgramPage.tsx(44,25): error TS6133: 'program' is declared but its value is never read.

@@ -36,10 +36,9 @@ export const DevToolsPage = () => {
 
         const startTime = Date.now();
         try {
-            // Using RTK Query's fetchBaseQuery via a manual dispatch
             const result = await dispatch(
-                baseApi.endpoints.pingCustom?.initiate?.({ endpoint }) ||
-                baseApi.internalActions.internal_fetchBaseQuery({
+                (baseApi as any).endpoints.pingCustom?.initiate?.({ endpoint }) ||
+                (baseApi as any).internalActions.internal_fetchBaseQuery({
                     url: endpoint,
                     method: 'GET'
                 })
@@ -87,7 +86,7 @@ export const DevToolsPage = () => {
 
             <Grid container spacing={4}>
                 {/* Auth State Panel */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, height: '100%', borderRadius: 3 }}>
                         <Typography variant="h6" gutterBottom>Auth State</Typography>
                         <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
@@ -111,7 +110,7 @@ export const DevToolsPage = () => {
                 </Grid>
 
                 {/* API Ping Panel */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, height: '100%', borderRadius: 3 }}>
                         <Typography variant="h6" gutterBottom>API Ping Tests</Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
@@ -138,7 +137,7 @@ export const DevToolsPage = () => {
 
                 {/* Last Error Display */}
                 {lastError && (
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Alert severity="error" sx={{ borderRadius: 2 }}>
                             <AlertTitle>Last API Error</AlertTitle>
                             <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(211,47,47,0.05)', borderRadius: 1, overflowX: 'auto' }}>

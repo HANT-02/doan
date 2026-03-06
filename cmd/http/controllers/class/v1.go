@@ -14,26 +14,38 @@ import (
 var _ Controller = (*ControllerV1)(nil)
 
 type ControllerV1 struct {
-	createClassUseCase class.CreateClassUseCase
-	getClassUseCase    class.GetClassUseCase
-	updateClassUseCase class.UpdateClassUseCase
-	deleteClassUseCase class.DeleteClassUseCase
-	listClassesUseCase class.ListClassesUseCase
+	createClassUseCase    class.CreateClassUseCase
+	getClassUseCase       class.GetClassUseCase
+	getClassRosterUseCase class.GetClassRosterUseCase
+	updateClassUseCase    class.UpdateClassUseCase
+	deleteClassUseCase    class.DeleteClassUseCase
+	listClassesUseCase    class.ListClassesUseCase
+	enrollStudentsUseCase class.EnrollStudentsUseCase
+	removeStudentsUseCase class.RemoveStudentsUseCase
+	assignTeacherUseCase  class.AssignTeacherUseCase
 }
 
 func NewClassControllerV1(
 	createClassUseCase class.CreateClassUseCase,
 	getClassUseCase class.GetClassUseCase,
+	getClassRosterUseCase class.GetClassRosterUseCase,
 	updateClassUseCase class.UpdateClassUseCase,
 	deleteClassUseCase class.DeleteClassUseCase,
 	listClassesUseCase class.ListClassesUseCase,
+	enrollStudentsUseCase class.EnrollStudentsUseCase,
+	removeStudentsUseCase class.RemoveStudentsUseCase,
+	assignTeacherUseCase class.AssignTeacherUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
-		createClassUseCase: createClassUseCase,
-		getClassUseCase:    getClassUseCase,
-		updateClassUseCase: updateClassUseCase,
-		deleteClassUseCase: deleteClassUseCase,
-		listClassesUseCase: listClassesUseCase,
+		createClassUseCase:    createClassUseCase,
+		getClassUseCase:       getClassUseCase,
+		getClassRosterUseCase: getClassRosterUseCase,
+		updateClassUseCase:    updateClassUseCase,
+		deleteClassUseCase:    deleteClassUseCase,
+		listClassesUseCase:    listClassesUseCase,
+		enrollStudentsUseCase: enrollStudentsUseCase,
+		removeStudentsUseCase: removeStudentsUseCase,
+		assignTeacherUseCase:  assignTeacherUseCase,
 	}
 }
 
@@ -77,6 +89,17 @@ func (ctrl *ControllerV1) GetClass(c *gin.Context) {
 	}
 
 	rest.ResponseSuccess(c, http.StatusOK, "Class retrieved successfully", output.Class)
+}
+
+func (ctrl *ControllerV1) GetClassRoster(c *gin.Context) {
+	id := c.Param("id")
+	output, err := ctrl.getClassRosterUseCase.Execute(c.Request.Context(), class.GetClassRosterInput{ClassID: id})
+	if err != nil {
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to retrieve class roster", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, "Class roster retrieved successfully", output)
 }
 
 func (ctrl *ControllerV1) UpdateClass(c *gin.Context) {
@@ -145,4 +168,67 @@ func (ctrl *ControllerV1) ListClasses(c *gin.Context) {
 	}
 
 	rest.ResponseSuccess(c, http.StatusOK, "Classes retrieved successfully", output)
+}
+
+func (ctrl *ControllerV1) EnrollStudents(c *gin.Context) {
+	id := c.Param("id")
+	var req EnrollStudentsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	output, err := ctrl.enrollStudentsUseCase.Execute(c.Request.Context(), class.EnrollStudentsInput{
+		ClassID:    id,
+		StudentIDs: req.StudentIDs,
+	})
+
+	if err != nil {
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to enroll students", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, "Students enrolled successfully", output)
+}
+
+func (ctrl *ControllerV1) RemoveStudents(c *gin.Context) {
+	id := c.Param("id")
+	var req RemoveStudentsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	output, err := ctrl.removeStudentsUseCase.Execute(c.Request.Context(), class.RemoveStudentsInput{
+		ClassID:    id,
+		StudentIDs: req.StudentIDs,
+	})
+
+	if err != nil {
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to remove students", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, output.Message, nil)
+}
+
+func (ctrl *ControllerV1) AssignTeacher(c *gin.Context) {
+	id := c.Param("id")
+	var req AssignTeacherRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	output, err := ctrl.assignTeacherUseCase.Execute(c.Request.Context(), class.AssignTeacherInput{
+		ClassID:   id,
+		TeacherID: req.TeacherID,
+	})
+
+	if err != nil {
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to assign teacher", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, output.Message, nil)
 }

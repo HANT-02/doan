@@ -10,9 +10,13 @@ import (
 type Controller interface {
 	CreateClass(c *gin.Context)
 	GetClass(c *gin.Context)
+	GetClassRoster(c *gin.Context)
 	UpdateClass(c *gin.Context)
 	DeleteClass(c *gin.Context)
 	ListClasses(c *gin.Context)
+	EnrollStudents(c *gin.Context)
+	RemoveStudents(c *gin.Context)
+	AssignTeacher(c *gin.Context)
 }
 
 // RegisterRoutesV1 registers class routes with the router
@@ -26,9 +30,13 @@ func RegisterRoutesV1(router *gin.RouterGroup, ctrl Controller, configManager co
 	// Routes
 	v1.GET("", ctrl.ListClasses)
 	v1.GET("/:id", ctrl.GetClass)
+	v1.GET("/:id/students", ctrl.GetClassRoster)
 
 	// Admin-only operations
 	v1.POST("", authMiddleware, adminRole, ctrl.CreateClass)
 	v1.PUT("/:id", authMiddleware, adminRole, ctrl.UpdateClass)
 	v1.DELETE("/:id", authMiddleware, adminRole, ctrl.DeleteClass)
+	v1.POST("/:id/students", authMiddleware, adminRole, ctrl.EnrollStudents)
+	v1.DELETE("/:id/students", authMiddleware, adminRole, ctrl.RemoveStudents)
+	v1.PUT("/:id/teacher", authMiddleware, adminRole, ctrl.AssignTeacher)
 }

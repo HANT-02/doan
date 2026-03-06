@@ -22,6 +22,8 @@ type Class struct {
 	Course      Course         `gorm:"foreignKey:CourseID" json:"course"`
 	TeacherID   *string        `json:"teacher_id"`
 	Teacher     Teacher        `gorm:"foreignKey:TeacherID" json:"teacher"`
+	RoomID      *string        `json:"room_id"`
+	Room        Room           `gorm:"foreignKey:RoomID" json:"room"`
 	CreatedAt   time.Time      `gorm:"default:now()" json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`

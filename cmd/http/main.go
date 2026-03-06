@@ -4,8 +4,10 @@ import (
 	httpConfig "doan/cmd/http/config"
 	"doan/cmd/http/controllers/class"
 	"doan/cmd/http/controllers/course"
+	"doan/cmd/http/controllers/material"
 	"doan/cmd/http/controllers/program"
 	"doan/cmd/http/controllers/room"
+	"doan/cmd/http/controllers/scheduling"
 	"doan/cmd/http/controllers/student"
 	"doan/cmd/http/controllers/teacher"
 	"doan/cmd/http/controllers/user"
@@ -24,20 +26,22 @@ import (
 )
 
 type App struct {
-	Name                string
-	Version             string
-	ConfigFilePath      string
-	ConfigFile          string
-	router              *gin.Engine
-	restConfig          httpConfig.RestServer
-	userControllerV1    user.Controller
-	userControllerV2    user.Controller
-	classControllerV1   class.Controller
-	roomControllerV1    room.Controller
-	teacherControllerV1 teacher.Controller
-	studentControllerV1 student.Controller
-	courseControllerV1  course.Controller
-	programControllerV1 program.Controller
+	Name                   string
+	Version                string
+	ConfigFilePath         string
+	ConfigFile             string
+	router                 *gin.Engine
+	restConfig             httpConfig.RestServer
+	userControllerV1       user.Controller
+	userControllerV2       user.Controller
+	classControllerV1      class.Controller
+	roomControllerV1       room.Controller
+	teacherControllerV1    teacher.Controller
+	studentControllerV1    student.Controller
+	courseControllerV1     course.Controller
+	programControllerV1    program.Controller
+	schedulingControllerV1 scheduling.Controller
+	materialControllerV1   material.Controller
 }
 
 func (a *App) initFlag() {
@@ -89,6 +93,8 @@ func (a *App) registerRoute() {
 	student.RegisterRoutesV1(api, a.studentControllerV1, config.GetManager())
 	course.RegisterRoutesV1(api, a.courseControllerV1, config.GetManager())
 	program.RegisterRoutesV1(api, a.programControllerV1, config.GetManager())
+	scheduling.RegisterRoutesV1(api, a.schedulingControllerV1, config.GetManager())
+	material.RegisterRoutesV1(api, a.materialControllerV1, config.GetManager())
 
 }
 
@@ -102,6 +108,8 @@ func inject(
 	studentControllerV1 student.Controller,
 	courseControllerV1 course.Controller,
 	programControllerV1 program.Controller,
+	schedulingControllerV1 scheduling.Controller,
+	materialControllerV1 material.Controller,
 ) error {
 	app.userControllerV1 = userControllerV1
 	app.userControllerV2 = userControllerV2
@@ -111,6 +119,8 @@ func inject(
 	app.studentControllerV1 = studentControllerV1
 	app.courseControllerV1 = courseControllerV1
 	app.programControllerV1 = programControllerV1
+	app.schedulingControllerV1 = schedulingControllerV1
+	app.materialControllerV1 = materialControllerV1
 	return nil
 }
 

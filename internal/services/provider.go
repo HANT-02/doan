@@ -2,9 +2,12 @@ package services
 
 import (
 	_interface "doan/internal/infrastructure/queue/interface"
+	auditservice "doan/internal/services/audit"
 	"doan/internal/services/mailer"
+	schedulingstore "doan/internal/services/scheduling"
 	"doan/internal/services/security"
 	"doan/internal/services/user"
+	usecasescheduling "doan/internal/usecases/scheduling"
 	"doan/pkg/config"
 	"doan/pkg/logger"
 	"github.com/google/wire"
@@ -22,6 +25,14 @@ var ServiceProviders = wire.NewSet(
 
 	// Mailer service
 	NewMailer,
+
+	// Scheduling preview store
+	NewSchedulingPreviewStore,
+
+	// AI audit stub services
+	auditservice.NewLocalStorageService,
+	auditservice.NewStubOCRService,
+	auditservice.NewStubGeminiService,
 )
 
 // Wrapper providers to keep wire_gen imports minimal
@@ -35,4 +46,8 @@ func NewPasswordHasher(cfg config.Manager) security.PasswordHasher {
 
 func NewMailer(q _interface.Queue, log logger.Logger, cfg config.Manager) mailer.Mailer {
 	return mailer.NewMailer(q, log, cfg)
+}
+
+func NewSchedulingPreviewStore() schedulingstore.PreviewStore[usecasescheduling.PreviewResult] {
+	return schedulingstore.NewPreviewStore[usecasescheduling.PreviewResult]()
 }

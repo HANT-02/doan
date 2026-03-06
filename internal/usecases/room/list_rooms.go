@@ -59,7 +59,7 @@ func (uc *listRoomsUseCase) Execute(ctx context.Context, input ListRoomsInput) (
 		commonCond.SetPaging(uint64(input.Limit), uint64(input.Page))
 	}
 
-	orderBy := "created_at DESC"
+	orderBy := "created_at"
 	if input.SortBy != "" {
 		order := repositories.Asc
 		if input.SortOrder == "desc" || input.SortOrder == "DESC" {

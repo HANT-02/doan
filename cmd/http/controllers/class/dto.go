@@ -32,6 +32,18 @@ type UpdateClassRequest struct {
 	TeacherID   *string    `json:"teacher_id"`
 }
 
+type EnrollStudentsRequest struct {
+	StudentIDs []string `json:"student_ids" binding:"required,min=1"`
+}
+
+type RemoveStudentsRequest struct {
+	StudentIDs []string `json:"student_ids" binding:"required,min=1"`
+}
+
+type AssignTeacherRequest struct {
+	TeacherID string `json:"teacher_id" binding:"required"`
+}
+
 type ClassResponse struct {
 	ID          string     `json:"id"`
 	Code        string     `json:"code"`

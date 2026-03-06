@@ -22,6 +22,8 @@ import { AdminOverview } from '@/pages/admin/AdminOverview';
 import { TeacherOverview } from '@/pages/teacher/TeacherOverview';
 import { StudentOverview } from '@/pages/student/StudentOverview';
 import { ComplianceOverview } from '@/pages/compliance/ComplianceOverview';
+import { TeacherDocumentsPage } from '@/pages/teacher/TeacherDocumentsPage';
+import { ComplianceQueuePage } from '@/pages/compliance/ComplianceQueuePage';
 
 // Admin Teacher Management Pages
 import { TeachersPage } from '@/pages/admin/TeachersPage';
@@ -30,7 +32,10 @@ import { TeacherFormPage } from '@/pages/admin/TeacherFormPage';
 import { RoomsPage } from '@/pages/admin/RoomsPage';
 import { ClassesPage } from '@/pages/admin/ClassesPage';
 import { StudentsPage } from '@/pages/admin/StudentsPage';
+import { ProgramPage } from '@/pages/admin/ProgramPage';
+import { CoursePage } from '@/pages/admin/CoursePage';
 import { DevToolsPage } from '@/pages/admin/DevToolsPage';
+import { SchedulingPage } from '@/pages/admin/SchedulingPage';
 
 // Placeholder & Error Pages
 import { PlaceholderPage } from '@/components/layout/PlaceholderPage';
@@ -101,12 +106,14 @@ function App() {
                     <Route path="admin/teachers/new" element={<TeacherFormPage />} />
                     <Route path="admin/teachers/:id" element={<TeacherDetailPage />} />
                     <Route path="admin/teachers/:id/edit" element={<TeacherFormPage />} />
-                    <Route path="admin/programs" element={<PlaceholderPage title="Programs & Courses" />} />
+                    <Route path="admin/programs" element={<ProgramPage />} />
+                    <Route path="admin/courses" element={<CoursePage />} />
                     <Route path="admin/classes" element={<ClassesPage />} />
                     <Route path="admin/students" element={<StudentsPage />} />
                     <Route path="admin/rooms" element={<RoomsPage />} />
                     <Route path="admin/devtools" element={<DevToolsPage />} />
-                    <Route path="admin/scheduling" element={<PlaceholderPage title="Auto Scheduling" />} />
+                    <Route path="admin/scheduling" element={<SchedulingPage />} />
+                    <Route path="admin/audit" element={<ComplianceQueuePage />} />
                     <Route path="admin/conflicts" element={<PlaceholderPage title="Conflict Resolution" />} />
                     <Route path="admin/reports" element={<PlaceholderPage title="Reports & Analytics" />} />
                   </Route>
@@ -118,7 +125,7 @@ function App() {
                   <Route path="teacher/schedule" element={<PlaceholderPage title="My Schedule" />} />
                   <Route path="teacher/attendance" element={<PlaceholderPage title="Attendance" />} />
                   <Route path="teacher/journal" element={<PlaceholderPage title="Lesson Journal" />} />
-                  <Route path="teacher/documents" element={<PlaceholderPage title="Upload Documents" />} />
+                  <Route path="teacher/documents" element={<TeacherDocumentsPage />} />
                   <Route path="teacher/substitute" element={<PlaceholderPage title="Substitute Request" />} />
                 </Route>
 
@@ -136,7 +143,7 @@ function App() {
                 <Route element={<RoleRoute allowedRoles={['COMPLIANCE']} />}>
                   <Route path="compliance/overview" element={<ComplianceOverview />} />
                   <Route path="compliance/alerts" element={<PlaceholderPage title="Content Alerts" />} />
-                  <Route path="compliance/approvals" element={<PlaceholderPage title="Approvals" />} />
+                  <Route path="compliance/approvals" element={<ComplianceQueuePage />} />
                 </Route>
               </Route>
             </Route>

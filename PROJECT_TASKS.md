@@ -105,9 +105,9 @@
   - [ ] API xem điểm và chuyên cần
 - [x] API quản lý Lớp học *(Hoàn thành: 2026-02-25, Implemented in: cmd/http/controllers/class)*
   - [x] CRUD Class
-  - [ ] API thêm/xóa học sinh khỏi lớp
-  - [ ] API gán giáo viên cho lớp
-  - [ ] API kiểm tra sĩ số
+  - [x] API thêm/xóa học sinh khỏi lớp
+  - [x] API gán giáo viên cho lớp
+  - [x] API kiểm tra sĩ số
 - [ ] API quản lý Chương trình đào tạo *(Missing: usecases, repositories, controllers)*
   - [ ] CRUD Program
   - [ ] CRUD Course
@@ -119,51 +119,51 @@
 
 
 ### Task 2.3: Triển khai thuật toán Xếp lịch tự động (CSP)
-- [ ] Thiết kế cấu trúc dữ liệu CSP
-  - [ ] Định nghĩa Variable (Biến)
-  - [ ] Định nghĩa Domain (Miền giá trị)
-  - [ ] Định nghĩa Constraint (Ràng buộc)
-- [ ] Triển khai giải thuật Backtracking
-  - [ ] Implement thuật toán backtracking cơ bản
-  - [ ] Implement heuristic MRV (Minimum Remaining Values)
+- [x] Thiết kế cấu trúc dữ liệu CSP *(Hoàn thành: 2026-03-06, Implemented in: internal/usecases/scheduling/types.go, internal/usecases/scheduling/preview.go)*
+  - [x] Định nghĩa Variable (Biến)
+  - [x] Định nghĩa Domain (Miền giá trị)
+  - [x] Định nghĩa Constraint (Ràng buộc)
+- [x] Triển khai giải thuật Backtracking *(Hoàn thành: 2026-03-06, Implemented in: internal/usecases/scheduling/preview.go)*
+  - [x] Implement thuật toán backtracking cơ bản
+  - [x] Implement heuristic MRV (Minimum Remaining Values)
   - [ ] Implement heuristic Degree Heuristic
   - [ ] Implement heuristic LCV (Least Constraining Value)
-- [ ] Tích hợp Forward Checking
-  - [ ] Implement logic loại bỏ sớm các giá trị xung đột
+- [x] Tích hợp Forward Checking *(Hoàn thành: 2026-03-06, Implemented in: internal/usecases/scheduling/preview.go)*
+  - [x] Implement logic loại bỏ sớm các giá trị xung đột
   - [ ] Optimize performance với pruning
-- [ ] Implement Hard Constraints
-  - [ ] Kiểm tra trùng lịch giáo viên
-  - [ ] Kiểm tra trùng lịch phòng học
-  - [ ] Kiểm tra khung giờ cấm (sau 22h)
-  - [ ] Kiểm tra sức chứa phòng học
+- [x] Implement Hard Constraints *(Hoàn thành: 2026-03-06, Implemented in: internal/usecases/scheduling/preview.go)*
+  - [x] Kiểm tra trùng lịch giáo viên
+  - [x] Kiểm tra trùng lịch phòng học
+  - [x] Kiểm tra khung giờ cấm (sau 22h)
+  - [x] Kiểm tra sức chứa phòng học
 - [ ] Implement Soft Constraints
   - [ ] Tính điểm ưu tiên lịch liên tiếp
   - [ ] Tối ưu hóa khoảng cách giữa các buổi học
-- [ ] API Scheduling
-  - [ ] API trigger xếp lịch tự động
-  - [ ] API lấy kết quả xếp lịch
+- [x] API Scheduling *(Hoàn thành: 2026-03-06, Implemented in: cmd/http/controllers/scheduling, internal/usecases/scheduling, internal/services/scheduling)*
+  - [x] API trigger xếp lịch tự động
+  - [x] API lấy kết quả xếp lịch
   - [ ] API chỉnh sửa lịch thủ công
   - [ ] API kiểm tra xung đột khi chỉnh sửa
 
 ### Task 2.4: Tích hợp AI Pipeline (Kiểm soát chất lượng)
 - [ ] Xây dựng module OCR
   - [ ] Tích hợp thư viện OCR (Tesseract/Cloud Vision API)
-  - [ ] API upload tài liệu
-  - [ ] API trích xuất văn bản từ PDF/Image
-  - [ ] Xử lý và làm sạch văn bản
+  - [x] API upload tài liệu *(Hoàn thành: 2026-03-06, Implemented in: cmd/http/controllers/material, internal/usecases/material/upload_material.go, internal/services/audit/services.go)*
+  - [x] API trích xuất văn bản từ PDF/Image *(Stub OCR: Hoàn thành 2026-03-06, Implemented in: internal/services/audit/services.go)*
+  - [x] Xử lý và làm sạch văn bản *(Stub OCR: Hoàn thành 2026-03-06, Implemented in: internal/services/audit/services.go)*
 - [ ] Kết nối Google Gemini API
   - [ ] Setup API credentials
   - [ ] Thiết kế prompt phát hiện nội dung không phù hợp
   - [ ] Thiết kế prompt phát hiện sai lệch kiến thức
-  - [ ] API gửi văn bản đến Gemini và nhận kết quả
+  - [x] API gửi văn bản đến Gemini và nhận kết quả *(Stub Gemini: Hoàn thành 2026-03-06, Implemented in: internal/services/audit/services.go, internal/usecases/material/upload_material.go)*
 - [ ] Xây dựng logic gán nhãn tự động
-  - [ ] Định nghĩa các loại nhãn (An toàn/Cảnh báo/Nguy hiểm)
-  - [ ] Logic phân loại dựa trên kết quả AI
-  - [ ] Lưu kết quả vào database
-- [ ] API AI Audit
-  - [ ] API quét tài liệu
-  - [ ] API lấy lịch sử audit
-  - [ ] API phê duyệt/từ chối tài liệu (Compliance Officer)
+  - [x] Định nghĩa các loại nhãn (An toàn/Cảnh báo/Nguy hiểm) *(Hoàn thành: 2026-03-06, Implemented in: internal/infrastructure/database/postgres/sql_migration/23_create_material_audit_tables.up.sql, internal/entities/label.go)*
+  - [x] Logic phân loại dựa trên kết quả AI *(Stub: Hoàn thành 2026-03-06, Implemented in: internal/services/audit/services.go)*
+  - [x] Lưu kết quả vào database *(Hoàn thành: 2026-03-06, Implemented in: internal/usecases/material, internal/infrastructure/database/postgres/implement/material_repository.go, internal/infrastructure/database/postgres/implement/audit_log_repository.go, internal/infrastructure/database/postgres/implement/approval_decision_repository.go)*
+- [x] API AI Audit *(Hoàn thành: 2026-03-06, Implemented in: cmd/http/controllers/material, internal/usecases/material, internal/services/audit, internal/infrastructure/database/postgres/sql_migration/23_create_material_audit_tables.up.sql)*
+  - [x] API quét tài liệu
+  - [x] API lấy lịch sử audit
+  - [x] API phê duyệt/từ chối tài liệu (Compliance Officer)
   - [ ] API thống kê chất lượng tài liệu
 
 ---
@@ -196,9 +196,9 @@
   - [x] Phân quyền người dùng (Role-based)
   - [ ] Reset mật khẩu (DEFERRED - NOT IN SCOPE)
 - [ ] Compliance Dashboard
-  - [ ] Danh sách tài liệu chờ phê duyệt
-  - [ ] Chi tiết kết quả AI audit
-  - [ ] Thao tác phê duyệt/từ chối
+  - [x] Danh sách tài liệu chờ phê duyệt *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/pages/compliance/ComplianceQueuePage.tsx, frontend/src/api/materialApi.ts)*
+  - [x] Chi tiết kết quả AI audit *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/components/material/MaterialDetailDialog.tsx)*
+  - [x] Thao tác phê duyệt/từ chối *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/pages/compliance/ComplianceQueuePage.tsx, frontend/src/api/materialApi.ts)*
   - [ ] Báo cáo tuân thủ
 
 ### Task 3.2: Module Thời khóa biểu & Xếp lịch
@@ -207,11 +207,11 @@
   - [ ] Hiển thị thông tin lớp học trên calendar
   - [ ] Filter theo giáo viên/phòng/lớp
   - [ ] Color coding theo trạng thái
-- [ ] Chức năng xếp lịch tự động
-  - [ ] Form cấu hình tham số xếp lịch
-  - [ ] Button trigger xếp lịch
-  - [ ] Hiển thị progress/loading
-  - [ ] Hiển thị kết quả xếp lịch
+- [x] Chức năng xếp lịch tự động *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/pages/admin/SchedulingPage.tsx, frontend/src/api/schedulingApi.ts, frontend/src/App.tsx)*
+  - [x] Form cấu hình tham số xếp lịch
+  - [x] Button trigger xếp lịch
+  - [x] Hiển thị progress/loading
+  - [x] Hiển thị kết quả xếp lịch
 - [ ] Chức năng chỉnh sửa thủ công
   - [ ] Drag & drop để di chuyển lịch
   - [ ] Modal chỉnh sửa chi tiết buổi học
@@ -228,6 +228,7 @@
   - [x] Danh sách lớp học
   - [x] Form thêm/sửa lớp học
   - [x] Xem chi tiết lớp học
+  - [x] Chi tiết lớp với roster học sinh + gán giáo viên *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/pages/admin/ClassesPage.tsx, frontend/src/components/admin/ClassDetailDialog.tsx, frontend/src/api/classApi.ts, cmd/http/controllers/class, internal/usecases/class/get_class_roster.go)*
 - [x] Quản lý Học sinh *(Đã fix getRowId & Normalize response)*
   - [x] Danh sách học sinh
   - [x] Form thêm/sửa học sinh
@@ -236,12 +237,11 @@
   - [x] Danh sách giáo viên
   - [x] Form thêm/sửa giáo viên
   - [x] Xem chi tiết hồ sơ
-  - [ ] Quản lý chứng chỉ/bằng cấp
 - [ ] Tải và quản lý tài liệu
-  - [ ] Upload giáo án/tài liệu giảng dạy
-  - [ ] Danh sách tài liệu đã tải
-  - [ ] Xem trạng thái kiểm duyệt AI
-  - [ ] Xem chi tiết phản hồi từ AI
+  - [x] Upload giáo án/tài liệu giảng dạy *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/pages/teacher/TeacherDocumentsPage.tsx, frontend/src/api/materialApi.ts)*
+  - [x] Danh sách tài liệu đã tải *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/pages/teacher/TeacherDocumentsPage.tsx, frontend/src/api/materialApi.ts)*
+  - [x] Xem trạng thái kiểm duyệt AI *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/pages/teacher/TeacherDocumentsPage.tsx, frontend/src/components/material/MaterialDetailDialog.tsx)*
+  - [x] Xem chi tiết phản hồi từ AI *(Hoàn thành: 2026-03-06, Implemented in: frontend/src/components/material/MaterialDetailDialog.tsx, frontend/src/pages/compliance/ComplianceQueuePage.tsx)*
   - [ ] Download/Preview tài liệu
 - [ ] Sổ đầu bài điện tử
   - [ ] Danh sách buổi học
@@ -408,13 +408,66 @@
 
 | Ưu tiên | Trạng thái | Module | Tên Task | Phân loại |
 |---|---|---|---|---|
-| 1 | [/] | Program/Course | CRUD Program/Course + Link Course->Program | Backend |
-| 2 | [ ] | Program/Course | Giao diện quản lý Program/Course (Table + Dialog) | Frontend |
-| 3 | [ ] | Class | API thêm/xóa học sinh, gán giáo viên, check sức chứa | Backend |
-| 4 | [ ] | Class | Giao diện quản lý roster (danh sách học sinh) + gán GV | Frontend |
+| 1 | [x] | Program/Course | CRUD Program/Course + Link Course->Program (Implemented in: internal/entities, repositories, usecases/program, cmd/http/controllers/program) | Backend |
+| 2 | [x] | Program/Course | Giao diện quản lý Program/Course (Table + Dialog) (Implemented in: frontend/src/api/programApi.ts, courseApi.ts, pages/admin/ProgramPage.tsx, pages/admin/CoursePage.tsx) | Frontend |
+| 3 | [x] | Class | API thêm/xóa học sinh, gán giáo viên, check sức chứa (Implemented in internal/usecases/class, cmd/http/controllers/class) | Backend |
+| 4 | [x] | Class | Giao diện quản lý roster (danh sách học sinh) + gán GV (Implemented in: frontend/src/pages/admin/ClassesPage.tsx, frontend/src/components/admin/ClassDetailDialog.tsx, frontend/src/api/classApi.ts, frontend/src/components/admin/ClassDialog.tsx, cmd/http/controllers/class, internal/usecases/class/get_class_roster.go, internal/infrastructure/database/postgres/implement/enrollment_repository.go) | Frontend |
 | 5 | [x] | Student | Cố định màn hình Student (lỗi hiện thị danh sách, trắng trang) | Frontend |
 | 6 | [x] | Room | Xử lý trạng thái deleted_at đồng bộ BE/FE | Frontend |
-| 7 | [ ] | Scheduling (CSP) | Scaffold cấu trúc dữ liệu + Hard constraints (base) | Backend |
-| 8 | [ ] | Scheduling (CSP) | Giao diện Scheduling Trigger & Preview | Frontend |
-| 9 | [ ] | AI Audit | Scaffold luồng Upload tài liệu + Audit log + Phê duyệt | Backend |
-| 10 | [ ] | AI Audit | Giao diện màn hình upload cho Giáo viên & Compliance queue | Frontend |
+| 7 | [x] | Scheduling (CSP) | Scaffold cấu trúc dữ liệu + Hard constraints (base) (Implemented in: internal/usecases/scheduling, internal/services/scheduling, cmd/http/controllers/scheduling, cmd/http/main.go) | Backend |
+| 8 | [x] | Scheduling (CSP) | Giao diện Scheduling Trigger & Preview (Implemented in: frontend/src/pages/admin/SchedulingPage.tsx, frontend/src/api/schedulingApi.ts, frontend/src/App.tsx, frontend/src/api/baseApi.ts) | Frontend |
+| 9 | [x] | AI Audit | Scaffold luồng Upload tài liệu + Audit log + Phê duyệt (Implemented in: internal/entities/material.go, internal/entities/label.go, internal/entities/audit_log.go, internal/entities/approval_decision.go, internal/usecases/material, internal/services/audit, cmd/http/controllers/material, internal/infrastructure/database/postgres/sql_migration/23_create_material_audit_tables.up.sql) | Backend |
+| 10 | [x] | AI Audit | Giao diện màn hình upload cho Giáo viên & Compliance queue (Implemented in: frontend/src/pages/teacher/TeacherDocumentsPage.tsx, frontend/src/pages/compliance/ComplianceQueuePage.tsx, frontend/src/components/material/MaterialDetailDialog.tsx, frontend/src/api/materialApi.ts, frontend/src/App.tsx) | Frontend |
+
+### Ghi chú triển khai gần nhất
+
+- 2026-03-06 — Top 10 #4 Class roster UI + gán giáo viên
+  - Trạng thái: [x]
+  - Implemented in: `frontend/src/pages/admin/ClassesPage.tsx`, `frontend/src/components/admin/ClassDetailDialog.tsx`, `frontend/src/components/admin/ClassDialog.tsx`, `frontend/src/api/classApi.ts`, `frontend/src/api/teacherApi.ts`, `cmd/http/controllers/class/controller.go`, `cmd/http/controllers/class/v1.go`, `internal/usecases/class/get_class_roster.go`, `internal/repositories/interface/enrollment.go`, `internal/infrastructure/database/postgres/implement/enrollment_repository.go`
+  - Endpoints: `GET /api/v1/classes/:id/students`, `POST /api/v1/classes/:id/students`, `DELETE /api/v1/classes/:id/students`, `PUT /api/v1/classes/:id/teacher`
+  - Cách test nhanh:
+    1. Vào `Quản lý lớp học` -> dùng toolbar tìm/lọc -> bấm một dòng bất kỳ để mở `Chi tiết lớp học`.
+    2. Tab `Danh sách học sinh` -> `Thêm học sinh` -> chọn nhiều học sinh -> lưu -> kiểm tra DataGrid roster cập nhật ngay.
+    3. Tab `Giáo viên phụ trách` -> chọn giáo viên -> `Lưu giáo viên phụ trách` -> đóng dialog -> kiểm tra cột giáo viên ở danh sách lớp.
+    4. API nhanh:
+       - `curl -X GET http://localhost:9000/api/v1/classes/<class_id>/students`
+       - `curl -X POST http://localhost:9000/api/v1/classes/<class_id>/students -H 'Content-Type: application/json' -d '{"student_ids":["<student_id>"]}'`
+       - `curl -X PUT http://localhost:9000/api/v1/classes/<class_id>/teacher -H 'Content-Type: application/json' -d '{"teacher_id":"<teacher_id>"}'`
+
+- 2026-03-06 — Top 10 #7 Scheduling backend scaffold
+  - Trạng thái: [x]
+  - Implemented in: `internal/usecases/scheduling/types.go`, `internal/usecases/scheduling/preview.go`, `internal/usecases/scheduling/get_preview.go`, `internal/usecases/scheduling/commit_preview.go`, `internal/services/scheduling/preview_store.go`, `internal/services/provider.go`, `cmd/http/controllers/scheduling/controller.go`, `cmd/http/controllers/scheduling/v1.go`, `cmd/http/controllers/scheduling/dto.go`, `cmd/http/controllers/provider.go`, `cmd/http/main.go`
+  - Endpoints: `POST /api/v1/scheduling/preview`, `GET /api/v1/scheduling/preview/latest`, `GET /api/v1/scheduling/preview/:id`, `POST /api/v1/scheduling/commit`
+  - Migration: Không cần migration ở bước scaffold này. Preview/result đang lưu in-memory để phục vụ demo.
+  - Cách test nhanh:
+    1. `curl -X POST http://localhost:9000/api/v1/scheduling/preview -H 'Content-Type: application/json' -d '{"date_from":"2026-03-06T00:00:00Z","date_to":"2026-03-12T00:00:00Z"}'`
+    2. Copy `run_id` từ response rồi gọi `curl http://localhost:9000/api/v1/scheduling/preview/<run_id>`.
+    3. Gọi `curl http://localhost:9000/api/v1/scheduling/preview/latest` để kiểm tra latest preview.
+
+- 2026-03-06 — Top 10 #8 Scheduling FE trigger + preview
+  - Trạng thái: [x]
+  - Implemented in: `frontend/src/pages/admin/SchedulingPage.tsx`, `frontend/src/api/schedulingApi.ts`, `frontend/src/App.tsx`, `frontend/src/api/baseApi.ts`
+  - Cách test nhanh:
+    1. Vào `Xếp lịch (CSP)` trên sidebar admin.
+    2. Chọn khoảng ngày, lọc lớp/GV/phòng nếu cần rồi bấm `Chạy xếp lịch`.
+    3. Kiểm tra `Preview run`, bảng assignment, banner conflict và nút `Commit scaffold`.
+
+- 2026-03-06 — Top 10 #9 AI Audit backend scaffold
+  - Trạng thái: [x]
+  - Implemented in: `internal/entities/material.go`, `internal/entities/label.go`, `internal/entities/audit_log.go`, `internal/entities/approval_decision.go`, `internal/repositories/interface/material.go`, `internal/repositories/interface/label.go`, `internal/repositories/interface/audit_log.go`, `internal/repositories/interface/approval_decision.go`, `internal/infrastructure/database/postgres/implement/material_repository.go`, `internal/infrastructure/database/postgres/implement/label_repository.go`, `internal/infrastructure/database/postgres/implement/audit_log_repository.go`, `internal/infrastructure/database/postgres/implement/approval_decision_repository.go`, `internal/services/audit/services.go`, `internal/usecases/material`, `cmd/http/controllers/material`, `internal/infrastructure/database/postgres/sql_migration/23_create_material_audit_tables.up.sql`
+  - Endpoints: `POST /api/v1/materials/upload`, `GET /api/v1/materials`, `GET /api/v1/materials/flagged`, `GET /api/v1/materials/:id`, `POST /api/v1/materials/:id/review`
+  - Migration: `internal/infrastructure/database/postgres/sql_migration/23_create_material_audit_tables.up.sql`
+  - Nhắc chạy migrate: `make migrate`
+  - Cách test nhanh:
+    1. Chạy migrate theo quy trình repo: `make migrate` (tôi chưa chạy).
+    2. Upload bằng multipart: `curl -X POST http://localhost:9000/api/v1/materials/upload -F teacher_id=<teacher_id> -F title='Giáo án Demo' -F description='demo' -F file=@/path/to/file.txt`
+    3. Kiểm tra queue: `curl http://localhost:9000/api/v1/materials?queue=flagged&status=AI_REVIEWED`
+    4. Duyệt tài liệu: `curl -X POST http://localhost:9000/api/v1/materials/<material_id>/review -H 'Content-Type: application/json' -d '{"compliance_officer_id":"<user_id>","approved":true,"notes":"OK cho demo"}'`
+
+- 2026-03-06 — Top 10 #10 AI Audit frontend
+  - Trạng thái: [x]
+  - Implemented in: `frontend/src/api/materialApi.ts`, `frontend/src/components/material/MaterialDetailDialog.tsx`, `frontend/src/pages/teacher/TeacherDocumentsPage.tsx`, `frontend/src/pages/compliance/ComplianceQueuePage.tsx`, `frontend/src/App.tsx`
+  - Cách test nhanh:
+    1. Vào `Tài liệu giảng dạy` ở menu giáo viên, chọn giáo viên demo, nhập tiêu đề và upload một file.
+    2. Mở dialog chi tiết để xem label AI, reasoning, raw OCR text và lịch sử audit.
+    3. Vào `Tài liệu cần duyệt` của Compliance/Admin, mở chi tiết, nhập `compliance_officer_id`, chọn Approve/Reject rồi lưu quyết định.

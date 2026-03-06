@@ -1,11 +1,14 @@
 import { baseApi } from './baseApi';
+import { normalizeDetailEnvelope, normalizeListEnvelope } from './responseUtils';
 
 export interface Room {
     id: string;
+    code?: string;
     name: string;
     capacity: number;
+    address?: string;
     location?: string;
-    status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE';
+    status?: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE';
     created_at: string;
     updated_at: string;
 }
@@ -27,7 +30,40 @@ export interface ListRoomsResponse {
 export interface RoomResponse {
     success: boolean;
     message: string;
-    data: Room;
+    data: Room | null;
+}
+
+interface RawRoomListResponse {
+    success?: boolean;
+    message?: string;
+    data?: {
+        rooms?: Room[];
+        Rooms?: Room[];
+        pagination?: {
+            items_per_page?: number;
+            total_items?: number;
+            current_page?: number;
+            total_pages?: number;
+        };
+        Pagination?: {
+            items_per_page?: number;
+            total_items?: number;
+            current_page?: number;
+            total_pages?: number;
+            ItemsPerPage?: number;
+            TotalItems?: number;
+            CurrentPage?: number;
+            TotalPages?: number;
+        };
+    };
+}
+
+interface RawRoomResponse {
+    success?: boolean;
+    message?: string;
+    data?: {
+        Room?: Room;
+    } | Room;
 }
 
 export const roomApi = baseApi.injectEndpoints({
@@ -37,19 +73,15 @@ export const roomApi = baseApi.injectEndpoints({
                 url: '/v1/rooms',
                 params,
             }),
-            transformResponse: (response: any) => {
+            transformResponse: (response: RawRoomListResponse) => {
+                const normalized = normalizeListEnvelope<Room>(response, ['rooms', 'Rooms']);
                 return {
-                    success: response.success,
-                    message: response.message,
+                    success: normalized.success,
+                    message: normalized.message,
                     data: {
-                        rooms: response.data?.Rooms || [],
-                        pagination: {
-                            items_per_page: response.data?.Pagination?.ItemsPerPage || 10,
-                            total_items: response.data?.Pagination?.TotalItems || 0,
-                            current_page: response.data?.Pagination?.CurrentPage || 1,
-                            total_pages: response.data?.Pagination?.TotalPages || 1,
-                        }
-                    }
+                        rooms: normalized.items,
+                        pagination: normalized.pagination,
+                    },
                 };
             },
             providesTags: (result) =>
@@ -62,10 +94,7 @@ export const roomApi = baseApi.injectEndpoints({
         }),
         getRoomById: builder.query<RoomResponse, string>({
             query: (id) => `/v1/rooms/${id}`,
-            transformResponse: (response: any) => ({
-                ...response,
-                data: response.data?.Room || response.data
-            }),
+            transformResponse: (response: RawRoomResponse) => normalizeDetailEnvelope<Room>(response, ['Room']),
             providesTags: (_result, _error, id) => [{ type: 'Room', id }],
         }),
         createRoom: builder.mutation<RoomResponse, Partial<Room>>({

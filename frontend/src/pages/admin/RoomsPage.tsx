@@ -1,52 +1,93 @@
-import { useState } from 'react';
+import { type MouseEvent, useMemo, useState } from 'react';
 import {
+    Alert,
     Box,
-    Typography,
     Button,
-    Paper,
-    Breadcrumbs,
-    Link,
     Chip,
     IconButton,
+    InputAdornment,
+    Menu,
+    MenuItem,
+    Paper,
+    Skeleton,
+    Stack,
+    TextField,
+    Typography,
 } from '@mui/material';
-import { Add, Room as RoomIcon, MoreVert, Edit, Delete } from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
-import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import {
-    useGetRoomsQuery,
+    AddRounded,
+    ApartmentRounded,
+    DeleteOutlineRounded,
+    EditOutlined,
+    MoreVert,
+    RefreshRounded,
+    SearchRounded,
+} from '@mui/icons-material';
+import { DataGrid, type GridColDef, type GridRenderCellParams } from '@mui/x-data-grid';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+import {
     useCreateRoomMutation,
+    useDeleteRoomMutation,
+    useGetRoomsQuery,
     useUpdateRoomMutation,
-    useDeleteRoomMutation
+    type Room,
 } from '@/api/roomApi';
-import PageHeader from '@/components/common/PageHeader';
 import RoomDialog from '@/components/admin/RoomDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
-import { Menu, MenuItem as MuiMenuItem } from '@mui/material';
+import PageHeader from '@/components/common/PageHeader';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === 'object' && error && 'data' in error) {
+        const apiError = error as { data?: { message?: string } };
+        return apiError.data?.message || fallback;
+    }
+
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    return fallback;
+};
 
 export const RoomsPage = () => {
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(10);
+    const [search, setSearch] = useState('');
 
-    // Dialog states
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [selectedRoom, setSelectedRoom] = useState<any>(null);
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+    const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
 
-    // Menu state
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [menuRoom, setMenuRoom] = useState<any>(null);
+    const [menuRoom, setMenuRoom] = useState<Room | null>(null);
 
-    const { data, isLoading } = useGetRoomsQuery({
-        page: page + 1,
-        limit: pageSize,
-    });
+    const queryParams = useMemo(
+        () => ({
+            page: page + 1,
+            limit: pageSize,
+            search: search || undefined,
+        }),
+        [page, pageSize, search],
+    );
+
+    const {
+        data,
+        isLoading,
+        isFetching,
+        isError,
+        refetch,
+    } = useGetRoomsQuery(queryParams);
 
     const [createRoom, { isLoading: isCreating }] = useCreateRoomMutation();
     const [updateRoom, { isLoading: isUpdating }] = useUpdateRoomMutation();
     const [deleteRoom, { isLoading: isDeleting }] = useDeleteRoomMutation();
 
-    const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, room: any) => {
+    const rooms = data?.data?.rooms || [];
+
+    const handleOpenMenu = (event: MouseEvent<HTMLElement>, room: Room) => {
         setAnchorEl(event.currentTarget);
         setMenuRoom(room);
     };
@@ -61,133 +102,274 @@ export const RoomsPage = () => {
         setIsDialogOpen(true);
     };
 
-    const handleEdit = () => {
-        setSelectedRoom(menuRoom);
+    const handleEdit = (room?: Room | null) => {
+        const target = room || menuRoom;
+        if (!target) {
+            return;
+        }
+
+        setSelectedRoom(target);
         setIsDialogOpen(true);
         handleCloseMenu();
     };
 
     const handleDeleteClick = () => {
-        setRoomToDelete(menuRoom.id);
+        if (!menuRoom) {
+            return;
+        }
+
+        setRoomToDelete(menuRoom);
         setIsConfirmOpen(true);
         handleCloseMenu();
     };
 
     const handleConfirmDelete = async () => {
-        if (roomToDelete) {
-            try {
-                await deleteRoom(roomToDelete).unwrap();
-            } catch (error) {
-                console.error('Failed to delete room:', error);
-            } finally {
-                setIsConfirmOpen(false);
-                setRoomToDelete(null);
-            }
+        if (!roomToDelete) {
+            return;
+        }
+
+        try {
+            await deleteRoom(roomToDelete.id).unwrap();
+            toast.success('Xóa phòng học thành công');
+            setRoomToDelete(null);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Xóa phòng học thất bại'));
         }
     };
 
-    const handleFormSubmit = async (formData: any) => {
+    const handleFormSubmit = async (formData: { name: string; capacity: number; location?: string; status: string }) => {
         try {
             if (selectedRoom) {
                 await updateRoom({ id: selectedRoom.id, body: formData }).unwrap();
+                toast.success('Cập nhật phòng học thành công');
             } else {
                 await createRoom(formData).unwrap();
+                toast.success('Tạo phòng học thành công');
             }
         } catch (error) {
-            console.error('Failed to save room:', error);
+            toast.error(getErrorMessage(error, 'Không thể lưu thông tin phòng học'));
+            throw error;
         }
     };
 
-    const columns: GridColDef[] = [
+    const columns: GridColDef<Room>[] = [
+        {
+            field: 'code',
+            headerName: 'Mã phòng',
+            width: 140,
+            align: 'left',
+            headerAlign: 'left',
+            renderCell: (params: GridRenderCellParams<Room>) => (
+                <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    {params.row.code || 'Chưa có mã'}
+                </Typography>
+            ),
+        },
         {
             field: 'name',
             headerName: 'Tên phòng',
-            flex: 1,
-            renderCell: (params: GridRenderCellParams) => (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <RoomIcon color="primary" fontSize="small" />
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{params.value}</Typography>
-                </Box>
-            )
+            minWidth: 260,
+            flex: 1.3,
+            align: 'left',
+            headerAlign: 'left',
+            renderCell: (params: GridRenderCellParams<Room>) => (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                    <ApartmentRounded sx={{ color: 'primary.main', fontSize: 18 }} />
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                            {params.row.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                            {params.row.address || params.row.location || 'Chưa cập nhật địa chỉ'}
+                        </Typography>
+                    </Box>
+                </Stack>
+            ),
         },
-        { field: 'capacity', headerName: 'Sức chứa', width: 120 },
-        { field: 'location', headerName: 'Vị trí', flex: 1 },
         {
-            field: 'status',
-            headerName: 'Trạng thái',
-            width: 150,
-            renderCell: (params: GridRenderCellParams) => {
-                const status = params.value as string;
-                let color: 'success' | 'warning' | 'error' = 'success';
-                if (status === 'MAINTENANCE') color = 'warning';
-                if (status === 'INACTIVE') color = 'error';
-
-                return <Chip label={status} size="small" color={color} sx={{ fontWeight: 600 }} />;
-            }
+            field: 'capacity',
+            headerName: 'Sức chứa',
+            width: 120,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params: GridRenderCellParams<Room>) => (
+                <Chip size="small" label={`${params.row.capacity} chỗ`} color="primary" variant="outlined" />
+            ),
+        },
+        {
+            field: 'address',
+            headerName: 'Địa chỉ',
+            minWidth: 240,
+            flex: 1,
+            align: 'left',
+            headerAlign: 'left',
+            renderCell: (params: GridRenderCellParams<Room>) => (
+                <Typography variant="body2" color="text.secondary" noWrap>
+                    {params.row.address || params.row.location || 'Chưa cập nhật'}
+                </Typography>
+            ),
+        },
+        {
+            field: 'updated_at',
+            headerName: 'Cập nhật',
+            width: 130,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params: GridRenderCellParams<Room>) => (
+                <Typography variant="body2">
+                    {params.row.updated_at ? format(new Date(params.row.updated_at), 'dd/MM/yyyy') : '-'}
+                </Typography>
+            ),
         },
         {
             field: 'actions',
             headerName: '',
-            width: 50,
+            width: 64,
             sortable: false,
-            renderCell: (params: GridRenderCellParams) => (
-                <IconButton size="small" onClick={(e) => handleOpenMenu(e, params.row)}>
+            align: 'center',
+            renderCell: (params: GridRenderCellParams<Room>) => (
+                <IconButton size="small" onClick={(event) => handleOpenMenu(event, params.row)}>
                     <MoreVert />
                 </IconButton>
-            )
-        }
+            ),
+        },
     ];
+
+    const renderLoadingState = () => (
+        <Stack spacing={1.5}>
+            <Skeleton variant="rounded" height={72} />
+            <Skeleton variant="rounded" height={420} />
+        </Stack>
+    );
+
+    const renderEmptyState = () => (
+        <Paper
+            variant="outlined"
+            sx={{
+                p: 6,
+                borderRadius: 4,
+                textAlign: 'center',
+                borderStyle: 'dashed',
+            }}
+        >
+            <ApartmentRounded sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                Chưa có phòng học nào phù hợp
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Kiểm tra lại bộ lọc hoặc tạo phòng học mới để bắt đầu xếp lớp và xếp lịch.
+            </Typography>
+            <Button variant="contained" startIcon={<AddRounded />} onClick={handleAdd}>
+                Tạo phòng học đầu tiên
+            </Button>
+        </Paper>
+    );
 
     return (
         <Box>
             <PageHeader
-                title="Quản lý Phòng học"
-                subtitle="Danh sách các phòng học và cơ sở vật chất"
+                title="Quản lý phòng học"
+                subtitle="Kết nối trực tiếp dữ liệu phòng học từ backend, sẵn sàng cho luồng lớp học và xếp lịch."
+                breadcrumbs={[
+                    { label: 'Tổng quan', path: '/app/admin/overview' },
+                    { label: 'Quản lý phòng học' },
+                ]}
                 actions={
-                    <Button
-                        variant="contained"
-                        startIcon={<Add />}
-                        sx={{ borderRadius: 2 }}
-                        onClick={handleAdd}
-                    >
-                        Thêm phòng mới
-                    </Button>
+                    <Stack direction="row" spacing={1}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<RefreshRounded />}
+                            onClick={() => void refetch()}
+                            disabled={isFetching}
+                        >
+                            Làm mới
+                        </Button>
+                        <Button variant="contained" startIcon={<AddRounded />} onClick={handleAdd}>
+                            Thêm phòng mới
+                        </Button>
+                    </Stack>
                 }
             />
 
-            <Breadcrumbs sx={{ mb: 3 }}>
-                <Link underline="hover" color="inherit" href="/app/admin/overview">Dashboard</Link>
-                <Typography color="text.primary">Phòng học</Typography>
-            </Breadcrumbs>
+            {isLoading && rooms.length === 0 ? renderLoadingState() : null}
+            {!isLoading && isError ? (
+                <Alert
+                    severity="error"
+                    action={
+                        <Button color="inherit" size="small" startIcon={<RefreshRounded />} onClick={() => void refetch()}>
+                            Tải lại
+                        </Button>
+                    }
+                    sx={{ mb: 3 }}
+                >
+                    Không thể tải danh sách phòng học. Kiểm tra backend rồi thử lại.
+                </Alert>
+            ) : null}
 
-            <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid #e2e8f0' }}>
-                <DataGrid
-                    rows={data?.data?.rooms || []}
-                    columns={columns}
-                    loading={isLoading}
-                    paginationMode="server"
-                    rowCount={data?.data?.pagination?.total_items || 0}
-                    paginationModel={{ page, pageSize }}
-                    onPaginationModelChange={(model) => {
-                        setPage(model.page);
-                        setPageSize(model.pageSize);
-                    }}
-                    pageSizeOptions={[10, 25, 50]}
-                    disableRowSelectionOnClick
-                    autoHeight
-                    getRowId={(row) => row.id || row.key || Math.random().toString()}
-                    sx={{
-                        border: 'none',
-                        '& .MuiDataGrid-columnHeaders': {
-                            backgroundColor: '#f8fafc',
-                            borderRadius: 0,
-                        },
-                        '& .MuiDataGrid-cell:focus': {
-                            outline: 'none',
-                        },
-                    }}
-                />
-            </Paper>
+            {!isLoading && !isError ? (
+                rooms.length === 0 ? (
+                    renderEmptyState()
+                ) : (
+                    <Paper elevation={0} sx={{ p: 2.5, borderRadius: 4, border: '1px solid #e2e8f0' }}>
+                        <Stack
+                            direction={{ xs: 'column', lg: 'row' }}
+                            spacing={1.5}
+                            justifyContent="space-between"
+                            alignItems={{ xs: 'stretch', lg: 'center' }}
+                            sx={{ mb: 2 }}
+                        >
+                            <TextField
+                                value={search}
+                                onChange={(event) => {
+                                    setSearch(event.target.value);
+                                    setPage(0);
+                                }}
+                                size="small"
+                                placeholder="Tìm theo tên phòng"
+                                sx={{ minWidth: { xs: '100%', md: 280 } }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchRounded fontSize="small" />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+                            <Chip
+                                label={`Hiển thị ${rooms.length}/${data?.data?.pagination?.total_items || rooms.length} phòng`}
+                                color="primary"
+                                variant="outlined"
+                            />
+                        </Stack>
+
+                        <DataGrid
+                            rows={rooms}
+                            columns={columns}
+                            loading={isFetching}
+                            paginationMode="server"
+                            rowCount={data?.data?.pagination?.total_items || 0}
+                            paginationModel={{ page, pageSize }}
+                            onPaginationModelChange={(model) => {
+                                setPage(model.page);
+                                setPageSize(model.pageSize);
+                            }}
+                            pageSizeOptions={[10, 25, 50]}
+                            disableRowSelectionOnClick
+                            autoHeight
+                            getRowId={(row) => row.id}
+                            localeText={{ noRowsLabel: 'Không có dữ liệu phòng học' }}
+                            sx={{
+                                border: 'none',
+                                '& .MuiDataGrid-columnHeaders': {
+                                    backgroundColor: '#f8fafc',
+                                },
+                            }}
+                        />
+                    </Paper>
+                )
+            ) : null}
+
             <RoomDialog
                 open={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
@@ -198,24 +380,29 @@ export const RoomsPage = () => {
 
             <ConfirmDialog
                 open={isConfirmOpen}
-                title="Xác nhận xóa"
-                message={`Bạn có chắc chắn muốn xóa phòng học "${menuRoom?.name || ''}"? Hành động này không thể hoàn tác.`}
-                onClose={() => setIsConfirmOpen(false)}
-                onConfirm={handleConfirmDelete}
+                title="Xóa phòng học"
+                message={
+                    roomToDelete
+                        ? `Bạn có chắc chắn muốn xóa phòng "${roomToDelete.name}"? Hành động này không thể hoàn tác.`
+                        : ''
+                }
+                confirmText="Xóa phòng"
+                isDanger
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setRoomToDelete(null);
+                }}
+                onConfirm={() => void handleConfirmDelete()}
                 loading={isDeleting}
             />
 
-            <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleCloseMenu}
-            >
-                <MuiMenuItem onClick={handleEdit}>
-                    <Edit fontSize="small" sx={{ mr: 1 }} /> Chỉnh sửa
-                </MuiMenuItem>
-                <MuiMenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
-                    <Delete fontSize="small" sx={{ mr: 1 }} /> Xóa
-                </MuiMenuItem>
+            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleCloseMenu}>
+                <MenuItem onClick={() => handleEdit()}>
+                    <EditOutlined fontSize="small" sx={{ mr: 1 }} /> Chỉnh sửa
+                </MenuItem>
+                <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+                    <DeleteOutlineRounded fontSize="small" sx={{ mr: 1 }} /> Xóa
+                </MenuItem>
             </Menu>
         </Box>
     );

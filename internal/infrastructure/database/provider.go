@@ -22,6 +22,11 @@ var DBProvider = wire.NewSet(
 	implement.NewStudentRepository,
 	implement.NewCourseRepository,
 	implement.NewProgramRepository,
+	implement.NewEnrollmentRepository,
+	implement.NewMaterialRepository,
+	implement.NewLabelRepository,
+	implement.NewAuditLogRepository,
+	implement.NewApprovalDecisionRepository,
 )
 
 // ProvideDB wraps GetDBContext and panics on error (for Wire)

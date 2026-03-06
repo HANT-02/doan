@@ -37,9 +37,13 @@ Prefix: `/v1` or `/v2` for specific user routes.
 ## Classes
 - `GET /v1/classes`: List all classes
 - `GET /v1/classes/:id`: Get class details
+- `GET /v1/classes/:id/students`: Get class roster and capacity snapshot
 - `POST /v1/classes`: Create a new class
 - `PUT /v1/classes/:id`: Update a class
+- `PUT /v1/classes/:id/teacher`: Assign teacher for a class
 - `DELETE /v1/classes/:id`: Soft delete a class
+- `POST /v1/classes/:id/students`: Add students into a class
+- `DELETE /v1/classes/:id/students`: Remove students from a class
 
 ## Students
 - `GET /v1/students`: List all students
@@ -64,7 +68,24 @@ Prefix: `/v1` or `/v2` for specific user routes.
 - `POST /v1/programs/:id/courses`: Add courses to program
 - `DELETE /v1/programs/:id/courses`: Remove courses from program
 
+## Scheduling
+- `POST /v1/scheduling/preview`: Trigger CSP scheduling preview
+- `GET /v1/scheduling/preview/latest`: Get the latest preview result
+- `GET /v1/scheduling/preview/:id`: Get a preview result by run ID
+- `POST /v1/scheduling/commit`: Commit scaffold for a preview run
+
+## Materials / AI Audit
+- `POST /v1/materials/upload`: Upload teaching material and trigger stub AI audit
+- `GET /v1/materials`: List materials with optional `teacher_id`, `status`, `queue`
+- `GET /v1/materials/flagged`: List materials waiting for compliance review
+- `GET /v1/materials/:id`: Get material detail with audit trail
+- `POST /v1/materials/:id/review`: Approve or reject a material
+
 ## Data Structures Notes
 - Reponses typically format as `{ "message": "...", "data": ... }`
 - List endpoints return: `{ "data": { "teachers": [...], "pagination": { "current_page": 1, "total_pages": x, "total_items": x, "items_per_page": x } } }`
+- `GET /v1/classes` currently returns PascalCase payload from Go usecase wrapper: `{ "data": { "Classes": [...], "Pagination": { "CurrentPage": 1, "ItemsPerPage": 10, "TotalItems": x, "TotalPages": x } } }`
+- `GET /v1/rooms` currently returns PascalCase payload from Go usecase wrapper: `{ "data": { "Rooms": [...], "Pagination": { "CurrentPage": 1, "ItemsPerPage": 10, "TotalItems": x, "TotalPages": x } } }`
+- `GET /v1/programs` returns lowercase DTO payload: `{ "data": { "programs": [...], "pagination": { "current_page": 1, "items_per_page": 10, "total_items": x, "total_pages": x } } }`
+- `GET /v1/programs/:id` returns the program object directly in `data`, with embedded `courses` when linked.
 - Authentication endpoints MUST return Tokens with `Authorization: Bearer <token>` in the future requests.
