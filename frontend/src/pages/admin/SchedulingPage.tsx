@@ -22,7 +22,6 @@ import {
     PlayArrowRounded,
     RefreshRounded,
     RuleRounded,
-    SaveRounded,
     SearchRounded,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
@@ -41,6 +40,7 @@ import {
 } from '@/api/schedulingApi';
 import { useGetTeachersQuery } from '@/api/teacherApi';
 import PageHeader from '@/components/common/PageHeader';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const schedulingSchema = z.object({
     date_from: z.string().min(1, 'Vui lòng chọn ngày bắt đầu'),
@@ -48,28 +48,98 @@ const schedulingSchema = z.object({
     class_ids: z.array(z.string()).optional(),
     teacher_ids: z.array(z.string()).optional(),
     room_ids: z.array(z.string()).optional(),
+}).refine((values) => values.date_to >= values.date_from, {
+    message: 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu',
+    path: ['date_to'],
 });
 
 type SchedulingFormValues = z.infer<typeof schedulingSchema>;
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (typeof error === 'object' && error && 'data' in error) {
-        const apiError = error as { data?: { message?: string } };
-        return apiError.data?.message || fallback;
-    }
-
-    if (error instanceof Error) {
-        return error.message;
-    }
-
-    return fallback;
+const previewSteps = ['Cấu hình đầu vào', 'Chạy CSP preview', 'Rà soát kết quả'];
+const formatDateInput = (value: Date) => {
+    const year = value.getFullYear();
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const day = `${value.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
-const previewSteps = ['Cấu hình đầu vào', 'Chạy CSP preview', 'Rà soát và commit'];
-const defaultDateFrom = new Date().toISOString().split('T')[0];
-const defaultDateTo = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+const defaultDateFrom = formatDateInput(new Date());
+const defaultDateTo = formatDateInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
 
 const formatDateTime = (value: string) => new Date(value).toLocaleString('vi-VN');
+
+const getConflictSeverity = (type: string): 'error' | 'warning' | 'info' => {
+    switch (type) {
+        case 'NO_CLASS_INPUT':
+        case 'NO_ACTIVE_ROOM':
+        case 'NO_VALID_DATE_RANGE':
+            return 'error';
+        case 'MISSING_TEACHER':
+        case 'PREFERRED_ROOM_UNAVAILABLE':
+        case 'ROOM_CAPACITY_BLOCK':
+        case 'NO_SLOT_IN_RANGE':
+        case 'NO_DOMAIN':
+        case 'MISSING_COURSE':
+        case 'INVALID_COURSE_SESSION_COUNT':
+        case 'INVALID_COURSE_DURATION':
+        case 'CLASS_SCHEDULE_NO_SLOT':
+        case 'CLASS_SCHEDULE_ROOM_UNAVAILABLE':
+            return 'warning';
+        default:
+            return 'info';
+    }
+};
+
+const getConflictActionHint = (type: string) => {
+    switch (type) {
+        case 'MISSING_TEACHER':
+            return 'Gợi ý: vào Quản lý lớp học để gán giáo viên phụ trách rồi chạy lại preview.';
+        case 'NO_CLASS_INPUT':
+            return 'Gợi ý: kiểm tra bộ lọc lớp, trạng thái OPEN hoặc giáo viên đã chọn.';
+        case 'NO_ACTIVE_ROOM':
+            return 'Gợi ý: bỏ lọc phòng hoặc bổ sung phòng học khả dụng trước khi chạy lại.';
+        case 'PREFERRED_ROOM_UNAVAILABLE':
+            return 'Gợi ý: đổi phòng đang gán cho lớp hoặc nới lại bộ lọc phòng.';
+        case 'ROOM_CAPACITY_BLOCK':
+            return 'Gợi ý: chọn phòng sức chứa lớn hơn hoặc điều chỉnh sĩ số tối đa của lớp.';
+        case 'NO_SLOT_IN_RANGE':
+            return 'Gợi ý: nới khoảng ngày preview để tạo thêm khung giờ khả dụng.';
+        case 'NO_DOMAIN':
+            return 'Gợi ý: giảm bớt bộ lọc và kiểm tra lại dữ liệu lớp/phòng để solver có thêm miền giá trị.';
+        case 'MISSING_COURSE':
+            return 'Gợi ý: gắn khóa học cho lớp trước khi chạy preview để hệ thống sinh đúng số buổi học.';
+        case 'INVALID_COURSE_SESSION_COUNT':
+            return 'Gợi ý: cập nhật `session_count` của khóa học thành số buổi hợp lệ.';
+        case 'INVALID_COURSE_DURATION':
+            return 'Gợi ý: cập nhật `session_duration_minutes` của khóa học để preview dùng đúng thời lượng buổi học.';
+        case 'CLASS_SCHEDULE_NO_SLOT':
+            return 'Gợi ý: kiểm tra lịch mẫu của lớp và bảo đảm khung giờ mẫu đủ chứa thời lượng buổi học từ khóa học.';
+        case 'CLASS_SCHEDULE_ROOM_UNAVAILABLE':
+            return 'Gợi ý: kiểm tra `room_id` trong lịch mẫu của lớp hoặc nới lại bộ lọc phòng để giữ đúng phòng cố định theo lịch mẫu.';
+        case 'NO_VALID_DATE_RANGE':
+            return 'Gợi ý: chọn ngày kết thúc lớn hơn hoặc bằng ngày bắt đầu.';
+        default:
+            return 'Gợi ý: rà lại dữ liệu lớp, giáo viên, phòng và bộ lọc preview.';
+    }
+};
+
+const getConflictScopeLabel = (classCode?: string, className?: string, sessionIndex?: number, sessionTotal?: number) => {
+    const sessionLabel = sessionIndex && sessionTotal ? ` • Buổi ${sessionIndex}/${sessionTotal}` : '';
+    if (classCode) {
+        return className ? `${classCode} - ${className}${sessionLabel}` : `${classCode}${sessionLabel}`;
+    }
+
+    return className ? `${className}${sessionLabel}` : 'Tổng quan preview';
+};
+
+type ClassPreviewProgress = {
+    classId: string;
+    classCode: string;
+    className: string;
+    scheduledSessions: number;
+    totalSessions: number;
+    conflictCount: number;
+};
 
 export const SchedulingPage = () => {
     const [preview, setPreview] = useState<SchedulingPreview | null>(null);
@@ -80,9 +150,9 @@ export const SchedulingPage = () => {
     const { data: roomsData, isLoading: isLoadingRooms } = useGetRoomsQuery({ page: 1, limit: 200 });
 
     const [previewScheduling, { isLoading: isPreviewing }] = usePreviewSchedulingMutation();
+    const [commitSchedulingPreview, { isLoading: isCommitting }] = useCommitSchedulingPreviewMutation();
     const [loadPreview, { isFetching: isLoadingPreview }] = useLazyGetSchedulingPreviewQuery();
     const [loadLatestPreview, { isFetching: isLoadingLatest }] = useLazyGetLatestSchedulingPreviewQuery();
-    const [commitPreview, { isLoading: isCommiting }] = useCommitSchedulingPreviewMutation();
 
     const classes = classesData?.data?.classes || [];
     const teachers = teachersData?.data?.teachers || [];
@@ -111,13 +181,78 @@ export const SchedulingPage = () => {
         }
 
         return rows.filter((row) =>
-            [row.class_code, row.class_name, row.teacher_label, row.room_name]
+            [row.class_code, row.class_name, row.teacher_label, row.room_name, `buoi ${row.session_index}`]
                 .filter(Boolean)
                 .some((value) => value.toLowerCase().includes(keyword)),
         );
     }, [preview?.assignments, search]);
 
-    const activeStep = preview ? (preview.status === 'COMPLETED' ? 2 : 1) : 0;
+    const conflictSeveritySummary = useMemo(() => {
+        const summary = {
+            error: 0,
+            warning: 0,
+            info: 0,
+        };
+
+        for (const conflict of preview?.conflicts || []) {
+            summary[getConflictSeverity(conflict.type)] += 1;
+        }
+
+        return summary;
+    }, [preview?.conflicts]);
+
+    const classProgressRows = useMemo<ClassPreviewProgress[]>(() => {
+        if (!preview) {
+            return [];
+        }
+
+        const progressMap = new Map<string, ClassPreviewProgress>();
+
+        for (const assignment of preview.assignments) {
+            const current = progressMap.get(assignment.class_id);
+            if (current) {
+                current.scheduledSessions += 1;
+                current.totalSessions = Math.max(current.totalSessions, assignment.session_total);
+                continue;
+            }
+
+            progressMap.set(assignment.class_id, {
+                classId: assignment.class_id,
+                classCode: assignment.class_code,
+                className: assignment.class_name,
+                scheduledSessions: 1,
+                totalSessions: assignment.session_total,
+                conflictCount: 0,
+            });
+        }
+
+        for (const conflict of preview.conflicts) {
+            if (!conflict.class_id) {
+                continue;
+            }
+
+            const current = progressMap.get(conflict.class_id);
+            if (current) {
+                current.conflictCount += 1;
+                current.totalSessions = Math.max(current.totalSessions, conflict.session_total || 0);
+                continue;
+            }
+
+            progressMap.set(conflict.class_id, {
+                classId: conflict.class_id,
+                classCode: conflict.class_code,
+                className: conflict.class_name,
+                scheduledSessions: 0,
+                totalSessions: conflict.session_total || 0,
+                conflictCount: 1,
+            });
+        }
+
+        return Array.from(progressMap.values()).sort((left, right) => left.classCode.localeCompare(right.classCode));
+    }, [preview]);
+
+    const activeStep = preview ? 2 : 0;
+    const canCommitPreview = !!preview && preview.status === 'COMPLETED' && preview.summary.unscheduled_lessons === 0;
 
     const handleRunPreview = handleSubmit(async (values) => {
         try {
@@ -125,7 +260,7 @@ export const SchedulingPage = () => {
             setPreview(response.data);
             toast.success('Đã chạy preview xếp lịch');
         } catch (error) {
-            toast.error(getErrorMessage(error, 'Không thể chạy preview xếp lịch'));
+            toast.error(getApiErrorMessage(error, 'Không thể chạy preview xếp lịch'));
         }
     });
 
@@ -135,7 +270,7 @@ export const SchedulingPage = () => {
             setPreview(response.data);
             toast.success('Đã tải preview mới nhất');
         } catch (error) {
-            toast.error(getErrorMessage(error, 'Chưa có preview nào để tải'));
+            toast.error(getApiErrorMessage(error, 'Chưa có preview nào để tải'));
         }
     };
 
@@ -150,21 +285,21 @@ export const SchedulingPage = () => {
             setPreview(response.data);
             toast.success('Đã làm mới kết quả preview');
         } catch (error) {
-            toast.error(getErrorMessage(error, 'Không thể tải lại preview hiện tại'));
+            toast.error(getApiErrorMessage(error, 'Không thể tải lại preview hiện tại'));
         }
     };
 
-    const handleCommit = async () => {
+    const handleCommitPreview = async () => {
         if (!preview?.run_id) {
-            toast.error('Chưa có preview để commit');
+            toast.error('Chưa có preview nào để commit');
             return;
         }
 
         try {
-            const response = await commitPreview({ run_id: preview.run_id }).unwrap();
-            toast.success(response.data.message || 'Đã chạy commit scaffold');
+            const response = await commitSchedulingPreview({ run_id: preview.run_id }).unwrap();
+            toast.success(response.data.message || `Đã commit ${response.data.scheduled_lessons} buổi học`);
         } catch (error) {
-            toast.error(getErrorMessage(error, 'Không thể commit preview'));
+            toast.error(getApiErrorMessage(error, 'Không thể commit preview xếp lịch'));
         }
     };
 
@@ -180,7 +315,7 @@ export const SchedulingPage = () => {
                         {params.row.class_name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                        {params.row.class_code}
+                        {params.row.class_code} • Buổi {params.row.session_index}/{params.row.session_total}
                     </Typography>
                 </Box>
             ),
@@ -440,6 +575,8 @@ export const SchedulingPage = () => {
                                     </Typography>
                                 </Box>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
+                                    <Chip label={`${preview.summary.requested_classes} lớp`} color="default" variant="outlined" />
+                                    <Chip label={`${preview.summary.requested_sessions} buổi cần xếp`} color="default" variant="outlined" />
                                     <Chip label={`${preview.summary.scheduled_lessons} buổi đã xếp`} color="success" variant="outlined" />
                                     <Chip label={`${preview.summary.unscheduled_lessons} buổi chưa xếp`} color="warning" variant="outlined" />
                                     <Chip label={`${preview.summary.conflict_count} conflict`} color="error" variant="outlined" />
@@ -449,14 +586,64 @@ export const SchedulingPage = () => {
                         </Paper>
 
                         {preview.conflicts.length > 0 ? (
-                            <Alert severity={preview.assignments.length > 0 ? 'warning' : 'error'}>
-                                Preview ghi nhận {preview.conflicts.length} conflict. Backend đã chặn teacher conflict, room conflict, slot sau 22h và sức chứa phòng.
-                            </Alert>
+                            <Stack spacing={1.25}>
+                                <Alert severity={preview.assignments.length > 0 ? 'warning' : 'error'}>
+                                    Preview ghi nhận {preview.conflicts.length} vấn đề cần xử lý. Mỗi conflict bên dưới đều kèm gợi ý để bạn biết nên sửa dữ liệu nào trước khi chạy lại.
+                                </Alert>
+                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                    <Chip label={`${conflictSeveritySummary.error} lỗi chặn`} color="error" variant="outlined" />
+                                    <Chip label={`${conflictSeveritySummary.warning} cảnh báo`} color="warning" variant="outlined" />
+                                    <Chip label={`${conflictSeveritySummary.info} thông tin`} color="info" variant="outlined" />
+                                </Stack>
+                            </Stack>
                         ) : (
                             <Alert severity="success">Preview hiện không có conflict hard constraint.</Alert>
                         )}
 
                         <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
+                                Tiến độ preview theo lớp
+                            </Typography>
+                            <Stack spacing={1.25} sx={{ mb: 2.5 }}>
+                                {classProgressRows.map((row) => (
+                                    <Paper
+                                        key={row.classId}
+                                        variant="outlined"
+                                        sx={{
+                                            p: 1.5,
+                                            borderRadius: 3,
+                                            display: 'flex',
+                                            flexDirection: { xs: 'column', md: 'row' },
+                                            justifyContent: 'space-between',
+                                            gap: 1,
+                                        }}
+                                    >
+                                        <Box>
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                {row.classCode} - {row.className}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Đã xếp {row.scheduledSessions}/{row.totalSessions || '?'} buổi
+                                            </Typography>
+                                        </Box>
+                                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                                            <Chip
+                                                size="small"
+                                                color={row.totalSessions > 0 && row.scheduledSessions === row.totalSessions ? 'success' : 'warning'}
+                                                variant="outlined"
+                                                label={`${row.scheduledSessions}/${row.totalSessions || '?'} buổi`}
+                                            />
+                                            <Chip
+                                                size="small"
+                                                color={row.conflictCount > 0 ? 'warning' : 'success'}
+                                                variant="outlined"
+                                                label={row.conflictCount > 0 ? `${row.conflictCount} conflict` : 'Không conflict'}
+                                            />
+                                        </Stack>
+                                    </Paper>
+                                ))}
+                            </Stack>
+
                             <Stack
                                 direction={{ xs: 'column', lg: 'row' }}
                                 spacing={1.5}
@@ -488,16 +675,25 @@ export const SchedulingPage = () => {
                                         Làm mới
                                     </Button>
                                     <Button
-                                        variant="contained"
-                                        color="secondary"
-                                        startIcon={<SaveRounded />}
-                                        onClick={() => void handleCommit()}
-                                        disabled={isCommiting}
+                                        variant="outlined"
+                                        color={canCommitPreview ? 'primary' : 'inherit'}
+                                        onClick={() => void handleCommitPreview()}
+                                        disabled={!canCommitPreview || isCommitting}
                                     >
-                                        {isCommiting ? 'Đang commit...' : 'Commit scaffold'}
+                                        {isCommitting ? 'Đang commit...' : 'Commit xuống lesson'}
                                     </Button>
                                 </Stack>
                             </Stack>
+
+                            {canCommitPreview ? (
+                                <Alert severity="success" sx={{ mb: 2 }}>
+                                    Preview đã đạt trạng thái `COMPLETED`. Bạn có thể commit để tạo `lesson` thật; hệ thống sẽ chặn nếu phát hiện trùng lịch với lesson đang tồn tại.
+                                </Alert>
+                            ) : (
+                                <Alert severity="info" sx={{ mb: 2 }}>
+                                    Commit chỉ mở khi preview `COMPLETED` và không còn buổi chưa xếp. Hãy xử lý conflict rồi chạy lại preview trước khi ghi lịch thật xuống `lesson`.
+                                </Alert>
+                            )}
 
                             <DataGrid
                                 rows={filteredAssignments}
@@ -531,8 +727,15 @@ export const SchedulingPage = () => {
                                 </Typography>
                                 <Stack spacing={1.25}>
                                     {preview.conflicts.map((conflict) => (
-                                        <Alert key={`${conflict.variable_id}-${conflict.type}`} severity="warning">
-                                            <strong>{conflict.class_code}</strong>: {conflict.message}
+                                        <Alert
+                                            key={`${conflict.variable_id || 'global'}-${conflict.type}`}
+                                            severity={getConflictSeverity(conflict.type)}
+                                        >
+                                            <strong>{getConflictScopeLabel(conflict.class_code, conflict.class_name, conflict.session_index, conflict.session_total)}</strong>
+                                            {`: ${conflict.message} `}
+                                            <Typography component="span" variant="body2" sx={{ fontWeight: 600 }}>
+                                                {getConflictActionHint(conflict.type)}
+                                            </Typography>
                                         </Alert>
                                     ))}
                                 </Stack>

@@ -45,6 +45,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 
 import { Toaster } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { normalizeRole } from '@/utils/roles';
 
 const DashboardRedirect = () => {
   const { user } = useAuth();
@@ -54,7 +55,7 @@ const DashboardRedirect = () => {
   }
 
   // Redirect based on role (standardized to uppercase)
-  switch (user.role) {
+  switch (normalizeRole(user.role)) {
     case 'ADMIN':
     case 'SUPER_ADMIN':
       return <Navigate to="/app/admin/overview" replace />;

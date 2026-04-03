@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { type Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -13,7 +13,7 @@ import {
     Grid,
     CircularProgress,
 } from '@mui/material';
-import type { Room } from '@/api/roomApi';
+import type { Room, RoomStatus } from '@/api/roomApi';
 
 const roomSchema = z.object({
     name: z.string().min(1, 'Tên phòng không được để trống'),
@@ -39,7 +39,7 @@ const RoomDialog = ({ open, onClose, onSubmit, room, isLoading }: RoomDialogProp
         reset,
         formState: { errors },
     } = useForm<RoomFormValues>({
-        resolver: zodResolver(roomSchema),
+        resolver: zodResolver(roomSchema) as Resolver<RoomFormValues>,
         defaultValues: {
             name: '',
             capacity: 30,
@@ -54,7 +54,7 @@ const RoomDialog = ({ open, onClose, onSubmit, room, isLoading }: RoomDialogProp
                 name: room.name,
                 capacity: room.capacity,
                 location: room.location || room.address || '',
-                status: room.status || 'ACTIVE',
+                status: (room.status || 'ACTIVE') as RoomStatus,
             });
         } else {
             reset({

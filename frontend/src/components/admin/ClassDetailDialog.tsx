@@ -22,6 +22,7 @@ import {
     Tabs,
     TextField,
     Typography,
+    autocompleteClasses,
 } from '@mui/material';
 import {
     AddRounded,
@@ -140,7 +141,7 @@ export default function ClassDetailDialog({
         { skip: !open },
     );
     const { data: studentsResponse, isFetching: isFetchingStudents } = useGetStudentsQuery(
-        { page: 1, limit: 200, status: 'ACTIVE', search: studentSearch },
+        { page: 1, limit: 500, status: 'ACTIVE' },
         { skip: !open || !isEnrollDialogOpen },
     );
 
@@ -170,6 +171,12 @@ export default function ClassDetailDialog({
         teacherForm.reset({ teacher_id: classData?.teacher_id || '' });
     }, [classData?.teacher_id, teacherForm]);
 
+    useEffect(() => {
+        if (!isEnrollDialogOpen) {
+            setStudentSearch('');
+        }
+    }, [isEnrollDialogOpen]);
+
     const rosterStudents = useMemo(() => {
         const keyword = rosterSearch.trim().toLowerCase();
         const rows = roster?.students || [];
@@ -189,6 +196,11 @@ export default function ClassDetailDialog({
         const enrolledIds = new Set((roster?.students || []).map((student) => student.id));
         return (studentsResponse?.data?.students || []).filter((student) => !enrolledIds.has(student.id));
     }, [roster?.students, studentsResponse?.data?.students]);
+
+    const selectedStudentMap = useMemo(
+        () => new Map(availableStudents.map((student) => [student.id, student])),
+        [availableStudents],
+    );
 
     const capacityLimit = roster?.capacity_limit || classData?.max_students || 0;
     const currentCount = roster?.current_count || 0;
@@ -251,22 +263,43 @@ export default function ClassDetailDialog({
             renderCell: (params: GridRenderCellParams<Student>) => (
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
                     <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.light', color: 'primary.dark' }}>
-                        {params.row.full_name.charAt(0)}
+                        {params.row.full_name?.charAt(0) || 'H'}
                     </Avatar>
                     <Box sx={{ minWidth: 0 }}>
                         <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
-                            {params.row.full_name}
+                            {params.row.full_name || 'Chưa có tên học sinh'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" noWrap>
-                            {params.row.code}
+                            {params.row.code || 'Chưa có mã học sinh'}
                         </Typography>
                     </Box>
                 </Stack>
             ),
         },
-        { field: 'grade_level', headerName: 'Khối lớp', width: 120 },
-        { field: 'phone', headerName: 'Số điện thoại', width: 140 },
-        { field: 'guardian_phone', headerName: 'SĐT phụ huynh', width: 150 },
+        {
+            field: 'grade_level',
+            headerName: 'Khối lớp',
+            width: 120,
+            renderCell: (params: GridRenderCellParams<Student>) => (
+                <Typography variant="body2">{params.row.grade_level || '-'}</Typography>
+            ),
+        },
+        {
+            field: 'phone',
+            headerName: 'Số điện thoại',
+            width: 140,
+            renderCell: (params: GridRenderCellParams<Student>) => (
+                <Typography variant="body2">{params.row.phone || '-'}</Typography>
+            ),
+        },
+        {
+            field: 'guardian_phone',
+            headerName: 'SĐT phụ huynh',
+            width: 150,
+            renderCell: (params: GridRenderCellParams<Student>) => (
+                <Typography variant="body2">{params.row.guardian_phone || '-'}</Typography>
+            ),
+        },
         {
             field: 'status',
             headerName: 'Trạng thái',
@@ -641,13 +674,6 @@ export default function ClassDetailDialog({
                 <DialogTitle>Thêm học sinh vào lớp</DialogTitle>
                 <DialogContent dividers>
                     <Stack spacing={2} sx={{ pt: 0.5 }}>
-                        <TextField
-                            label="Tìm học sinh"
-                            value={studentSearch}
-                            onChange={(event) => setStudentSearch(event.target.value)}
-                            helperText="Lọc theo tên, mã hoặc trạng thái hoạt động"
-                        />
-
                         <Controller
                             control={enrollForm.control}
                             name="student_ids"
@@ -656,17 +682,64 @@ export default function ClassDetailDialog({
                                     multiple
                                     options={availableStudents}
                                     loading={isFetchingStudents}
-                                    value={availableStudents.filter((student) => field.value.includes(student.id))}
+                                    value={field.value.map((studentId) => selectedStudentMap.get(studentId)).filter(Boolean) as Student[]}
                                     onChange={(_, values) => field.onChange(values.map((student) => student.id))}
-                                    getOptionLabel={(option) => `${option.full_name} (${option.code})`}
+                                    inputValue={studentSearch}
+                                    onInputChange={(_, value) => setStudentSearch(value)}
+                                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                                    getOptionLabel={(option) => {
+                                        const grade = option.grade_level ? ` • ${option.grade_level}` : '';
+                                        return `${option.full_name} (${option.code})${grade}`;
+                                    }}
+                                    filterOptions={(options, state) => {
+                                        const keyword = state.inputValue.trim().toLowerCase();
+                                        if (!keyword) {
+                                            return options;
+                                        }
+
+                                        return options.filter((student) =>
+                                            [
+                                                student.full_name,
+                                                student.code,
+                                                student.grade_level,
+                                                student.phone,
+                                                student.guardian_phone,
+                                            ]
+                                                .filter(Boolean)
+                                                .some((value) => value.toLowerCase().includes(keyword)),
+                                        );
+                                    }}
+                                    renderOption={(props, option) => (
+                                        <Box component="li" {...props} sx={{ alignItems: 'flex-start', py: 1 }}>
+                                            <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                                                    {option.full_name || 'Chưa có tên'} ({option.code || 'N/A'})
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap>
+                                                    {option.grade_level || 'Chưa có khối lớp'} • {option.phone || 'Chưa có SĐT'}
+                                                </Typography>
+                                            </Stack>
+                                        </Box>
+                                    )}
                                     renderInput={(params) => (
                                         <TextField
                                             {...params}
                                             label="Danh sách học sinh khả dụng"
                                             error={!!fieldState.error}
-                                            helperText={fieldState.error?.message || 'Có thể chọn nhiều học sinh trong một lần lưu'}
+                                            helperText={
+                                                fieldState.error?.message || 'Tìm ngay trong ô này theo tên, mã, khối lớp hoặc số điện thoại'
+                                            }
                                         />
                                     )}
+                                    slotProps={{
+                                        paper: {
+                                            sx: {
+                                                [`& .${autocompleteClasses.option}`]: {
+                                                    alignItems: 'flex-start',
+                                                },
+                                            },
+                                        },
+                                    }}
                                 />
                             )}
                         />

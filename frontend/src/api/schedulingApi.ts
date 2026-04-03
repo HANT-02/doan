@@ -13,6 +13,8 @@ export interface SchedulingAssignment {
     class_id: string;
     class_code: string;
     class_name: string;
+    session_index: number;
+    session_total: number;
     teacher_id: string;
     teacher_label: string;
     room_id: string;
@@ -28,6 +30,8 @@ export interface SchedulingConflict {
     class_id: string;
     class_code: string;
     class_name: string;
+    session_index: number;
+    session_total: number;
     type: string;
     message: string;
 }
@@ -39,6 +43,7 @@ export interface SchedulingPreview {
     filters: SchedulingFilters;
     summary: {
         requested_classes: number;
+        requested_sessions: number;
         scheduled_lessons: number;
         unscheduled_lessons: number;
         conflict_count: number;
@@ -96,6 +101,7 @@ const normalizePreviewResponse = (response: RawSchedulingPreviewResponse): Sched
         },
         summary: {
             requested_classes: 0,
+            requested_sessions: 0,
             scheduled_lessons: 0,
             unscheduled_lessons: 0,
             conflict_count: 0,

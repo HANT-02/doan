@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAppSelector } from '@/store';
 import FullScreenLoader from '@/components/common/FullScreenLoader';
+import { hasAnyRole } from '@/utils/roles';
 
 interface RoleRouteProps {
     allowedRoles: string[];
@@ -17,7 +18,7 @@ export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
         return <Navigate to="/login" replace />;
     }
 
-    if (!allowedRoles.includes(user.role)) {
+    if (!hasAnyRole(user.role, allowedRoles)) {
         return <Navigate to="/403" replace />;
     }
 

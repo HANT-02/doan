@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"doan/internal/entities"
@@ -47,6 +48,29 @@ func NewPreviewUseCase(
 func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*PreviewResult, error) {
 	ctxLogger := logger.NewLogger(ctx)
 
+	if input.DateTo.Before(input.DateFrom) {
+		return &PreviewResult{
+			RunID:       utils.GenerateUUIDWithPrefix("sched-preview-"),
+			Status:      "FAILED",
+			GeneratedAt: time.Now(),
+			Filters: PreviewFilters{
+				DateFrom:   input.DateFrom,
+				DateTo:     input.DateTo,
+				ClassIDs:   input.ClassIDs,
+				TeacherIDs: input.TeacherIDs,
+				RoomIDs:    input.RoomIDs,
+			},
+			Summary:     PreviewSummary{},
+			Assignments: []PreviewAssignment{},
+			Conflicts: []PreviewConflict{
+				{
+					Type:    "NO_VALID_DATE_RANGE",
+					Message: "Khoảng ngày preview không hợp lệ. Hãy chọn ngày kết thúc lớn hơn hoặc bằng ngày bắt đầu.",
+				},
+			},
+		}, nil
+	}
+
 	classes, err := uc.loadClasses(ctx, input)
 	if err != nil {
 		ctxLogger.Errorf("Failed to load classes for scheduling preview: %v", err)
@@ -75,18 +99,33 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		Conflicts:   []PreviewConflict{},
 	}
 
+	if len(classes) == 0 {
+		result.Conflicts = append(result.Conflicts, PreviewConflict{
+			Type:    "NO_CLASS_INPUT",
+			Message: "Không có lớp OPEN nào phù hợp bộ lọc hiện tại. Kiểm tra lại khoảng ngày, lớp đã chọn hoặc giáo viên đã lọc.",
+		})
+	}
+
+	if len(rooms) == 0 {
+		result.Conflicts = append(result.Conflicts, PreviewConflict{
+			Type:    "NO_ACTIVE_ROOM",
+			Message: "Không có phòng khả dụng để xếp lịch. Kiểm tra bộ lọc phòng hoặc dữ liệu phòng học đang hoạt động.",
+		})
+	}
+
 	variables, presetConflicts := buildVariables(classes, input.TeacherIDs)
 	result.Conflicts = append(result.Conflicts, presetConflicts...)
 
-	domains := buildDomains(variables, rooms, input)
-	solver := newSolver(variables, domains)
+	domains, domainConflicts := buildDomains(variables, rooms, input, indexClassSchedules(classes))
+	solver := newSolver(variables, domains, domainConflicts)
 	assignments, solverConflicts := solver.Solve()
 	result.Conflicts = append(result.Conflicts, solverConflicts...)
 	result.Assignments = assignments
 	result.Summary = PreviewSummary{
 		RequestedClasses:   len(classes),
+		RequestedSessions:  len(variables),
 		ScheduledLessons:   len(assignments),
-		UnscheduledLessons: len(classes) - len(assignments),
+		UnscheduledLessons: maxInt(len(variables)-len(assignments), 0),
 		ConflictCount:      len(result.Conflicts),
 		SoftScore:          scoreAssignments(assignments),
 	}
@@ -107,6 +146,7 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 func (uc *previewUseCase) loadClasses(ctx context.Context, input PreviewInput) ([]entities.Class, error) {
 	condition := repositories.NewCommonCondition()
 	condition.SetPaging(500, 1)
+	condition.SetPreload([]string{"Teacher", "Course", "Room", "ClassSchedules", "ClassSchedules.Room"})
 	condition.AddCondition("status", "OPEN", repositories.Equal)
 	if len(input.ClassIDs) > 0 {
 		condition.AddCondition("id", input.ClassIDs, repositories.In)
@@ -136,7 +176,6 @@ func (uc *previewUseCase) loadClasses(ctx context.Context, input PreviewInput) (
 func (uc *previewUseCase) loadRooms(ctx context.Context, input PreviewInput) ([]entities.Room, error) {
 	condition := repositories.NewCommonCondition()
 	condition.SetPaging(500, 1)
-	condition.AddCondition("status", "ACTIVE", repositories.Equal)
 	if len(input.RoomIDs) > 0 {
 		condition.AddCondition("id", input.RoomIDs, repositories.In)
 	}
@@ -183,6 +222,42 @@ func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, 
 			continue
 		}
 
+		if classEntity.CourseID == nil || *classEntity.CourseID == "" {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "MISSING_COURSE",
+				Message:    "Lớp chưa gắn khóa học nên chưa thể sinh số buổi học thực tế cho preview.",
+			})
+			continue
+		}
+
+		if classEntity.Course.SessionCount <= 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "INVALID_COURSE_SESSION_COUNT",
+				Message:    "Khóa học của lớp chưa có `session_count` hợp lệ, nên chưa thể sinh đủ số buổi cho preview.",
+			})
+			continue
+		}
+
+		if classEntity.Course.SessionDurationMinutes <= 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "INVALID_COURSE_DURATION",
+				Message:    "Khóa học của lớp chưa có `session_duration_minutes` hợp lệ, nên chưa thể sinh thời lượng buổi học chính xác.",
+			})
+			continue
+		}
+
 		if len(teacherFilter) > 0 {
 			if _, ok := teacherFilter[*classEntity.TeacherID]; !ok {
 				continue
@@ -190,32 +265,48 @@ func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, 
 		}
 
 		teacherLabel := *classEntity.TeacherID
+		if classEntity.Teacher.FullName != "" {
+			teacherLabel = classEntity.Teacher.FullName
+		} else if classEntity.Teacher.Code != "" {
+			teacherLabel = classEntity.Teacher.Code
+		}
 		var preferredRoomID string
 		if classEntity.RoomID != nil {
 			preferredRoomID = *classEntity.RoomID
 		}
 
-		variables = append(variables, Variable{
-			ID:              classEntity.ID,
-			ClassID:         classEntity.ID,
-			ClassCode:       classEntity.Code,
-			ClassName:       classEntity.Name,
-			TeacherID:       *classEntity.TeacherID,
-			TeacherLabel:    teacherLabel,
-			ExpectedCapcity: classEntity.MaxStudents,
-			DurationMinutes: 120,
-			PreferredRoomID: preferredRoomID,
-		})
+		for sessionIndex := 1; sessionIndex <= classEntity.Course.SessionCount; sessionIndex++ {
+			variables = append(variables, Variable{
+				ID:              fmt.Sprintf("%s-session-%02d", classEntity.ID, sessionIndex),
+				ClassID:         classEntity.ID,
+				ClassCode:       classEntity.Code,
+				ClassName:       classEntity.Name,
+				SessionIndex:    sessionIndex,
+				SessionTotal:    classEntity.Course.SessionCount,
+				TeacherID:       *classEntity.TeacherID,
+				TeacherLabel:    teacherLabel,
+				ExpectedCapcity: classEntity.MaxStudents,
+				DurationMinutes: classEntity.Course.SessionDurationMinutes,
+				PreferredRoomID: preferredRoomID,
+			})
+		}
 	}
 
 	return variables, conflicts
 }
 
-func buildDomains(variables []Variable, rooms []entities.Room, input PreviewInput) map[string][]DomainValue {
-	slots := generateTimeSlots(input.DateFrom, input.DateTo, 120)
+func buildDomains(
+	variables []Variable,
+	rooms []entities.Room,
+	input PreviewInput,
+	classSchedulesByClass map[string][]entities.ClassSchedule,
+) (map[string][]DomainValue, map[string]PreviewConflict) {
 	domains := make(map[string][]DomainValue, len(variables))
+	noDomainConflicts := make(map[string]PreviewConflict, len(variables))
 
 	for _, variable := range variables {
+		classSchedules := classSchedulesByClass[variable.ClassID]
+		slots := generateTimeSlotsForVariable(input.DateFrom, input.DateTo, variable.DurationMinutes, classSchedules)
 		values := make([]DomainValue, 0)
 		for _, room := range rooms {
 			if variable.PreferredRoomID != "" && variable.PreferredRoomID != room.ID {
@@ -225,6 +316,9 @@ func buildDomains(variables []Variable, rooms []entities.Room, input PreviewInpu
 				continue
 			}
 			for _, slot := range slots {
+				if slot.PreferredRoomID != "" && slot.PreferredRoomID != room.ID {
+					continue
+				}
 				if slot.End.Hour() > 22 || (slot.End.Hour() == 22 && slot.End.Minute() > 0) {
 					continue
 				}
@@ -244,9 +338,12 @@ func buildDomains(variables []Variable, rooms []entities.Room, input PreviewInpu
 			return values[i].TimeSlot.Start.Before(values[j].TimeSlot.Start)
 		})
 		domains[variable.ID] = values
+		if len(values) == 0 {
+			noDomainConflicts[variable.ID] = explainNoDomain(variable, rooms, slots, len(classSchedules) > 0)
+		}
 	}
 
-	return domains
+	return domains, noDomainConflicts
 }
 
 func generateTimeSlots(dateFrom, dateTo time.Time, durationMinutes int) []TimeSlot {
@@ -278,6 +375,87 @@ func generateTimeSlots(dateFrom, dateTo time.Time, durationMinutes int) []TimeSl
 	return slots
 }
 
+func generateTimeSlotsForVariable(
+	dateFrom, dateTo time.Time,
+	durationMinutes int,
+	classSchedules []entities.ClassSchedule,
+) []TimeSlot {
+	if len(classSchedules) == 0 {
+		return generateTimeSlots(dateFrom, dateTo, durationMinutes)
+	}
+
+	slots := make([]TimeSlot, 0)
+	for day := startOfDay(dateFrom); !day.After(startOfDay(dateTo)); day = day.AddDate(0, 0, 1) {
+		for _, schedule := range classSchedules {
+			if !matchesScheduleDay(day, schedule.DayOfWeek) {
+				continue
+			}
+
+			startHour, startMinute, startOk := parseClockValue(schedule.StartTime)
+			endHour, endMinute, endOk := parseClockValue(schedule.EndTime)
+			if !startOk || !endOk {
+				continue
+			}
+
+			start := time.Date(day.Year(), day.Month(), day.Day(), startHour, startMinute, 0, 0, day.Location())
+			limitEnd := time.Date(day.Year(), day.Month(), day.Day(), endHour, endMinute, 0, 0, day.Location())
+			end := start.Add(time.Duration(durationMinutes) * time.Minute)
+
+			if !end.After(start) || end.After(limitEnd) {
+				continue
+			}
+
+			slot := TimeSlot{
+				Start: start,
+				End:   end,
+			}
+			if schedule.RoomID != nil {
+				slot.PreferredRoomID = *schedule.RoomID
+			}
+
+			slots = append(slots, slot)
+		}
+	}
+
+	sort.Slice(slots, func(i, j int) bool {
+		return slots[i].Start.Before(slots[j].Start)
+	})
+
+	return slots
+}
+
+func matchesScheduleDay(day time.Time, scheduleDay string) bool {
+	switch strings.ToLower(strings.TrimSpace(scheduleDay)) {
+	case "monday", "mon", "thu_hai", "thứ hai", "thu 2", "thứ 2", "2":
+		return day.Weekday() == time.Monday
+	case "tuesday", "tue", "tues", "thu_ba", "thứ ba", "thu 3", "thứ 3", "3":
+		return day.Weekday() == time.Tuesday
+	case "wednesday", "wed", "thu_tu", "thứ tư", "thu 4", "thứ 4", "4":
+		return day.Weekday() == time.Wednesday
+	case "thursday", "thu", "thur", "thurs", "thu_nam", "thứ năm", "thu 5", "thứ 5", "5":
+		return day.Weekday() == time.Thursday
+	case "friday", "fri", "thu_sau", "thứ sáu", "thu 6", "thứ 6", "6":
+		return day.Weekday() == time.Friday
+	case "saturday", "sat", "thu_bay", "thứ bảy", "thu 7", "thứ 7", "7":
+		return day.Weekday() == time.Saturday
+	case "sunday", "sun", "chu_nhat", "chủ nhật", "cn":
+		return day.Weekday() == time.Sunday
+	default:
+		return false
+	}
+}
+
+func parseClockValue(raw string) (hour int, minute int, ok bool) {
+	for _, layout := range []string{"15:04", "15:04:05"} {
+		parsed, err := time.Parse(layout, raw)
+		if err == nil {
+			return parsed.Hour(), parsed.Minute(), true
+		}
+	}
+
+	return 0, 0, false
+}
+
 func startOfDay(value time.Time) time.Time {
 	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, value.Location())
 }
@@ -304,19 +482,25 @@ func sameDay(left, right time.Time) bool {
 }
 
 type solver struct {
-	variables []Variable
-	domains   map[string][]DomainValue
+	variables         []Variable
+	domains           map[string][]DomainValue
+	noDomainConflicts map[string]PreviewConflict
 }
 
-func newSolver(variables []Variable, domains map[string][]DomainValue) *solver {
+func newSolver(
+	variables []Variable,
+	domains map[string][]DomainValue,
+	noDomainConflicts map[string]PreviewConflict,
+) *solver {
 	clonedDomains := make(map[string][]DomainValue, len(domains))
 	for key, values := range domains {
 		clonedDomains[key] = append([]DomainValue(nil), values...)
 	}
 
 	return &solver{
-		variables: append([]Variable(nil), variables...),
-		domains:   clonedDomains,
+		variables:         append([]Variable(nil), variables...),
+		domains:           clonedDomains,
+		noDomainConflicts: noDomainConflicts,
 	}
 }
 
@@ -343,17 +527,22 @@ func (s *solver) Solve() ([]PreviewAssignment, []PreviewConflict) {
 
 		conflictType := "NO_DOMAIN"
 		message := "Không tìm thấy phương án hợp lệ với hard constraints hiện tại."
-		if len(s.domains[variable.ID]) == 0 {
+		if precomputedConflict, ok := s.noDomainConflicts[variable.ID]; ok {
+			conflictType = precomputedConflict.Type
+			message = precomputedConflict.Message
+		} else if len(s.domains[variable.ID]) == 0 {
 			message = "Không còn room/timeslot khả dụng cho lớp này trong khoảng ngày đã chọn."
 		}
 
 		conflicts = append(conflicts, PreviewConflict{
-			VariableID: variable.ID,
-			ClassID:    variable.ClassID,
-			ClassCode:  variable.ClassCode,
-			ClassName:  variable.ClassName,
-			Type:       conflictType,
-			Message:    message,
+			VariableID:   variable.ID,
+			ClassID:      variable.ClassID,
+			ClassCode:    variable.ClassCode,
+			ClassName:    variable.ClassName,
+			SessionIndex: variable.SessionIndex,
+			SessionTotal: variable.SessionTotal,
+			Type:         conflictType,
+			Message:      message,
 		})
 	}
 
@@ -373,6 +562,8 @@ func (s *solver) greedyAssign(variables []Variable) map[string]PreviewAssignment
 				ClassID:       variable.ClassID,
 				ClassCode:     variable.ClassCode,
 				ClassName:     variable.ClassName,
+				SessionIndex:  variable.SessionIndex,
+				SessionTotal:  variable.SessionTotal,
 				TeacherID:     variable.TeacherID,
 				TeacherLabel:  variable.TeacherLabel,
 				RoomID:        value.RoomID,
@@ -416,6 +607,8 @@ func (s *solver) backtrack(variables []Variable, assignments map[string]PreviewA
 			ClassID:       variable.ClassID,
 			ClassCode:     variable.ClassCode,
 			ClassName:     variable.ClassName,
+			SessionIndex:  variable.SessionIndex,
+			SessionTotal:  variable.SessionTotal,
 			TeacherID:     variable.TeacherID,
 			TeacherLabel:  variable.TeacherLabel,
 			RoomID:        value.RoomID,
@@ -471,6 +664,9 @@ func (s *solver) isConsistent(variable Variable, value DomainValue, assignments 
 
 	for _, assignment := range assignments {
 		if overlaps(value.TimeSlot.Start, value.TimeSlot.End, assignment.StartTime, assignment.EndTime) {
+			if assignment.ClassID == variable.ClassID {
+				return false
+			}
 			if assignment.TeacherID == variable.TeacherID {
 				return false
 			}
@@ -531,4 +727,160 @@ func assignmentsToSlice(assignments map[string]PreviewAssignment) []PreviewAssig
 
 func overlaps(startA, endA, startB, endB time.Time) bool {
 	return startA.Before(endB) && startB.Before(endA)
+}
+
+func explainNoDomain(variable Variable, rooms []entities.Room, slots []TimeSlot, hasClassSchedule bool) PreviewConflict {
+	if len(slots) == 0 {
+		if hasClassSchedule {
+			return PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "CLASS_SCHEDULE_NO_SLOT",
+				Message:      fmt.Sprintf("Lịch mẫu của lớp không tạo được slot hợp lệ cho buổi %d/%d trong khoảng ngày đã chọn. Hãy kiểm tra `day_of_week`, `start_time`, `end_time` hoặc nới khoảng ngày preview.", variable.SessionIndex, variable.SessionTotal),
+			}
+		}
+
+		return PreviewConflict{
+			VariableID:   variable.ID,
+			ClassID:      variable.ClassID,
+			ClassCode:    variable.ClassCode,
+			ClassName:    variable.ClassName,
+			SessionIndex: variable.SessionIndex,
+			SessionTotal: variable.SessionTotal,
+			Type:         "NO_SLOT_IN_RANGE",
+			Message:      fmt.Sprintf("Khoảng ngày đã chọn không sinh ra khung giờ hợp lệ cho buổi %d/%d của lớp này. Hãy nới khoảng ngày preview.", variable.SessionIndex, variable.SessionTotal),
+		}
+	}
+
+	if len(rooms) == 0 {
+		return PreviewConflict{
+			VariableID:   variable.ID,
+			ClassID:      variable.ClassID,
+			ClassCode:    variable.ClassCode,
+			ClassName:    variable.ClassName,
+			SessionIndex: variable.SessionIndex,
+			SessionTotal: variable.SessionTotal,
+			Type:         "NO_ACTIVE_ROOM",
+			Message:      fmt.Sprintf("Không có phòng khả dụng để xếp buổi %d/%d của lớp này. Hãy kiểm tra bộ lọc phòng hoặc dữ liệu phòng đang hoạt động.", variable.SessionIndex, variable.SessionTotal),
+		}
+	}
+
+	requiredSlotRooms := collectRequiredSlotRooms(slots)
+	if len(requiredSlotRooms) > 0 && !containsAnyRoom(rooms, requiredSlotRooms) {
+		return PreviewConflict{
+			VariableID:   variable.ID,
+			ClassID:      variable.ClassID,
+			ClassCode:    variable.ClassCode,
+			ClassName:    variable.ClassName,
+			SessionIndex: variable.SessionIndex,
+			SessionTotal: variable.SessionTotal,
+			Type:         "CLASS_SCHEDULE_ROOM_UNAVAILABLE",
+			Message:      fmt.Sprintf("Lịch mẫu của lớp đang khóa buổi %d/%d vào phòng cụ thể, nhưng phòng đó không nằm trong tập phòng khả dụng hiện tại. Hãy kiểm tra `class_schedule.room_id` hoặc bỏ bớt bộ lọc phòng.", variable.SessionIndex, variable.SessionTotal),
+		}
+	}
+
+	if variable.PreferredRoomID != "" {
+		for _, room := range rooms {
+			if room.ID != variable.PreferredRoomID {
+				continue
+			}
+
+			if room.Capacity < variable.ExpectedCapcity {
+				return PreviewConflict{
+					VariableID:   variable.ID,
+					ClassID:      variable.ClassID,
+					ClassCode:    variable.ClassCode,
+					ClassName:    variable.ClassName,
+					SessionIndex: variable.SessionIndex,
+					SessionTotal: variable.SessionTotal,
+					Type:         "ROOM_CAPACITY_BLOCK",
+					Message:      fmt.Sprintf("Phòng đang gán sẵn cho buổi %d/%d chỉ chứa %d chỗ, nhỏ hơn sĩ số tối đa %d. Hãy đổi phòng hoặc giảm sĩ số tối đa.", variable.SessionIndex, variable.SessionTotal, room.Capacity, variable.ExpectedCapcity),
+				}
+			}
+		}
+
+		return PreviewConflict{
+			VariableID:   variable.ID,
+			ClassID:      variable.ClassID,
+			ClassCode:    variable.ClassCode,
+			ClassName:    variable.ClassName,
+			SessionIndex: variable.SessionIndex,
+			SessionTotal: variable.SessionTotal,
+			Type:         "PREFERRED_ROOM_UNAVAILABLE",
+			Message:      fmt.Sprintf("Buổi %d/%d đang gán vào một phòng không nằm trong tập phòng khả dụng hiện tại. Hãy bỏ lọc phòng hoặc gán lại phòng học.", variable.SessionIndex, variable.SessionTotal),
+		}
+	}
+
+	for _, room := range rooms {
+		if room.Capacity >= variable.ExpectedCapcity {
+			return PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "NO_DOMAIN",
+				Message:      fmt.Sprintf("Có phòng phù hợp nhưng không tìm được tổ hợp phòng/khung giờ cho buổi %d/%d thỏa hard constraints hiện tại. Hãy nới bộ lọc hoặc đổi khoảng ngày preview.", variable.SessionIndex, variable.SessionTotal),
+			}
+		}
+	}
+
+	return PreviewConflict{
+		VariableID:   variable.ID,
+		ClassID:      variable.ClassID,
+		ClassCode:    variable.ClassCode,
+		ClassName:    variable.ClassName,
+		SessionIndex: variable.SessionIndex,
+		SessionTotal: variable.SessionTotal,
+		Type:         "ROOM_CAPACITY_BLOCK",
+		Message:      fmt.Sprintf("Không có phòng khả dụng nào đủ sức chứa cho buổi %d/%d của lớp này. Sĩ số tối đa hiện tại là %d học viên.", variable.SessionIndex, variable.SessionTotal, variable.ExpectedCapcity),
+	}
+}
+
+func maxInt(left, right int) int {
+	if left > right {
+		return left
+	}
+	return right
+}
+
+func indexClassSchedules(classes []entities.Class) map[string][]entities.ClassSchedule {
+	indexed := make(map[string][]entities.ClassSchedule, len(classes))
+	for _, classEntity := range classes {
+		if len(classEntity.ClassSchedules) == 0 {
+			continue
+		}
+
+		indexed[classEntity.ID] = append([]entities.ClassSchedule(nil), classEntity.ClassSchedules...)
+	}
+
+	return indexed
+}
+
+func collectRequiredSlotRooms(slots []TimeSlot) map[string]struct{} {
+	requiredRooms := make(map[string]struct{})
+	for _, slot := range slots {
+		if slot.PreferredRoomID == "" {
+			continue
+		}
+
+		requiredRooms[slot.PreferredRoomID] = struct{}{}
+	}
+
+	return requiredRooms
+}
+
+func containsAnyRoom(rooms []entities.Room, candidates map[string]struct{}) bool {
+	for _, room := range rooms {
+		if _, ok := candidates[room.ID]; ok {
+			return true
+		}
+	}
+
+	return false
 }

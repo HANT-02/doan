@@ -15,6 +15,7 @@ import {
     Dashboard,
     Build
 } from '@mui/icons-material';
+import { hasAnyRole } from '@/utils/roles';
 
 export interface NavItem {
     key: string;
@@ -171,5 +172,5 @@ export const NAV_ITEMS: NavItem[] = [
 
 export const getNavItemsByRole = (role?: string) => {
     if (!role) return [];
-    return NAV_ITEMS.filter(item => item.roles.includes(role));
+    return NAV_ITEMS.filter((item) => hasAnyRole(role, item.roles));
 };

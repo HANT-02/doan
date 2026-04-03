@@ -1,5 +1,6 @@
 import {
     Alert,
+    Autocomplete,
     Box,
     Button,
     Chip,
@@ -8,40 +9,40 @@ import {
     DialogContent,
     DialogTitle,
     Divider,
+    IconButton,
     Paper,
     Skeleton,
     Stack,
     Tab,
     Tabs,
+    TextField,
     Typography,
 } from '@mui/material';
-import { AutoStoriesOutlined, InfoOutlined, LinkRounded, RefreshRounded } from '@mui/icons-material';
+import {
+    AutoStoriesOutlined,
+    DeleteOutlineRounded,
+    InfoOutlined,
+    LinkRounded,
+    RefreshRounded,
+} from '@mui/icons-material';
 import { DataGrid, type GridColDef, type GridRenderCellParams } from '@mui/x-data-grid';
 import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { useGetProgramByIdQuery } from '@/api/programApi';
-import type { Course } from '@/api/courseApi';
+import { useGetCoursesQuery, type Course } from '@/api/courseApi';
+import {
+    useAddCoursesToProgramMutation,
+    useGetProgramByIdQuery,
+    useRemoveCoursesFromProgramMutation,
+} from '@/api/programApi';
+import { getApiErrorMessage } from '@/utils/apiError';
 
 interface ProgramDetailDialogProps {
     open: boolean;
     programId: string | null;
     onClose: () => void;
 }
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (typeof error === 'object' && error && 'data' in error) {
-        const apiError = error as { data?: { message?: string } };
-        return apiError.data?.message || fallback;
-    }
-
-    if (error instanceof Error) {
-        return error.message;
-    }
-
-    return fallback;
-};
 
 const infoField = (label: string, value: string) => (
     <Stack spacing={0.5}>
@@ -54,8 +55,47 @@ const infoField = (label: string, value: string) => (
     </Stack>
 );
 
+const trackLabelMap: Record<string, string> = {
+    BASIC: 'Cơ bản',
+    ADVANCED: 'Nâng cao',
+    SUPPORT: 'Bổ trợ',
+};
+
+const getTrackLabel = (track?: string) => {
+    if (!track) {
+        return 'Chưa phân hệ';
+    }
+
+    return trackLabelMap[track] || track;
+};
+
+const getProgramSummary = (effectiveFrom?: string, effectiveTo?: string) => {
+    if (!effectiveFrom && !effectiveTo) {
+        return 'Theo dõi thông tin chương trình và danh sách khóa học đang liên kết.';
+    }
+
+    const from = effectiveFrom ? format(new Date(effectiveFrom), 'dd/MM/yyyy') : '--';
+    const to = effectiveTo ? format(new Date(effectiveTo), 'dd/MM/yyyy') : '--';
+    return `Hiệu lực áp dụng: ${from} - ${to}.`;
+};
+
+const getCourseOptionLabel = (course: Course) => `${course.code} - ${course.name}`;
+
+const matchesCourseSearch = (course: Course, query: string) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+        return true;
+    }
+
+    return [course.code, course.name, course.subject, course.grade_level]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(normalizedQuery));
+};
+
 export default function ProgramDetailDialog({ open, programId, onClose }: ProgramDetailDialogProps) {
     const [activeTab, setActiveTab] = useState(0);
+    const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+    const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
 
     const {
         data,
@@ -68,8 +108,77 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
         skip: !open || !programId,
     });
 
+    const {
+        data: coursesData,
+        isFetching: isFetchingAvailableCourses,
+        error: availableCoursesError,
+    } = useGetCoursesQuery(
+        {
+            page: 1,
+            limit: 500,
+        },
+        {
+            skip: !open || !programId || !isLinkDialogOpen,
+        },
+    );
+
+    const [addCoursesToProgram, { isLoading: isAddingCourses }] = useAddCoursesToProgramMutation();
+    const [removeCoursesFromProgram, { isLoading: isRemovingCourses }] = useRemoveCoursesFromProgramMutation();
+
     const program = data?.data || null;
     const courses = useMemo(() => program?.courses || [], [program]);
+    const linkedCourseIds = useMemo(() => new Set(courses.map((course) => course.id)), [courses]);
+    const availableCourses = useMemo(
+        () => (coursesData?.data?.courses || []).filter((course) => !linkedCourseIds.has(course.id)),
+        [coursesData, linkedCourseIds],
+    );
+    const selectedCourses = useMemo(
+        () => availableCourses.filter((course) => selectedCourseIds.includes(course.id)),
+        [availableCourses, selectedCourseIds],
+    );
+
+    useEffect(() => {
+        if (!open) {
+            setActiveTab(0);
+            setIsLinkDialogOpen(false);
+            setSelectedCourseIds([]);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        if (!isLinkDialogOpen) {
+            setSelectedCourseIds([]);
+        }
+    }, [isLinkDialogOpen]);
+
+    const handleAddCourses = async () => {
+        if (!programId || selectedCourseIds.length === 0) {
+            return;
+        }
+
+        try {
+            await addCoursesToProgram({ programId, courseIds: selectedCourseIds }).unwrap();
+            toast.success('Liên kết khóa học thành công');
+            setIsLinkDialogOpen(false);
+            await refetch();
+        } catch (addError) {
+            toast.error(getApiErrorMessage(addError, 'Không thể liên kết khóa học vào chương trình'));
+        }
+    };
+
+    const handleRemoveCourse = async (courseId: string) => {
+        if (!programId) {
+            return;
+        }
+
+        try {
+            await removeCoursesFromProgram({ programId, courseIds: [courseId] }).unwrap();
+            toast.success('Đã gỡ khóa học khỏi chương trình');
+            await refetch();
+        } catch (removeError) {
+            toast.error(getApiErrorMessage(removeError, 'Không thể gỡ khóa học khỏi chương trình'));
+        }
+    };
 
     const columns: GridColDef<Course>[] = [
         {
@@ -137,6 +246,23 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
                 />
             ),
         },
+        {
+            field: 'actions',
+            headerName: '',
+            width: 86,
+            sortable: false,
+            align: 'center',
+            renderCell: (params: GridRenderCellParams<Course>) => (
+                <IconButton
+                    size="small"
+                    color="error"
+                    disabled={isRemovingCourses}
+                    onClick={() => void handleRemoveCourse(params.row.id)}
+                >
+                    <DeleteOutlineRounded fontSize="small" />
+                </IconButton>
+            ),
+        },
     ];
 
     const renderLoading = () => (
@@ -166,10 +292,6 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
 
         return (
             <Stack spacing={2}>
-                <Alert severity="info">
-                    Contract backend hiện cung cấp `code`, `name`, `track`, `effective_from`, `effective_to`, `approval_note` và `courses`. Chưa có field `description/status`.
-                </Alert>
-
                 <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
                     <Stack spacing={2.5}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
@@ -178,10 +300,10 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
                                     {program.name}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Mã chương trình: {program.code}
+                                    {getProgramSummary(program.effective_from, program.effective_to)}
                                 </Typography>
                             </Box>
-                            <Chip label={program.track || 'Chưa phân hệ'} color="primary" variant="outlined" />
+                            <Chip label={getTrackLabel(program.track)} color="primary" variant="outlined" />
                         </Stack>
 
                         <Divider />
@@ -195,7 +317,7 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
                         >
                             {infoField('Mã chương trình', program.code)}
                             {infoField('Tên chương trình', program.name)}
-                            {infoField('Hệ đào tạo', program.track || '-')}
+                            {infoField('Hệ đào tạo', getTrackLabel(program.track))}
                             {infoField('Số khóa học liên kết', `${courses.length}`)}
                             {infoField(
                                 'Hiệu lực từ',
@@ -237,13 +359,9 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
                         Chưa có khóa học nào được liên kết
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-                        Backend detail đã trả trường `courses`, hiện đang rỗng cho chương trình này.
+                        Mở danh sách khóa học khả dụng để chọn và liên kết trực tiếp vào chương trình này.
                     </Typography>
-                    <Button
-                        variant="contained"
-                        startIcon={<LinkRounded />}
-                        onClick={() => toast.info('Liên kết khóa học được thực hiện từ màn quản lý Program/Course')}
-                    >
+                    <Button variant="contained" startIcon={<LinkRounded />} onClick={() => setIsLinkDialogOpen(true)}>
                         Liên kết khóa học
                     </Button>
                 </Paper>
@@ -252,6 +370,26 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
 
         return (
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    sx={{ mb: 2 }}
+                >
+                    <Stack spacing={0.5}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            Khóa học đang liên kết
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Hiện có {courses.length} khóa học thuộc chương trình này.
+                        </Typography>
+                    </Stack>
+                    <Button variant="contained" startIcon={<LinkRounded />} onClick={() => setIsLinkDialogOpen(true)}>
+                        Liên kết khóa học
+                    </Button>
+                </Stack>
+
                 <DataGrid
                     rows={courses}
                     columns={columns}
@@ -272,62 +410,147 @@ export default function ProgramDetailDialog({ open, programId, onClose }: Progra
     };
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-            <DialogTitle sx={{ pb: 1.5 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            Chi tiết chương trình đào tạo
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Gọi trực tiếp `GET /api/v1/programs/:id` để hiển thị dữ liệu thật.
-                        </Typography>
-                    </Box>
-                    <Button
-                        variant="outlined"
-                        startIcon={<RefreshRounded />}
-                        onClick={() => void refetch()}
-                        disabled={isFetching || !programId}
-                    >
-                        Tải lại
-                    </Button>
-                </Stack>
-            </DialogTitle>
-
-            <DialogContent dividers sx={{ p: 3 }}>
-                {isLoading ? renderLoading() : null}
-
-                {!isLoading && isError ? (
-                    <Alert
-                        severity="error"
-                        action={
-                            <Button color="inherit" size="small" startIcon={<RefreshRounded />} onClick={() => void refetch()}>
-                                Tải lại
-                            </Button>
-                        }
-                    >
-                        {getErrorMessage(error, 'Không thể tải chi tiết chương trình')}
-                    </Alert>
-                ) : null}
-
-                {!isLoading && !isError ? (
-                    <Stack spacing={2}>
-                        <Tabs value={activeTab} onChange={(_event, value) => setActiveTab(value)}>
-                            <Tab icon={<InfoOutlined fontSize="small" />} iconPosition="start" label="Thông tin chương trình" />
-                            <Tab icon={<AutoStoriesOutlined fontSize="small" />} iconPosition="start" label="Khóa học thuộc chương trình" />
-                        </Tabs>
-
-                        {activeTab === 0 ? renderProgramInfo() : null}
-                        {activeTab === 1 ? renderCoursesTab() : null}
+        <>
+            <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+                <DialogTitle sx={{ pb: 1.5 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                Chi tiết chương trình đào tạo
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Theo dõi thông tin chi tiết và danh sách khóa học thuộc chương trình.
+                            </Typography>
+                        </Box>
+                        <Button
+                            variant="outlined"
+                            startIcon={<RefreshRounded />}
+                            onClick={() => void refetch()}
+                            disabled={isFetching || !programId}
+                        >
+                            Tải lại
+                        </Button>
                     </Stack>
-                ) : null}
-            </DialogContent>
+                </DialogTitle>
 
-            <DialogActions sx={{ px: 3, py: 2 }}>
-                <Button onClick={onClose} color="inherit">
-                    Đóng
-                </Button>
-            </DialogActions>
-        </Dialog>
+                <DialogContent dividers sx={{ p: 3 }}>
+                    {isLoading ? renderLoading() : null}
+
+                    {!isLoading && isError ? (
+                        <Alert
+                            severity="error"
+                            action={
+                                <Button color="inherit" size="small" startIcon={<RefreshRounded />} onClick={() => void refetch()}>
+                                    Tải lại
+                                </Button>
+                            }
+                        >
+                            {getApiErrorMessage(error, 'Không thể tải chi tiết chương trình')}
+                        </Alert>
+                    ) : null}
+
+                    {!isLoading && !isError ? (
+                        <Stack spacing={2}>
+                            <Tabs value={activeTab} onChange={(_event, value) => setActiveTab(value)}>
+                                <Tab icon={<InfoOutlined fontSize="small" />} iconPosition="start" label="Thông tin chương trình" />
+                                <Tab
+                                    icon={<AutoStoriesOutlined fontSize="small" />}
+                                    iconPosition="start"
+                                    label="Khóa học thuộc chương trình"
+                                />
+                            </Tabs>
+
+                            {activeTab === 0 ? renderProgramInfo() : null}
+                            {activeTab === 1 ? renderCoursesTab() : null}
+                        </Stack>
+                    ) : null}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={onClose} color="inherit">
+                        Đóng
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={isLinkDialogOpen}
+                onClose={() => setIsLinkDialogOpen(false)}
+                fullWidth
+                maxWidth="md"
+            >
+                <DialogTitle>Liên kết khóa học vào chương trình</DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2}>
+                        <Typography variant="body2" color="text.secondary">
+                            Tìm trực tiếp trong danh sách khóa học khả dụng và chọn nhiều khóa học trong một lần lưu.
+                        </Typography>
+
+                        {availableCoursesError ? (
+                            <Alert severity="error">
+                                {getApiErrorMessage(availableCoursesError, 'Không thể tải danh sách khóa học khả dụng')}
+                            </Alert>
+                        ) : null}
+
+                        <Autocomplete
+                            multiple
+                            disableCloseOnSelect
+                            options={availableCourses}
+                            loading={isFetchingAvailableCourses}
+                            value={selectedCourses}
+                            onChange={(_event, value) => setSelectedCourseIds(value.map((course) => course.id))}
+                            getOptionLabel={getCourseOptionLabel}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            filterOptions={(options, state) =>
+                                options.filter((course) => matchesCourseSearch(course, state.inputValue))
+                            }
+                            noOptionsText={
+                                isFetchingAvailableCourses
+                                    ? 'Đang tải khóa học...'
+                                    : 'Không còn khóa học khả dụng để liên kết'
+                            }
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props}>
+                                    <Stack spacing={0.25}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {getCourseOptionLabel(option)}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {(option.subject || 'Chưa phân môn') + ' • ' + (option.grade_level || 'Chưa khai báo khối lớp')}
+                                        </Typography>
+                                    </Stack>
+                                </Box>
+                            )}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Danh sách khóa học khả dụng"
+                                    placeholder="Tìm theo mã, tên, môn học hoặc khối lớp"
+                                    helperText="Ô chọn này đã tích hợp tìm kiếm, không cần thêm bộ lọc riêng."
+                                />
+                            )}
+                        />
+
+                        {!isFetchingAvailableCourses && availableCourses.length === 0 ? (
+                            <Alert severity="info">
+                                Tất cả khóa học hiện có đã được liên kết hoặc chưa có dữ liệu khóa học để chọn.
+                            </Alert>
+                        ) : null}
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={() => setIsLinkDialogOpen(false)} disabled={isAddingCourses}>
+                        Hủy
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void handleAddCourses()}
+                        disabled={isAddingCourses || selectedCourseIds.length === 0}
+                    >
+                        {isAddingCourses ? 'Đang lưu...' : 'Lưu liên kết'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
     );
 }

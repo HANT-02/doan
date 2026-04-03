@@ -2,6 +2,7 @@ package scheduling
 
 import (
 	"net/http"
+	"time"
 
 	"doan/cmd/http/rest"
 	"doan/internal/usecases/scheduling"
@@ -36,9 +37,26 @@ func (ctrl *ControllerV1) Preview(c *gin.Context) {
 		return
 	}
 
+	dateFrom, err := parsePreviewDate(req.DateFrom)
+	if err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid date_from. Expected YYYY-MM-DD or RFC3339", err)
+		return
+	}
+
+	dateTo, err := parsePreviewDate(req.DateTo)
+	if err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid date_to. Expected YYYY-MM-DD or RFC3339", err)
+		return
+	}
+
+	if dateTo.Before(dateFrom) {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid date range. date_to must be greater than or equal to date_from", nil)
+		return
+	}
+
 	output, err := ctrl.previewUseCase.Execute(c.Request.Context(), scheduling.PreviewInput{
-		DateFrom:   req.DateFrom,
-		DateTo:     req.DateTo,
+		DateFrom:   dateFrom,
+		DateTo:     dateTo,
 		ClassIDs:   req.ClassIDs,
 		TeacherIDs: req.TeacherIDs,
 		RoomIDs:    req.RoomIDs,
@@ -88,5 +106,18 @@ func (ctrl *ControllerV1) Commit(c *gin.Context) {
 		return
 	}
 
-	rest.ResponseSuccess(c, http.StatusOK, "Scheduling commit scaffold executed successfully", output)
+	rest.ResponseSuccess(c, http.StatusOK, "Scheduling preview committed successfully", output)
+}
+
+func parsePreviewDate(raw string) (time.Time, error) {
+	location, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		location = time.FixedZone("ICT", 7*60*60)
+	}
+
+	if parsedDate, parseErr := time.ParseInLocation("2006-01-02", raw, location); parseErr == nil {
+		return parsedDate, nil
+	}
+
+	return time.Parse(time.RFC3339, raw)
 }

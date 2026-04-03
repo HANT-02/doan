@@ -17,6 +17,7 @@ import { useAppSelector, useAppDispatch } from '@/store';
 import { logout } from '@/store/authSlice';
 import { useLogoutAccountMutation } from '@/api/authApi';
 import { toast } from 'sonner';
+import { isAdminRole, normalizeRole } from '@/utils/roles';
 
 export const ProfilePage = () => {
     const navigate = useNavigate();
@@ -56,8 +57,8 @@ export const ProfilePage = () => {
                                 {user.full_name}
                             </Typography>
                             <Chip
-                                label={user.role?.toUpperCase() || 'MEMBER'}
-                                color={user.role === 'admin' ? 'primary' : 'default'}
+                                label={normalizeRole(user.role) || 'MEMBER'}
+                                color={isAdminRole(user.role) ? 'primary' : 'default'}
                                 size="small"
                                 sx={{ fontWeight: 600 }}
                             />

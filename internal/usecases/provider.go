@@ -74,6 +74,7 @@ var MaterialUseCaseProviders = wire.NewSet(
 	material.NewUploadMaterialUseCase,
 	material.NewListMaterialsUseCase,
 	material.NewGetMaterialUseCase,
+	material.NewDownloadMaterialUseCase,
 	material.NewReviewMaterialUseCase,
 )
 

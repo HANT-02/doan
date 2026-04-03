@@ -33,22 +33,18 @@ import {
     useGetRoomsQuery,
     useUpdateRoomMutation,
     type Room,
+    type RoomStatus,
 } from '@/api/roomApi';
 import RoomDialog from '@/components/admin/RoomDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import PageHeader from '@/components/common/PageHeader';
+import { getApiErrorMessage } from '@/utils/apiError';
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (typeof error === 'object' && error && 'data' in error) {
-        const apiError = error as { data?: { message?: string } };
-        return apiError.data?.message || fallback;
-    }
-
-    if (error instanceof Error) {
-        return error.message;
-    }
-
-    return fallback;
+type RoomFormData = {
+    name: string;
+    capacity: number;
+    location?: string;
+    status: RoomStatus;
 };
 
 export const RoomsPage = () => {
@@ -133,11 +129,11 @@ export const RoomsPage = () => {
             toast.success('Xóa phòng học thành công');
             setRoomToDelete(null);
         } catch (error) {
-            toast.error(getErrorMessage(error, 'Xóa phòng học thất bại'));
+            toast.error(getApiErrorMessage(error, 'Xóa phòng học thất bại'));
         }
     };
 
-    const handleFormSubmit = async (formData: { name: string; capacity: number; location?: string; status: string }) => {
+    const handleFormSubmit = async (formData: RoomFormData) => {
         try {
             if (selectedRoom) {
                 await updateRoom({ id: selectedRoom.id, body: formData }).unwrap();
@@ -147,7 +143,7 @@ export const RoomsPage = () => {
                 toast.success('Tạo phòng học thành công');
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, 'Không thể lưu thông tin phòng học'));
+            toast.error(getApiErrorMessage(error, 'Không thể lưu thông tin phòng học'));
             throw error;
         }
     };
@@ -173,13 +169,26 @@ export const RoomsPage = () => {
             align: 'left',
             headerAlign: 'left',
             renderCell: (params: GridRenderCellParams<Room>) => (
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, height: '100%' }}>
                     <ApartmentRounded sx={{ color: 'primary.main', fontSize: 18 }} />
-                    <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                    <Box
+                        sx={{
+                            minWidth: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            py: 1,
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.35 }} noWrap>
                             {params.row.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            noWrap
+                            sx={{ display: 'block', lineHeight: 1.4, mt: 0.25 }}
+                        >
                             {params.row.address || params.row.location || 'Chưa cập nhật địa chỉ'}
                         </Typography>
                     </Box>

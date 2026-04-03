@@ -14,11 +14,12 @@ import { DeleteTeacherDialog } from '@/components/teacher/DeleteTeacherDialog';
 import { useAppSelector } from '@/store';
 import { toast } from 'sonner';
 import PageHeader from '@/components/common/PageHeader';
+import { isAdminRole } from '@/utils/roles';
 
 export const TeachersPage = () => {
     const navigate = useNavigate();
     const { user } = useAppSelector(state => state.auth);
-    const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+    const isAdmin = isAdminRole(user?.role);
 
     const [paginationModel, setPaginationModel] = useState({
         page: 0, // DataGrid uses 0-based page index

@@ -38,6 +38,15 @@ const uploadSchema = z.object({
 
 type UploadFormValues = z.infer<typeof uploadSchema>;
 
+const maxMaterialFileSize = 10 * 1024 * 1024;
+const acceptedMaterialTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/png',
+    'image/jpeg',
+];
+
 const statusColorMap: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
     AI_REVIEWED: 'warning',
     APPROVED: 'success',
@@ -120,6 +129,25 @@ export const TeacherDocumentsPage = () => {
             toast.error(getErrorMessage(error, 'Không thể tải tài liệu'));
         }
     });
+
+    const handleFileChange = (file: File | null) => {
+        if (!file) {
+            setSelectedFile(null);
+            return;
+        }
+
+        if (file.size > maxMaterialFileSize) {
+            toast.error('File vượt quá giới hạn 10 MB');
+            return;
+        }
+
+        if (file.type && !acceptedMaterialTypes.includes(file.type)) {
+            toast.error('Chỉ hỗ trợ PDF, DOC, DOCX, PNG hoặc JPG');
+            return;
+        }
+
+        setSelectedFile(file);
+    };
 
     const columns: GridColDef<MaterialItem>[] = [
         { field: 'title', headerName: 'Tiêu đề', minWidth: 220, flex: 1.2 },
@@ -238,7 +266,8 @@ export const TeacherDocumentsPage = () => {
                                 <input
                                     hidden
                                     type="file"
-                                    onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                                    onChange={(event) => handleFileChange(event.target.files?.[0] || null)}
                                 />
                             </Button>
                         </Stack>
@@ -266,6 +295,10 @@ export const TeacherDocumentsPage = () => {
                                 Xóa file đã chọn
                             </Button>
                         </Stack>
+
+                        <Alert severity="info">
+                            Hỗ trợ các định dạng `PDF`, `DOC`, `DOCX`, `PNG`, `JPG` với dung lượng tối đa `10 MB`.
+                        </Alert>
                     </Stack>
                 </Paper>
 

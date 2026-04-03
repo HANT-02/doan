@@ -23,12 +23,13 @@ import {
     getStatusColor,
     formatDateTime,
 } from '@/utils/teacherHelpers';
+import { isAdminRole } from '@/utils/roles';
 
 export const TeacherDetailPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAppSelector((state) => state.auth);
-    const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+    const isAdmin = isAdminRole(user?.role);
 
     const { data: responseData, isLoading, error } = useGetTeacherByIdQuery(id!);
     const [deleteTeacher, { isLoading: isDeleting }] = useDeleteTeacherMutation();

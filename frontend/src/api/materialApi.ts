@@ -36,8 +36,8 @@ export interface MaterialItem {
     title: string;
     description: string;
     file_name: string;
-    file_path: string;
     file_type: string;
+    file_size: number;
     status: 'UPLOADED' | 'SCANNING' | 'AI_REVIEWED' | 'APPROVED' | 'REJECTED';
     uploaded_at: string;
     latest_label?: MaterialLabel;
@@ -137,3 +137,39 @@ export const {
     useUploadMaterialMutation,
     useReviewMaterialMutation,
 } = materialApi;
+
+export const downloadMaterialFile = async (materialId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    const response = await fetch(`http://localhost:9000/api/v1/materials/${materialId}/download`, {
+        method: 'GET',
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
+
+    if (!response.ok) {
+        let message = 'Không thể tải tài liệu';
+        try {
+            const payload = await response.json();
+            if (payload?.message) {
+                message = payload.message;
+            }
+        } catch {
+            // ignore JSON parse errors and fall back to generic message
+        }
+
+        throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const contentDisposition = response.headers.get('content-disposition') || '';
+    const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    const fileName = fileNameMatch?.[1] || `material-${materialId}`;
+
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(objectUrl);
+};

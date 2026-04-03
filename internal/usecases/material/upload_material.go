@@ -4,12 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"mime"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"doan/internal/entities"
 	repositoryinterface "doan/internal/repositories/interface"
 	auditservice "doan/internal/services/audit"
 	"doan/pkg/logger"
+	"doan/pkg/utils"
 )
 
 type UploadMaterialInput struct {
@@ -33,6 +38,8 @@ type uploadMaterialUseCase struct {
 	ocrService   auditservice.OCRService
 	gemini       auditservice.GeminiService
 }
+
+const maxMaterialFileSize int64 = 10 * 1024 * 1024
 
 func NewUploadMaterialUseCase(
 	materialRepo repositoryinterface.MaterialRepository,
@@ -59,7 +66,18 @@ func (uc *uploadMaterialUseCase) Execute(ctx context.Context, input UploadMateri
 		return nil, errors.New("teacher_id and file are required")
 	}
 
-	filePath, err := uc.storage.Save(ctx, input.FileName, input.Content)
+	normalizedFileType, err := normalizeMaterialFileType(input.FileName, input.FileType)
+	if err != nil {
+		return nil, err
+	}
+	input.FileType = normalizedFileType
+
+	if err := validateMaterialUpload(input.FileName, input.FileType, int64(len(input.Content))); err != nil {
+		return nil, err
+	}
+
+	materialID := utils.GenerateUUID()
+	filePath, err := uc.storage.Save(ctx, materialID, input.FileName, input.Content)
 	if err != nil {
 		ctxLogger.Errorf("Failed to store material file: %v", err)
 		return nil, err
@@ -70,12 +88,14 @@ func (uc *uploadMaterialUseCase) Execute(ctx context.Context, input UploadMateri
 	}
 
 	materialEntity, err := uc.materialRepo.Create(ctx, &entities.Material{
+		ID:          materialID,
 		TeacherID:   input.TeacherID,
 		Title:       input.Title,
 		Description: input.Description,
 		FileName:    input.FileName,
 		FilePath:    filePath,
 		FileType:    input.FileType,
+		FileSize:    int64(len(input.Content)),
 		Status:      "SCANNING",
 	})
 	if err != nil {
@@ -134,4 +154,61 @@ func (uc *uploadMaterialUseCase) Execute(ctx context.Context, input UploadMateri
 
 	view := mapMaterial(detailedMaterial)
 	return &view, nil
+}
+
+func validateMaterialUpload(fileName string, fileType string, fileSize int64) error {
+	if fileSize <= 0 {
+		return errors.New("file is empty")
+	}
+	if fileSize > maxMaterialFileSize {
+		return fmt.Errorf("file exceeds maximum size of %d MB", maxMaterialFileSize/(1024*1024))
+	}
+
+	extension := strings.ToLower(path.Ext(fileName))
+	contentType := strings.ToLower(strings.TrimSpace(fileType))
+	if contentType == "" {
+		contentType = strings.ToLower(mime.TypeByExtension(extension))
+	}
+
+	allowedByExtension := map[string]struct{}{
+		".pdf":  {},
+		".doc":  {},
+		".docx": {},
+		".png":  {},
+		".jpg":  {},
+		".jpeg": {},
+	}
+	allowedByType := map[string]struct{}{
+		"application/pdf":    {},
+		"application/msword": {},
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {},
+		"image/png":  {},
+		"image/jpeg": {},
+	}
+
+	if _, ok := allowedByExtension[extension]; !ok {
+		return fmt.Errorf("unsupported file extension: %s", extension)
+	}
+	if contentType != "" {
+		if _, ok := allowedByType[contentType]; !ok {
+			return fmt.Errorf("unsupported file type: %s", contentType)
+		}
+	}
+
+	return nil
+}
+
+func normalizeMaterialFileType(fileName string, fileType string) (string, error) {
+	extension := strings.ToLower(path.Ext(fileName))
+	contentType := strings.ToLower(strings.TrimSpace(fileType))
+	if contentType != "" {
+		return contentType, nil
+	}
+
+	guessedType := strings.ToLower(mime.TypeByExtension(extension))
+	if guessedType == "" {
+		return "", fmt.Errorf("cannot determine file type for extension: %s", extension)
+	}
+
+	return guessedType, nil
 }

@@ -12,6 +12,7 @@ type Controller interface {
 	List(c *gin.Context)
 	ListFlagged(c *gin.Context)
 	Get(c *gin.Context)
+	Download(c *gin.Context)
 	Review(c *gin.Context)
 }
 
@@ -24,6 +25,7 @@ func RegisterRoutesV1(router *gin.RouterGroup, ctrl Controller, configManager co
 	v1.GET("", authMiddleware, ctrl.List)
 	v1.GET("/flagged", authMiddleware, ctrl.ListFlagged)
 	v1.GET("/:id", authMiddleware, ctrl.Get)
+	v1.GET("/:id/download", authMiddleware, ctrl.Download)
 	v1.POST("/upload", authMiddleware, teacherRole, ctrl.Upload)
 	v1.POST("/:id/review", authMiddleware, ctrl.Review)
 }

@@ -15,6 +15,7 @@ type Material struct {
 	FileName          string             `gorm:"type:varchar(255);not null" json:"file_name"`
 	FilePath          string             `gorm:"type:text;not null" json:"file_path"`
 	FileType          string             `gorm:"type:varchar(100);not null" json:"file_type"`
+	FileSize          int64              `gorm:"default:0" json:"file_size"`
 	Status            string             `gorm:"type:varchar(50);not null;default:'UPLOADED'" json:"status"`
 	LatestLabelID     *string            `json:"latest_label_id"`
 	LatestLabel       Label              `gorm:"foreignKey:LatestLabelID" json:"-"`

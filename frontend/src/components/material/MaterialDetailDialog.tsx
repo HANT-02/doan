@@ -13,8 +13,10 @@ import {
     Tabs,
     Typography,
 } from '@mui/material';
+import { DownloadRounded } from '@mui/icons-material';
 import { useState } from 'react';
-import type { MaterialItem } from '@/api/materialApi';
+import { downloadMaterialFile, type MaterialItem } from '@/api/materialApi';
+import { toast } from 'sonner';
 
 interface MaterialDetailDialogProps {
     open: boolean;
@@ -30,6 +32,19 @@ const severityColorMap: Record<string, 'success' | 'warning' | 'error' | 'info'>
 
 export default function MaterialDetailDialog({ open, material, onClose }: MaterialDetailDialogProps) {
     const [tab, setTab] = useState(0);
+
+    const handleDownload = async () => {
+        if (!material) {
+            return;
+        }
+
+        try {
+            await downloadMaterialFile(material.id);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Không thể tải tài liệu';
+            toast.error(message);
+        }
+    };
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -67,9 +82,14 @@ export default function MaterialDetailDialog({ open, material, onClose }: Materi
                             <Stack spacing={1.5}>
                                 <Typography variant="body2"><strong>Tên file:</strong> {material.file_name}</Typography>
                                 <Typography variant="body2"><strong>Loại file:</strong> {material.file_type}</Typography>
-                                <Typography variant="body2"><strong>Đường dẫn:</strong> {material.file_path}</Typography>
+                                <Typography variant="body2"><strong>Kích thước:</strong> {(material.file_size / 1024 / 1024).toFixed(2)} MB</Typography>
                                 <Typography variant="body2"><strong>Mô tả:</strong> {material.description || 'Chưa có mô tả'}</Typography>
                                 <Typography variant="body2"><strong>Thời điểm tải lên:</strong> {new Date(material.uploaded_at).toLocaleString('vi-VN')}</Typography>
+                                <Box>
+                                    <Button variant="outlined" startIcon={<DownloadRounded />} onClick={() => void handleDownload()}>
+                                        Tải tài liệu
+                                    </Button>
+                                </Box>
                             </Stack>
                         ) : null}
 

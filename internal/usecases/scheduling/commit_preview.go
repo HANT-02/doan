@@ -3,8 +3,15 @@ package scheduling
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
+	"time"
 
+	"doan/internal/entities"
+	"doan/internal/repositories"
+	repositoryinterface "doan/internal/repositories/interface"
 	schedulingstore "doan/internal/services/scheduling"
+	"doan/pkg/logger"
 )
 
 type CommitPreviewInput struct {
@@ -22,14 +29,27 @@ type CommitPreviewUseCase interface {
 }
 
 type commitPreviewUseCase struct {
-	store schedulingstore.PreviewStore[PreviewResult]
+	lessonRepo repositoryinterface.LessonRepository
+	uow        repositories.UnitOfWork
+	log        logger.Logger
+	store      schedulingstore.PreviewStore[PreviewResult]
 }
 
-func NewCommitPreviewUseCase(store schedulingstore.PreviewStore[PreviewResult]) CommitPreviewUseCase {
-	return &commitPreviewUseCase{store: store}
+func NewCommitPreviewUseCase(
+	lessonRepo repositoryinterface.LessonRepository,
+	uow repositories.UnitOfWork,
+	log logger.Logger,
+	store schedulingstore.PreviewStore[PreviewResult],
+) CommitPreviewUseCase {
+	return &commitPreviewUseCase{
+		lessonRepo: lessonRepo,
+		uow:        uow,
+		log:        log,
+		store:      store,
+	}
 }
 
-func (uc *commitPreviewUseCase) Execute(_ context.Context, input CommitPreviewInput) (*CommitPreviewOutput, error) {
+func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreviewInput) (*CommitPreviewOutput, error) {
 	if input.RunID == "" {
 		return nil, errors.New("run_id is required")
 	}
@@ -39,9 +59,217 @@ func (uc *commitPreviewUseCase) Execute(_ context.Context, input CommitPreviewIn
 		return nil, errors.New("preview run not found")
 	}
 
+	if len(preview.Assignments) == 0 {
+		return nil, errors.New("preview does not contain any assignment to commit")
+	}
+
+	if preview.Status != "COMPLETED" {
+		return nil, fmt.Errorf(
+			"preview %s chưa thể commit vì còn %d buổi chưa xếp và %d conflict. Hãy chạy lại preview đến khi trạng thái COMPLETED",
+			input.RunID,
+			preview.Summary.UnscheduledLessons,
+			preview.Summary.ConflictCount,
+		)
+	}
+
+	committedLessons := 0
+	_, err := repositories.ExecuteInTransaction(ctx, uc.uow, uc.log, func(txCtx context.Context) (interface{}, error) {
+		from, to := previewAssignmentWindow(preview.Assignments)
+		existingLessons, err := uc.lessonRepo.FindOverlappingLessons(
+			txCtx,
+			from,
+			to,
+			collectAssignmentClassIDs(preview.Assignments),
+			collectAssignmentTeacherIDs(preview.Assignments),
+			collectAssignmentRoomIDs(preview.Assignments),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if conflicts := detectCommitConflicts(preview.Assignments, existingLessons); len(conflicts) > 0 {
+			return nil, errors.New(formatCommitConflicts(conflicts))
+		}
+
+		for _, assignment := range preview.Assignments {
+			teacherID := assignment.TeacherID
+			roomID := assignment.RoomID
+
+			_, err := uc.lessonRepo.Create(txCtx, &entities.Lesson{
+				ClassID:   assignment.ClassID,
+				TeacherID: &teacherID,
+				RoomID:    &roomID,
+				DateStart: assignment.StartTime,
+				DateEnd:   assignment.EndTime,
+				Notes: fmt.Sprintf(
+					"Generated from scheduling preview %s - session %d/%d",
+					input.RunID,
+					assignment.SessionIndex,
+					assignment.SessionTotal,
+				),
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			committedLessons++
+		}
+
+		return committedLessons, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return &CommitPreviewOutput{
-		Message:          "Scheduling commit scaffold executed. Persisting lessons is TODO.",
-		ScheduledLessons: len(preview.Assignments),
-		Status:           preview.Status,
+		Message: fmt.Sprintf(
+			"Da tao %d lesson tu preview %s. Neu can xem lai, hay vao timetable/quan ly lop hoc de doi chieu ket qua.",
+			committedLessons,
+			input.RunID,
+		),
+		ScheduledLessons: committedLessons,
+		Status:           "COMMITTED",
 	}, nil
+}
+
+type commitConflict struct {
+	Assignment PreviewAssignment
+	Lesson     entities.Lesson
+	Reason     string
+}
+
+func previewAssignmentWindow(assignments []PreviewAssignment) (time.Time, time.Time) {
+	if len(assignments) == 0 {
+		return time.Time{}, time.Time{}
+	}
+
+	from := assignments[0].StartTime
+	to := assignments[0].EndTime
+	for _, assignment := range assignments[1:] {
+		if assignment.StartTime.Before(from) {
+			from = assignment.StartTime
+		}
+		if assignment.EndTime.After(to) {
+			to = assignment.EndTime
+		}
+	}
+
+	return from, to
+}
+
+func collectAssignmentClassIDs(assignments []PreviewAssignment) []string {
+	ids := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, assignment := range assignments {
+		if _, ok := seen[assignment.ClassID]; ok {
+			continue
+		}
+		seen[assignment.ClassID] = struct{}{}
+		ids = append(ids, assignment.ClassID)
+	}
+
+	return ids
+}
+
+func collectAssignmentTeacherIDs(assignments []PreviewAssignment) []string {
+	ids := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, assignment := range assignments {
+		if assignment.TeacherID == "" {
+			continue
+		}
+		if _, ok := seen[assignment.TeacherID]; ok {
+			continue
+		}
+		seen[assignment.TeacherID] = struct{}{}
+		ids = append(ids, assignment.TeacherID)
+	}
+
+	return ids
+}
+
+func collectAssignmentRoomIDs(assignments []PreviewAssignment) []string {
+	ids := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, assignment := range assignments {
+		if assignment.RoomID == "" {
+			continue
+		}
+		if _, ok := seen[assignment.RoomID]; ok {
+			continue
+		}
+		seen[assignment.RoomID] = struct{}{}
+		ids = append(ids, assignment.RoomID)
+	}
+
+	return ids
+}
+
+func detectCommitConflicts(assignments []PreviewAssignment, lessons []entities.Lesson) []commitConflict {
+	conflicts := make([]commitConflict, 0)
+	for _, assignment := range assignments {
+		for _, lesson := range lessons {
+			if !overlaps(assignment.StartTime, assignment.EndTime, lesson.DateStart, lesson.DateEnd) {
+				continue
+			}
+
+			reason := ""
+			switch {
+			case lesson.ClassID == assignment.ClassID:
+				reason = "lop hoc da co lesson trung gio"
+			case lesson.TeacherID != nil && *lesson.TeacherID == assignment.TeacherID:
+				reason = "giao vien da co lesson trung gio"
+			case lesson.RoomID != nil && *lesson.RoomID == assignment.RoomID:
+				reason = "phong hoc da co lesson trung gio"
+			default:
+				continue
+			}
+
+			conflicts = append(conflicts, commitConflict{
+				Assignment: assignment,
+				Lesson:     lesson,
+				Reason:     reason,
+			})
+		}
+	}
+
+	return conflicts
+}
+
+func formatCommitConflicts(conflicts []commitConflict) string {
+	if len(conflicts) == 0 {
+		return ""
+	}
+
+	lines := make([]string, 0, minInt(len(conflicts), 5))
+	for index, conflict := range conflicts {
+		if index >= 5 {
+			break
+		}
+
+		lines = append(lines, fmt.Sprintf(
+			"- %s (%s buoi %d/%d) xung dot vi %s voi lesson dang ton tai [%s - %s]",
+			conflict.Assignment.ClassName,
+			conflict.Assignment.ClassCode,
+			conflict.Assignment.SessionIndex,
+			conflict.Assignment.SessionTotal,
+			conflict.Reason,
+			conflict.Lesson.DateStart.Format("02/01/2006 15:04"),
+			conflict.Lesson.DateEnd.Format("15:04"),
+		))
+	}
+
+	suffix := ""
+	if len(conflicts) > 5 {
+		suffix = fmt.Sprintf("\n... va %d xung dot khac", len(conflicts)-5)
+	}
+
+	return "Khong the commit preview vi da ton tai lesson trung lich:\n" + strings.Join(lines, "\n") + suffix
+}
+
+func minInt(left, right int) int {
+	if left < right {
+		return left
+	}
+	return right
 }

@@ -13,7 +13,7 @@ type PaginationCandidate = {
 type Envelope = {
     success?: boolean;
     message?: string;
-    data?: Record<string, unknown> | null;
+    data?: unknown | null;
 };
 
 export interface NormalizedPagination {
@@ -35,7 +35,9 @@ export const normalizeListEnvelope = <T>(
     keys: string[],
     paginationKeys: string[] = ['pagination', 'Pagination'],
 ) => {
-    const data = response.data ?? {};
+    const data = response.data && typeof response.data === 'object'
+        ? (response.data as Record<string, unknown>)
+        : {};
     const items = keys.reduce<T[]>((result, key) => {
         if (result.length > 0) {
             return result;
@@ -73,8 +75,9 @@ export const normalizeDetailEnvelope = <T>(
     const data = response.data;
 
     if (data && typeof data === 'object') {
+        const normalizedData = data as Record<string, unknown>;
         for (const key of keys) {
-            const value = data[key];
+            const value = normalizedData[key];
             if (value && typeof value === 'object') {
                 return {
                     success: response.success ?? false,

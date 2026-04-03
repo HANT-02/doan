@@ -3,8 +3,9 @@ package scheduling
 import "time"
 
 type TimeSlot struct {
-	Start time.Time `json:"start"`
-	End   time.Time `json:"end"`
+	Start           time.Time `json:"start"`
+	End             time.Time `json:"end"`
+	PreferredRoomID string    `json:"preferred_room_id,omitempty"`
 }
 
 type Variable struct {
@@ -12,6 +13,8 @@ type Variable struct {
 	ClassID         string `json:"class_id"`
 	ClassCode       string `json:"class_code"`
 	ClassName       string `json:"class_name"`
+	SessionIndex    int    `json:"session_index"`
+	SessionTotal    int    `json:"session_total"`
 	TeacherID       string `json:"teacher_id"`
 	TeacherLabel    string `json:"teacher_label"`
 	ExpectedCapcity int    `json:"expected_capacity"`
@@ -31,6 +34,8 @@ type PreviewAssignment struct {
 	ClassID       string    `json:"class_id"`
 	ClassCode     string    `json:"class_code"`
 	ClassName     string    `json:"class_name"`
+	SessionIndex  int       `json:"session_index"`
+	SessionTotal  int       `json:"session_total"`
 	TeacherID     string    `json:"teacher_id"`
 	TeacherLabel  string    `json:"teacher_label"`
 	RoomID        string    `json:"room_id"`
@@ -42,16 +47,19 @@ type PreviewAssignment struct {
 }
 
 type PreviewConflict struct {
-	VariableID string `json:"variable_id"`
-	ClassID    string `json:"class_id"`
-	ClassCode  string `json:"class_code"`
-	ClassName  string `json:"class_name"`
-	Type       string `json:"type"`
-	Message    string `json:"message"`
+	VariableID   string `json:"variable_id"`
+	ClassID      string `json:"class_id"`
+	ClassCode    string `json:"class_code"`
+	ClassName    string `json:"class_name"`
+	SessionIndex int    `json:"session_index,omitempty"`
+	SessionTotal int    `json:"session_total,omitempty"`
+	Type         string `json:"type"`
+	Message      string `json:"message"`
 }
 
 type PreviewSummary struct {
 	RequestedClasses   int `json:"requested_classes"`
+	RequestedSessions  int `json:"requested_sessions"`
 	ScheduledLessons   int `json:"scheduled_lessons"`
 	UnscheduledLessons int `json:"unscheduled_lessons"`
 	ConflictCount      int `json:"conflict_count"`

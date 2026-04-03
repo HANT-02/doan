@@ -13,6 +13,8 @@ export interface Room {
     updated_at: string;
 }
 
+export type RoomStatus = NonNullable<Room['status']>;
+
 export interface ListRoomsResponse {
     success: boolean;
     message: string;

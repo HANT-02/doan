@@ -28,31 +28,36 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 import {
+    useCreateProgramMutation,
     useDeleteProgramMutation,
     useGetProgramsQuery,
+    useUpdateProgramMutation,
     type Program,
 } from '@/api/programApi';
+import ProgramDialog from '@/components/admin/ProgramDialog';
 import ProgramDetailDialog from '@/components/admin/ProgramDetailDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import PageHeader from '@/components/common/PageHeader';
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (typeof error === 'object' && error && 'data' in error) {
-        const apiError = error as { data?: { message?: string } };
-        return apiError.data?.message || fallback;
-    }
-
-    if (error instanceof Error) {
-        return error.message;
-    }
-
-    return fallback;
-};
+import { getApiErrorMessage } from '@/utils/apiError';
 
 const trackMeta: Record<string, { label: string; color: 'info' | 'secondary' | 'success' | 'default' }> = {
     BASIC: { label: 'Cơ bản', color: 'info' },
     ADVANCED: { label: 'Nâng cao', color: 'secondary' },
     SUPPORT: { label: 'Bổ trợ', color: 'success' },
+};
+
+const getProgramSubtitle = (program: Program) => {
+    if (program.approval_note?.trim()) {
+        return program.approval_note;
+    }
+
+    if (program.effective_from || program.effective_to) {
+        const from = program.effective_from ? format(new Date(program.effective_from), 'dd/MM/yyyy') : '--';
+        const to = program.effective_to ? format(new Date(program.effective_to), 'dd/MM/yyyy') : '--';
+        return `Hiệu lực: ${from} - ${to}`;
+    }
+
+    return 'Chưa có ghi chú phê duyệt';
 };
 
 export const ProgramPage = () => {
@@ -61,7 +66,13 @@ export const ProgramPage = () => {
     const [search, setSearch] = useState('');
     const [trackFilter, setTrackFilter] = useState('');
     const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Program | null>(null);
+    const handleCloseDialog = () => {
+        setIsDialogOpen(false);
+        setSelectedProgram(null);
+    };
 
     const queryParams = useMemo(
         () => ({
@@ -82,10 +93,37 @@ export const ProgramPage = () => {
         refetch,
     } = useGetProgramsQuery(queryParams);
 
+    const [createProgram, { isLoading: isCreating }] = useCreateProgramMutation();
+    const [updateProgram, { isLoading: isUpdating }] = useUpdateProgramMutation();
     const [deleteProgram, { isLoading: isDeleting }] = useDeleteProgramMutation();
 
     const programs = data?.data?.programs || [];
     const totalItems = data?.data?.pagination?.total_items || 0;
+
+    const handleOpenCreate = () => {
+        setSelectedProgram(null);
+        setIsDialogOpen(true);
+    };
+
+    const handleOpenEdit = (program: Program) => {
+        setSelectedProgram(program);
+        setIsDialogOpen(true);
+    };
+
+    const handleSubmitProgram = async (formData: Partial<Program>) => {
+        try {
+            if (selectedProgram) {
+                await updateProgram({ id: selectedProgram.id, ...formData }).unwrap();
+                toast.success('Cập nhật chương trình thành công');
+            } else {
+                await createProgram(formData).unwrap();
+                toast.success('Tạo chương trình thành công');
+            }
+        } catch (submitError) {
+            toast.error(getApiErrorMessage(submitError, 'Không thể lưu chương trình'));
+            throw submitError;
+        }
+    };
 
     const handleDelete = async () => {
         if (!deleteTarget) {
@@ -97,7 +135,7 @@ export const ProgramPage = () => {
             toast.success('Xóa chương trình thành công');
             setDeleteTarget(null);
         } catch (deleteError) {
-            toast.error(getErrorMessage(deleteError, 'Lỗi khi xóa chương trình'));
+            toast.error(getApiErrorMessage(deleteError, 'Lỗi khi xóa chương trình'));
         }
     };
 
@@ -122,14 +160,27 @@ export const ProgramPage = () => {
             align: 'left',
             headerAlign: 'left',
             renderCell: (params: GridRenderCellParams<Program>) => (
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, height: '100%' }}>
                     <AutoStoriesOutlined sx={{ color: 'primary.main', fontSize: 18 }} />
-                    <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                    <Box
+                        sx={{
+                            minWidth: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            py: 1,
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.35 }} noWrap>
                             {params.row.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                            {params.row.approval_note || 'Chưa có ghi chú phê duyệt'}
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            noWrap
+                            sx={{ display: 'block', lineHeight: 1.4, mt: 0.25 }}
+                        >
+                            {getProgramSubtitle(params.row)}
                         </Typography>
                     </Box>
                 </Stack>
@@ -186,7 +237,7 @@ export const ProgramPage = () => {
                         <IconButton
                             size="small"
                             color="primary"
-                            onClick={() => toast.info('Form chỉnh sửa chương trình đang được phát triển')}
+                            onClick={() => handleOpenEdit(params.row)}
                         >
                             <EditOutlined fontSize="small" />
                         </IconButton>
@@ -228,7 +279,7 @@ export const ProgramPage = () => {
             <Button
                 variant="contained"
                 startIcon={<AddRounded />}
-                onClick={() => toast.info('Form thêm chương trình đang được phát triển')}
+                onClick={handleOpenCreate}
             >
                 Tạo chương trình mới
             </Button>
@@ -257,7 +308,7 @@ export const ProgramPage = () => {
                         <Button
                             variant="contained"
                             startIcon={<AddRounded />}
-                            onClick={() => toast.info('Form thêm chương trình đang được phát triển')}
+                            onClick={handleOpenCreate}
                         >
                             Thêm chương trình
                         </Button>
@@ -276,7 +327,7 @@ export const ProgramPage = () => {
                     }
                     sx={{ mb: 3 }}
                 >
-                    {getErrorMessage(error, 'Không thể tải danh sách chương trình')}
+                    {getApiErrorMessage(error, 'Không thể tải danh sách chương trình')}
                 </Alert>
             ) : null}
 
@@ -383,6 +434,14 @@ export const ProgramPage = () => {
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={() => void handleDelete()}
                 loading={isDeleting}
+            />
+
+            <ProgramDialog
+                open={isDialogOpen}
+                onClose={handleCloseDialog}
+                onSubmit={handleSubmitProgram}
+                program={selectedProgram}
+                isLoading={isCreating || isUpdating}
             />
         </Box>
     );

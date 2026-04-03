@@ -13,23 +13,26 @@ import (
 var _ Controller = (*ControllerV1)(nil)
 
 type ControllerV1 struct {
-	uploadUseCase usecasematerial.UploadMaterialUseCase
-	listUseCase   usecasematerial.ListMaterialsUseCase
-	getUseCase    usecasematerial.GetMaterialUseCase
-	reviewUseCase usecasematerial.ReviewMaterialUseCase
+	uploadUseCase   usecasematerial.UploadMaterialUseCase
+	listUseCase     usecasematerial.ListMaterialsUseCase
+	getUseCase      usecasematerial.GetMaterialUseCase
+	downloadUseCase usecasematerial.DownloadMaterialUseCase
+	reviewUseCase   usecasematerial.ReviewMaterialUseCase
 }
 
 func NewMaterialControllerV1(
 	uploadUseCase usecasematerial.UploadMaterialUseCase,
 	listUseCase usecasematerial.ListMaterialsUseCase,
 	getUseCase usecasematerial.GetMaterialUseCase,
+	downloadUseCase usecasematerial.DownloadMaterialUseCase,
 	reviewUseCase usecasematerial.ReviewMaterialUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
-		uploadUseCase: uploadUseCase,
-		listUseCase:   listUseCase,
-		getUseCase:    getUseCase,
-		reviewUseCase: reviewUseCase,
+		uploadUseCase:   uploadUseCase,
+		listUseCase:     listUseCase,
+		getUseCase:      getUseCase,
+		downloadUseCase: downloadUseCase,
+		reviewUseCase:   reviewUseCase,
 	}
 }
 
@@ -106,6 +109,21 @@ func (ctrl *ControllerV1) Get(c *gin.Context) {
 	}
 
 	rest.ResponseSuccess(c, http.StatusOK, "Material retrieved successfully", output)
+}
+
+func (ctrl *ControllerV1) Download(c *gin.Context) {
+	output, err := ctrl.downloadUseCase.Execute(c.Request.Context(), usecasematerial.DownloadMaterialInput{
+		ID: c.Param("id"),
+	})
+	if err != nil {
+		rest.ResponseError(c, http.StatusNotFound, "Material file not found", err)
+		return
+	}
+
+	if output.FileType != "" {
+		c.Header("Content-Type", output.FileType)
+	}
+	c.FileAttachment(output.AbsolutePath, output.FileName)
 }
 
 func (ctrl *ControllerV1) Review(c *gin.Context) {

@@ -1,0 +1,2 @@
+ALTER TABLE materials
+DROP COLUMN IF EXISTS file_size;

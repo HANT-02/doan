@@ -42,8 +42,8 @@ type MaterialView struct {
 	Title        string                `json:"title"`
 	Description  string                `json:"description"`
 	FileName     string                `json:"file_name"`
-	FilePath     string                `json:"file_path"`
 	FileType     string                `json:"file_type"`
+	FileSize     int64                 `json:"file_size"`
 	Status       string                `json:"status"`
 	UploadedAt   string                `json:"uploaded_at"`
 	LatestLabel  *LabelView            `json:"latest_label,omitempty"`
@@ -72,8 +72,8 @@ func mapMaterial(material *entities.Material) MaterialView {
 		Title:       material.Title,
 		Description: material.Description,
 		FileName:    material.FileName,
-		FilePath:    material.FilePath,
 		FileType:    material.FileType,
+		FileSize:    material.FileSize,
 		Status:      material.Status,
 		UploadedAt:  material.UploadedAt.Format("2006-01-02T15:04:05Z07:00"),
 		LatestLabel: mapLabel(&material.LatestLabel),

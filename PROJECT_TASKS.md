@@ -404,7 +404,139 @@
 
 ---
 
-## 🚀 Next Tasks (Top 10 Ưu tiên Demo)
+## 🚨 Current Fix Queue (User Review 2026-03-31)
+
+Nguyen tac thuc hien cho dot fix nay:
+- Lam tuan tu theo thu tu duoi day, khong mo song song nhieu module.
+- Moi task chi bat dau sau khi task truoc da duoc review/chap nhan.
+- Uu tien sua luong dang loi that, bo placeholder va thong diep "dang phat trien" truoc khi lam them tinh nang moi.
+- Cac task UI text/can le chi dong task khi da kiem tra lai tren man hinh that, khong dong task chi vi da sua CSS.
+
+| Thu tu | Trang thai | Module | Van de hien tai | Muc tieu dong task |
+|---|---|---|---|---|
+| 1 | [x] | Auth + Teacher | Man danh sach giao vien chua co chuc nang them giao vien tren UI; kha nang cao do check role dang dung chu thuong trong khi BE/store dang luu role hoa (`ADMIN`). | Nut `Them giao vien` hien dung voi tai khoan admin; route tao/sua giao vien di duoc tu danh sach; kiem tra lai role gating de khong lap lai loi an nut o cac man admin khac. |
+| 2 | [x] | Class - list filter + session stability | Man quan ly lop hoc bi vo toolbar sau khi chon filter trang thai; sau khi reload thi bi logout; text ghi chu "Chua co ghi chu" dang lech baseline. | Filter search + trang thai hoat dong on dinh sau moi lan chon/xoa filter; reload trang khong lam mat session admin; subtitle/secondary text trong list can hang dung voi ten lop. |
+| 3 | [x] | Class - detail roster + add student UX | `Chi tiet lop hoc` khong hien du thong tin hoc sinh trong roster; dialog them hoc sinh chua search duoc hoc sinh de chon; can tich hop search ngay trong danh sach kha dung. | Tab `Danh sach hoc sinh` hien day du ten, ma/khối lop, SDT, SDT phu huynh, trang thai; dialog them hoc sinh cho phep tim theo ten/ma/khối lop ngay tren danh sach chon va them thanh cong vao lop. |
+| 4 | [x] | Room | Text phu trong man phong hoc dang bi thap/le baseline, vi du `Tang 1 Toa A`. | Text ten phong + dong thong tin phu can hang thang tren danh sach va chi tiet lien quan; khong con cam giac "dut dong" khi scroll danh sach. |
+| 5 | [x] | Program/Course - data contract + layout | Man chuong trinh/khoa hoc dang lech text detail; dialog chi tiet dang hien thong diep ky thuat `Contract backend... Chua co field...`; hien trang nay khong phu hop voi user flow. | Layout ten + detail text can hang dung; bo thong diep contract ky thuat khoi UI nguoi dung; mapping data detail dua tren field that backend dang tra ve, neu thieu field thi degrade gracefully. |
+| 6 | [x] | Program/Course - action flow | Lien ket khoa hoc chua dung duoc; nut chinh sua record chua dung; flow quan ly chuong trinh/khoa hoc chua hoan tat du du API da co. | Co the mo form chinh sua chuong trinh/khoa hoc, luu thanh cong; co the lien ket/bo lien ket khoa hoc vao chuong trinh tu UI; refresh lai danh sach/chi tiet thay doi dung. |
+| 7 | [x] | Scheduling (CSP) | Audit ngay 2026-04-01 cho thay module xep lich dang o muc scaffold/demo: FE co man preview nhung contract date bi lech, BE commit chua persist lesson, preview store dang luu in-memory va solver chua bam sat du lieu hoc vu that. | Da hoan tat phase audit + implementation uu tien: sua contract input/output, nang cap preview bam course/session/class_schedule, hien conflict/actionable message, va mo commit that xuong lesson co check trung lich. |
+| 8 | [/] | AI Audit | Module kiem duyet tai lieu hien tai moi o muc scaffold/stub, chua dung duoc cho luong giao vien/compliance. | Da audit luong hien tai: tai lieu duoc upload tu FE giao vien, file luu local, metadata luu DB, nhan do stub OCR + stub Gemini sinh ra; can tach task con de bien scaffold nay thanh luong co the demo duoc on dinh. |
+
+### Chi tiet task theo thu tu implement
+
+1. Auth + Teacher CTA
+- Ra soat role gating o man `TeachersPage` va cac man admin lien quan.
+- Doi chieu role dang luu trong store/localStorage voi dieu kien hien nut thao tac.
+- Xac nhan route tao moi/chinh sua giao vien da mo duong di tu danh sach.
+
+2. Class list stability
+- Sua logic state/filter de toolbar khong bi bien mat sau khi chon trang thai.
+- Kiem tra nguyen nhan reload bi logout va dua ve mot hanh vi session on dinh.
+- Chinh lai typography/spacing cua dong note duoi ten lop.
+
+3. Class detail roster + add student
+- Ra soat mapping du lieu roster tu API sang bang hien thi.
+- Hien day du cot thong tin hoc sinh thay vi chi co avatar.
+- Dua search vao danh sach hoc sinh kha dung, uu tien tim ngay trong control chon hoc sinh.
+
+4. Room alignment polish
+- Chinh typography stack o ten phong/dia chi.
+- Kiem tra lai row height, icon alignment va baseline tren cac kich thuoc man hinh.
+
+5. Program/Course contract cleanup
+- Loai bo thong diep ky thuat dang lo ra o dialog chi tiet.
+- Dung cac field backend dang tra ve de hien thi thong tin co nghia voi user.
+- Chinh can le text detail trong list va detail dialog.
+
+6. Program/Course action flow completion
+- Mo lai flow them/sua chuong trinh.
+- Mo flow them/sua khoa hoc neu dang bi placeholder.
+- Noi lai thao tac lien ket/bo lien ket khoa hoc voi chuong trinh bang cac mutation da co.
+
+7. Scheduling audit -> implementation
+- Audit completed 2026-04-01. Ket qua chinh:
+- FE dang gui `date_from`/`date_to` dang `YYYY-MM-DD` tu form date ([frontend/src/pages/admin/SchedulingPage.tsx]), trong khi BE bind truc tiep vao `time.Time` ([cmd/http/controllers/scheduling/dto.go]). Day la blocker contract rat de lam preview fail ngay tu request body.
+- FE cho phep bam `Commit scaffold` sau moi preview va hien toast thanh cong ([frontend/src/pages/admin/SchedulingPage.tsx]), nhung BE commit chi tra message `Persisting lessons is TODO` va khong tao `Lesson`/`ClassSchedule` nao ([internal/usecases/scheduling/commit_preview.go]).
+- Preview result dang luu bang in-memory store ([internal/services/scheduling/preview_store.go]), nen restart server la mat het run; `preview/latest` khong co gia tri van hanh thuc te.
+- Solver hien tai moi tao 1 bien cho moi lop va dem `scheduled_lessons = len(assignments)` ([internal/usecases/scheduling/preview.go]), trong khi du lieu hoc vu co `course.session_count`, `course.session_duration_minutes`, `class_schedule`, `lesson`. Nghia la preview chua xep "cac buoi hoc that", moi xep 1 slot demo cho tung lop.
+- `TeacherLabel` dang lay truc tiep tu `teacher_id` thay vi ten giao vien ([internal/usecases/scheduling/preview.go]), nen ket qua preview kho doc voi admin.
+- Domain slot dang fix cung 6 khung gio/ngay va duration 120 phut ([internal/usecases/scheduling/preview.go]), chua bam `course`, chua bam `class_schedule`, chua co logic fallback/no-data message cho cac truong hop thieu `teacher`, `room`, `course`, `session_count`.
+- FE da co danh sach conflict, nhung message hien tai van o muc tong quat; chua huong user phai sua du lieu nao truoc de chay lai preview cho dung.
+- Thu tu implement de xong task 7:
+- 7.1. [x] Sua contract request/response giua FE-BE cho preview:
+  DTO BE da doi sang nhan string va parse duoc `YYYY-MM-DD`/RFC3339; FE tiep tuc gui plain date tu date picker va co validate `date_to >= date_from`.
+- 7.2. [x] Khoa hanh vi commit gia:
+  FE da bo CTA `commit scaffold` khoi luong thao tac chinh, doi thanh trang thai disabled + thong bao ro day moi la preview, chua persist `lesson`.
+- 7.3. [x] Nang cap conflict messaging:
+  BE da tra conflict cu the hon theo nhom nguyen nhan (`NO_CLASS_INPUT`, `NO_ACTIVE_ROOM`, `PREFERRED_ROOM_UNAVAILABLE`, `ROOM_CAPACITY_BLOCK`, `NO_SLOT_IN_RANGE`, ...); FE da hien severity + goi y xu ly de admin biet can sua du lieu nao truoc.
+- 7.4. [x] Dua preview bam du lieu hoc vu that:
+  Da doi tu `1 lop = 1 bien demo` sang sinh nhieu buoi theo `course.session_count`, duration theo `course.session_duration_minutes`, preload `class_schedule`, va chi sinh slot theo `day_of_week/start_time/end_time` thuc te cua lop. Neu `class_schedule` co `room_id` thi preview cung ton trong rang buoc phong nay ngay tu domain.
+- 7.5. [x] Nang cap chat luong ket qua preview:
+  Da hien ten giao vien that neu preload co du lieu, hien `Buoi X/Y` tren assignment/conflict, severity cua conflict, action hint, tong `requested_sessions`, progress theo tung lop, va bo sung conflict ro hon cho cac tinh huong `CLASS_SCHEDULE_NO_SLOT`, `CLASS_SCHEDULE_ROOM_UNAVAILABLE`, `ROOM_CAPACITY_BLOCK`, `NO_DOMAIN`...
+- 7.6. [x] Commit that sau khi preview on dinh:
+  BE da persist assignment xuong bang `lessons` bang transaction, co check trung lich theo lop/giao vien/phong voi lesson da ton tai, va FE da mo lai CTA commit khi preview dat `COMPLETED`. Preview store van luu in-memory cho muc dich xem lai preview, nhung khong con chan luong commit xuong `lesson`.
+
+8. AI Audit audit -> implementation
+- Audit completed 2026-04-01. Ket qua chinh:
+- Nguon tai lieu hien tai den tu giao dien giao vien qua `POST /api/v1/materials/upload` ([frontend/src/pages/teacher/TeacherDocumentsPage.tsx], [cmd/http/controllers/material/v1.go]). He thong khong tu lay tai lieu tu kho ngoai, Google Drive hay DB khac.
+- File vat ly dang duoc luu local tren server o thu muc `storage/materials` qua `localStorageService.Save(...)` ([internal/services/audit/services.go]). Duong dan luu vao cot `materials.file_path`.
+- Metadata tai lieu luu o bang `materials`; ket qua OCR/AI luu o bang `audit_logs`; nhan hien tai cua tai lieu duoc tro den bang `materials.latest_label_id`; quyet dinh phe duyet luu o bang `approval_decisions` ([internal/infrastructure/database/postgres/sql_migration/23_create_material_audit_tables.up.sql]).
+- Co che gan nhan hien tai la stub:
+  - OCR stub lay preview noi dung file bang cach doc byte va cat toi da 500 ky tu.
+  - Gemini stub khong goi model that; no chi so tu khoa trong text (`violence`, `gambling`, `danger`, `exam`, `cheat`, `warning`) de gan `SAFE/WARNING/DANGER` ([internal/services/audit/services.go]).
+- Luong upload hien tai la dong bo trong 1 request:
+  - luu file
+  - tao `material`
+  - OCR stub
+  - Gemini stub
+  - tao `audit_log`
+  - cap nhat `material.status = AI_REVIEWED`
+  Nghia la chua co queue/background job that.
+- Frontend dang cho giao vien chon `teacher_id` thu cong tu combobox ([frontend/src/pages/teacher/TeacherDocumentsPage.tsx]). Dieu nay phu hop demo nhung chua dung voi luong thuc te, vi tai khoan giao vien dang dang nhap phai tu suy ra `teacher_id`.
+- Man chi tiet hien duong dan file (`file_path`) va raw OCR text, nhung chua co endpoint tai/xem file an toan. Nghia la nguoi dung thay duong dan local, nhung chua mo/xem tep ngay tren UI duoc.
+- Hien chua co validate manh cho loai file, kich thuoc file, scan loi, retry, hay timeout AI.
+- Hien chua co "manual relabel/re-audit", chua co thong ke chat luong tai lieu, chua co tich hop model AI that, va chua co rule/prompt theo Thong tu 29 hay rubric compliance that.
+- Thu tu implement de xong task 8:
+- 8.1. [ ] Chuan hoa nguon tai lieu va ownership:
+  upload se lay `teacher_id` tu user/role dang nhap hoac map ro tu tai khoan, bo chon tay tren man giao vien; validate file type/size ngay tu FE + BE.
+- 8.2. [/] Chuan hoa luu tru va truy cap file:
+  Da bo hien raw local path tren UI, them endpoint download an toan theo `material_id`, validate upload, va doi quy uoc luu file local theo cau truc thu muc. Phan cleanup/retention van de lai cho buoc sau.
+- Ke hoach de xuat theo huong "production don gian cho do an":
+  - 8.2.a. [x] Doi mo hinh luu tru tu `file_path` raw sang `storage_key/relative_path`:
+    file van luu local disk, nhung theo cau truc co to chuc nhu `storage/materials/YYYY/MM/<material_id>/<original_file>` thay vi 1 thu muc phang.
+  - 8.2.b. [x] Bo sung metadata file toi thieu trong bang `materials`:
+    luu them `mime_type`, `file_size`, va neu can `original_file_name`; muc tieu la du thong tin de hien thi, validate va debug ma khong can lo duong dan that.
+  - 8.2.c. [x] Tao abstraction download/view file:
+    them endpoint backend kieu `GET /api/v1/materials/:id/download` de doc file theo `material_id`, kiem tra quyen, roi moi stream file; frontend chi goi endpoint nay, khong doc local path truc tiep.
+  - 8.2.d. [x] Don dep UI hien thi file:
+    bo hien `file_path` raw khoi dialog chi tiet; doi thanh thong tin an toan hon nhu ten file, loai file, kich thuoc, va nut `Tai tep`/`Xem tep`.
+  - 8.2.e. [x] Validate upload theo huong an toan toi thieu:
+    chan file qua lon, gioi han mime type/phan mo rong (pdf/docx/png/jpg tuy pham vi demo), va tra thong bao loi ro rang neu file khong hop le.
+  - 8.2.f. [ ] Chuan bi cleanup/backup don gian:
+    quy uoc ro file local nao thuoc `material_id` nao, de sau nay co the xoa mem metadata ma van co cach doi chieu hoac viet job cleanup neu can.
+- Ly do chon huong nay:
+  - khong can them S3/MinIO nen setup nhanh cho do an;
+  - van giong production hon cach luu phang + lo raw path hien tai;
+  - de demo duoc luong upload, xem file, audit, review ma khong tang nhieu ha tang.
+- Thu tu implement de tranh sua lan man:
+  - buoc 1: schema + entity metadata file
+  - buoc 2: storage service doi sang path co cau truc
+  - buoc 3: endpoint download/view file
+  - buoc 4: frontend bo raw path, them nut tai/xem
+  - buoc 5: validate file upload FE + BE
+- 8.3. [ ] Lam ro pipeline audit:
+  tach status `UPLOADED -> SCANNING -> AI_REVIEWED -> APPROVED/REJECTED`, xu ly loi OCR/AI ro rang hon, va hien retry/manual re-audit neu can.
+- 8.4. [ ] Thay stub label bang logic AI that:
+  tich hop OCR/model that, dung prompt/schema/rule engine phu hop nghiep vu compliance.
+- 8.5. [ ] Hoan thien compliance review:
+  review form dung voi user compliance dang dang nhap, luu lich su day du, va cap nhat queue/status nhat quan.
+- 8.6. [ ] Bo sung bao cao/thong ke:
+  tong hop so tai lieu theo nhan, severity, trang thai phe duyet, giao vien, khoang thoi gian.
+
+---
+
+## 📚 Historical Top 10 Demo (giu lai de doi chieu)
 
 | Ưu tiên | Trạng thái | Module | Tên Task | Phân loại |
 |---|---|---|---|---|

@@ -204,13 +204,26 @@ export const ClassesPage = () => {
             align: 'left',
             headerAlign: 'left',
             renderCell: (params: GridRenderCellParams<Class>) => (
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, height: '100%' }}>
                     <SchoolOutlined sx={{ color: 'primary.main', fontSize: 18 }} />
-                    <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                    <Box
+                        sx={{
+                            minWidth: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            py: 1,
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.35 }} noWrap>
                             {params.row.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            noWrap
+                            sx={{ display: 'block', lineHeight: 1.4, mt: 0.25 }}
+                        >
                             {params.row.notes || 'Chưa có ghi chú'}
                         </Typography>
                     </Box>
@@ -346,60 +359,60 @@ export const ClassesPage = () => {
             ) : null}
 
             {!isLoading && !isError ? (
-                classes.length === 0 ? (
-                    renderEmptyState()
-                ) : (
-                    <Paper elevation={0} sx={{ p: 2.5, borderRadius: 4, border: '1px solid #e2e8f0' }}>
-                        <Stack
-                            direction={{ xs: 'column', lg: 'row' }}
-                            spacing={1.5}
-                            justifyContent="space-between"
-                            alignItems={{ xs: 'stretch', lg: 'center' }}
-                            sx={{ mb: 2 }}
-                        >
-                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
-                                <TextField
-                                    value={search}
-                                    onChange={(event) => {
-                                        setSearch(event.target.value);
-                                        setPage(0);
-                                    }}
-                                    size="small"
-                                    placeholder="Tìm theo mã lớp hoặc tên lớp"
-                                    sx={{ minWidth: { xs: '100%', md: 280 } }}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <SearchRounded fontSize="small" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                                <TextField
-                                    select
-                                    size="small"
-                                    label="Trạng thái"
-                                    value={statusFilter}
-                                    onChange={(event) => {
-                                        setStatusFilter(event.target.value);
-                                        setPage(0);
-                                    }}
-                                    sx={{ minWidth: { xs: '100%', md: 180 } }}
-                                >
-                                    <MenuItem value="">Tất cả trạng thái</MenuItem>
-                                    <MenuItem value="OPEN">Đang mở</MenuItem>
-                                    <MenuItem value="CLOSED">Đã đóng</MenuItem>
-                                    <MenuItem value="CANCELLED">Đã hủy</MenuItem>
-                                </TextField>
-                            </Stack>
-
-                            <Chip
-                                label={`Hiển thị ${classes.length}/${data?.data?.pagination?.total_items || classes.length} lớp`}
-                                color="primary"
-                                variant="outlined"
+                <Paper elevation={0} sx={{ p: 2.5, borderRadius: 4, border: '1px solid #e2e8f0' }}>
+                    <Stack
+                        direction={{ xs: 'column', lg: 'row' }}
+                        spacing={1.5}
+                        justifyContent="space-between"
+                        alignItems={{ xs: 'stretch', lg: 'center' }}
+                        sx={{ mb: 2 }}
+                    >
+                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+                            <TextField
+                                value={search}
+                                onChange={(event) => {
+                                    setSearch(event.target.value);
+                                    setPage(0);
+                                }}
+                                size="small"
+                                placeholder="Tìm theo mã lớp hoặc tên lớp"
+                                sx={{ minWidth: { xs: '100%', md: 280 } }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchRounded fontSize="small" />
+                                        </InputAdornment>
+                                    ),
+                                }}
                             />
+                            <TextField
+                                select
+                                size="small"
+                                label="Trạng thái"
+                                value={statusFilter}
+                                onChange={(event) => {
+                                    setStatusFilter(event.target.value);
+                                    setPage(0);
+                                }}
+                                sx={{ minWidth: { xs: '100%', md: 180 } }}
+                            >
+                                <MenuItem value="">Tất cả trạng thái</MenuItem>
+                                <MenuItem value="OPEN">Đang mở</MenuItem>
+                                <MenuItem value="CLOSED">Đã đóng</MenuItem>
+                                <MenuItem value="CANCELLED">Đã hủy</MenuItem>
+                            </TextField>
                         </Stack>
 
+                        <Chip
+                            label={`Hiển thị ${classes.length}/${data?.data?.pagination?.total_items || classes.length} lớp`}
+                            color="primary"
+                            variant="outlined"
+                        />
+                    </Stack>
+
+                    {classes.length === 0 ? (
+                        renderEmptyState()
+                    ) : (
                         <DataGrid
                             rows={classes}
                             columns={columns}
@@ -427,8 +440,8 @@ export const ClassesPage = () => {
                                 },
                             }}
                         />
-                    </Paper>
-                )
+                    )}
+                </Paper>
             ) : null}
 
             <ClassDialog

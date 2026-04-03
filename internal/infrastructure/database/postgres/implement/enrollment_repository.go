@@ -33,7 +33,10 @@ func NewEnrollmentRepository(db *gorm.DB, log logger.Logger, manager config.Mana
 
 func (r *enrollmentRepository) ListByClassID(ctx context.Context, classID string) ([]entities.Enrollment, error) {
 	var enrollments []entities.Enrollment
-	err := r.db.WithContext(ctx).Where("class_id = ?", classID).Find(&enrollments).Error
+	err := r.db.WithContext(ctx).
+		Preload("Student").
+		Where("class_id = ?", classID).
+		Find(&enrollments).Error
 	if err != nil {
 		return nil, err
 	}
