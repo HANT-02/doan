@@ -14,17 +14,20 @@ var _ Controller = (*ControllerV1)(nil)
 
 type ControllerV1 struct {
 	previewUseCase    scheduling.PreviewUseCase
+	benchmarkUseCase  scheduling.BenchmarkUseCase
 	getPreviewUseCase scheduling.GetPreviewUseCase
 	commitUseCase     scheduling.CommitPreviewUseCase
 }
 
 func NewSchedulingControllerV1(
 	previewUseCase scheduling.PreviewUseCase,
+	benchmarkUseCase scheduling.BenchmarkUseCase,
 	getPreviewUseCase scheduling.GetPreviewUseCase,
 	commitUseCase scheduling.CommitPreviewUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
 		previewUseCase:    previewUseCase,
+		benchmarkUseCase:  benchmarkUseCase,
 		getPreviewUseCase: getPreviewUseCase,
 		commitUseCase:     commitUseCase,
 	}
@@ -67,6 +70,45 @@ func (ctrl *ControllerV1) Preview(c *gin.Context) {
 	}
 
 	rest.ResponseSuccess(c, http.StatusOK, "Scheduling preview generated successfully", output)
+}
+
+func (ctrl *ControllerV1) Benchmark(c *gin.Context) {
+	var req PreviewScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	dateFrom, err := parsePreviewDate(req.DateFrom)
+	if err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid date_from. Expected YYYY-MM-DD or RFC3339", err)
+		return
+	}
+
+	dateTo, err := parsePreviewDate(req.DateTo)
+	if err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid date_to. Expected YYYY-MM-DD or RFC3339", err)
+		return
+	}
+
+	if dateTo.Before(dateFrom) {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid date range. date_to must be greater than or equal to date_from", nil)
+		return
+	}
+
+	output, err := ctrl.benchmarkUseCase.Execute(c.Request.Context(), scheduling.BenchmarkInput{
+		DateFrom:   dateFrom,
+		DateTo:     dateTo,
+		ClassIDs:   req.ClassIDs,
+		TeacherIDs: req.TeacherIDs,
+		RoomIDs:    req.RoomIDs,
+	})
+	if err != nil {
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to build scheduling benchmark contract", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, "Scheduling benchmark contract retrieved successfully", output)
 }
 
 func (ctrl *ControllerV1) GetPreview(c *gin.Context) {

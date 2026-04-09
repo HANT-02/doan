@@ -28,6 +28,8 @@ var ServiceProviders = wire.NewSet(
 
 	// Scheduling preview store
 	NewSchedulingPreviewStore,
+	schedulingstore.NewSchedulingSolverCatalog,
+	schedulingstore.NewDefaultSchedulingSolver,
 
 	// AI audit stub services
 	auditservice.NewLocalStorageService,

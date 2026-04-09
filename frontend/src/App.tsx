@@ -30,6 +30,7 @@ import { TeachersPage } from '@/pages/admin/TeachersPage';
 import { TeacherDetailPage } from '@/pages/admin/TeacherDetailPage';
 import { TeacherFormPage } from '@/pages/admin/TeacherFormPage';
 import { RoomsPage } from '@/pages/admin/RoomsPage';
+import { ShiftsPage } from '@/pages/admin/ShiftsPage';
 import { ClassesPage } from '@/pages/admin/ClassesPage';
 import { StudentsPage } from '@/pages/admin/StudentsPage';
 import { ProgramPage } from '@/pages/admin/ProgramPage';
@@ -112,6 +113,7 @@ function App() {
                     <Route path="admin/classes" element={<ClassesPage />} />
                     <Route path="admin/students" element={<StudentsPage />} />
                     <Route path="admin/rooms" element={<RoomsPage />} />
+                    <Route path="admin/shifts" element={<ShiftsPage />} />
                     <Route path="admin/devtools" element={<DevToolsPage />} />
                     <Route path="admin/scheduling" element={<SchedulingPage />} />
                     <Route path="admin/audit" element={<ComplianceQueuePage />} />

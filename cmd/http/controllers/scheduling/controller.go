@@ -9,6 +9,7 @@ import (
 
 type Controller interface {
 	Preview(c *gin.Context)
+	Benchmark(c *gin.Context)
 	GetPreview(c *gin.Context)
 	GetLatestPreview(c *gin.Context)
 	Commit(c *gin.Context)
@@ -22,6 +23,7 @@ func RegisterRoutesV1(router *gin.RouterGroup, ctrl Controller, configManager co
 
 	v1.Use(authMiddleware, adminRole)
 	v1.POST("/preview", ctrl.Preview)
+	v1.POST("/benchmark", ctrl.Benchmark)
 	v1.GET("/preview/latest", ctrl.GetLatestPreview)
 	v1.GET("/preview/:id", ctrl.GetPreview)
 	v1.POST("/commit", ctrl.Commit)

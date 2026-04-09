@@ -7,6 +7,7 @@ import (
 	"doan/cmd/http/controllers/program"
 	"doan/cmd/http/controllers/room"
 	"doan/cmd/http/controllers/scheduling"
+	"doan/cmd/http/controllers/shift"
 	"doan/cmd/http/controllers/student"
 	"doan/cmd/http/controllers/teacher"
 	"doan/cmd/http/controllers/user"
@@ -27,6 +28,10 @@ var ControllerProviders = wire.NewSet(
 	// Room controller
 	room.NewRoomControllerV1,
 	wire.Bind(new(room.Controller), new(*room.ControllerV1)),
+
+	// Shift controller
+	shift.NewShiftControllerV1,
+	wire.Bind(new(shift.Controller), new(*shift.ControllerV1)),
 
 	// Teacher controller
 	teacher.NewTeacherControllerV1,

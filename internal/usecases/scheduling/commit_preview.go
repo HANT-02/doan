@@ -267,6 +267,10 @@ func formatCommitConflicts(conflicts []commitConflict) string {
 	return "Khong the commit preview vi da ton tai lesson trung lich:\n" + strings.Join(lines, "\n") + suffix
 }
 
+func overlaps(startA, endA, startB, endB time.Time) bool {
+	return startA.Before(endB) && startB.Before(endA)
+}
+
 func minInt(left, right int) int {
 	if left < right {
 		return left

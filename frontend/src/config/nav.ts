@@ -65,6 +65,13 @@ export const NAV_ITEMS: NavItem[] = [
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
+        key: "admin-shifts",
+        labelVi: "Quản lý ca học",
+        path: "/app/admin/shifts",
+        icon: AccessTime,
+        roles: ["ADMIN", "SUPER_ADMIN"]
+    },
+    {
         key: "admin-programs",
         labelVi: "Chương trình / Khóa học",
         path: "/app/admin/programs",

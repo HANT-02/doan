@@ -7,6 +7,7 @@ import (
 	"doan/internal/usecases/program"
 	"doan/internal/usecases/room"
 	"doan/internal/usecases/scheduling"
+	"doan/internal/usecases/shift"
 	"doan/internal/usecases/student"
 	"doan/internal/usecases/teacher"
 	"doan/internal/usecases/user"
@@ -44,6 +45,14 @@ var RoomUseCaseProviders = wire.NewSet(
 	room.NewListRoomsUseCase,
 )
 
+var ShiftUseCaseProviders = wire.NewSet(
+	shift.NewCreateShiftUseCase,
+	shift.NewGetShiftUseCase,
+	shift.NewUpdateShiftUseCase,
+	shift.NewDeleteShiftUseCase,
+	shift.NewListShiftsUseCase,
+)
+
 var ClassUseCaseProviders = wire.NewSet(
 	class.NewCreateClassUseCase,
 	class.NewGetClassUseCase,
@@ -66,6 +75,7 @@ var StudentUseCaseProviders = wire.NewSet(
 
 var SchedulingUseCaseProviders = wire.NewSet(
 	scheduling.NewPreviewUseCase,
+	scheduling.NewBenchmarkUseCase,
 	scheduling.NewGetPreviewUseCase,
 	scheduling.NewCommitPreviewUseCase,
 )
@@ -100,6 +110,7 @@ var UseCaseProviders = wire.NewSet(
 	UserUseCaseProviders,
 	TeacherUseCaseProviders,
 	RoomUseCaseProviders,
+	ShiftUseCaseProviders,
 	ClassUseCaseProviders,
 	StudentUseCaseProviders,
 	SchedulingUseCaseProviders,

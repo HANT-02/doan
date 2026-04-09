@@ -78,6 +78,7 @@ func (m *migration) getAllEntities() []interface{} {
 		&entities.Teacher{},
 		&entities.Student{},
 		&entities.Room{},
+		&entities.Shift{},
 		&entities.Course{},
 		&entities.Program{},
 		&entities.ProgramCourse{},
