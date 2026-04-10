@@ -18,6 +18,10 @@ type TimeSlot struct {
 	Start           time.Time `json:"start"`
 	End             time.Time `json:"end"`
 	PreferredRoomID string    `json:"preferred_room_id,omitempty"`
+	ShiftID         string    `json:"shift_id,omitempty"`
+	ShiftCode       string    `json:"shift_code,omitempty"`
+	ShiftName       string    `json:"shift_name,omitempty"`
+	ShiftType       string    `json:"shift_type,omitempty"`
 }
 
 type Variable struct {
@@ -53,6 +57,10 @@ type PreviewAssignment struct {
 	RoomID        string    `json:"room_id"`
 	RoomName      string    `json:"room_name"`
 	RoomCapacity  int       `json:"room_capacity"`
+	ShiftID       string    `json:"shift_id,omitempty"`
+	ShiftCode     string    `json:"shift_code,omitempty"`
+	ShiftName     string    `json:"shift_name,omitempty"`
+	ShiftType     string    `json:"shift_type,omitempty"`
 	StartTime     time.Time `json:"start_time"`
 	EndTime       time.Time `json:"end_time"`
 	ConstraintFit string    `json:"constraint_fit"`
@@ -86,6 +94,7 @@ type SolverInput struct {
 	RoomIDs    []string
 	Classes    []entities.Class
 	Rooms      []entities.Room
+	Shifts     []entities.Shift
 }
 
 type SolverOutput struct {
@@ -110,4 +119,5 @@ type SolverDescriptor struct {
 
 type SolverCatalog interface {
 	BenchmarkSolvers() []SolverDescriptor
+	GetSolver(key string) (SchedulingSolver, bool)
 }

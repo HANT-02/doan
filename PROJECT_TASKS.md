@@ -184,30 +184,30 @@ Những phần dưới đây đã có nền tảng triển khai và được xem
 ### Giai đoạn C - Refactor scheduling sang `Shift`
 
 #### Task C1. Refactor `class_schedule` sang `shift_id`
-- [ ] Thiết kế migration chuyển dữ liệu `class_schedule`
-- [ ] Bỏ phụ thuộc chính vào `start_time/end_time`
-- [ ] Cập nhật entity/repository/use case liên quan
-- [ ] Cập nhật controller/API liên quan
-- [ ] Kiểm tra backward impact với dữ liệu hiện có
+- [x] Thiết kế migration chuyển dữ liệu `class_schedule`
+- [x] Bỏ phụ thuộc chính vào `start_time/end_time`
+- [x] Cập nhật entity/repository/use case liên quan
+- [x] Cập nhật controller/API liên quan
+- [x] Kiểm tra backward impact với dữ liệu hiện có
 
 **Mục tiêu đóng task:**
 - `class_schedule` dùng chuẩn `shift_id` trong luồng chính.
 
 #### Task C2. Cập nhật scheduling domain theo `Shift`
-- [ ] Sửa scheduling input để lấy `Shift`
-- [ ] Sửa domain generation để tạo assignment theo `Shift`
-- [ ] Sửa hard constraint check theo `Shift`
-- [ ] Sửa soft score theo `Shift`
-- [ ] Sửa preview output để hiển thị theo `Shift`
+- [x] Sửa scheduling input để lấy `Shift`
+- [x] Sửa domain generation để tạo assignment theo `Shift`
+- [x] Sửa hard constraint check theo `Shift`
+- [x] Sửa soft score theo `Shift`
+- [x] Sửa preview output để hiển thị theo `Shift`
 
 **Mục tiêu đóng task:**
 - Scheduling domain không còn phụ thuộc vào time slot hardcode kiểu cũ.
 
 #### Task C3. Cập nhật UI scheduling theo `Shift`
-- [ ] Hiển thị thông tin `Shift` trên preview/result
-- [ ] Hiển thị lịch mẫu theo `Shift`
-- [ ] Kiểm tra flow preview/commit sau refactor
-- [ ] Giữ UI production-like gọn, không để lộ logic benchmark
+- [x] Hiển thị thông tin `Shift` trên preview/result
+- [x] Hiển thị lịch mẫu theo `Shift`
+- [x] Kiểm tra flow preview/commit sau refactor
+- [x] Giữ UI production-like gọn, không để lộ logic benchmark
 
 **Mục tiêu đóng task:**
 - UI scheduling chạy đúng trên dữ liệu `Shift`.
@@ -217,29 +217,29 @@ Những phần dưới đây đã có nền tảng triển khai và được xem
 ### Giai đoạn D - 3 solver scheduling
 
 #### Task D1. Implement `GraphColoringSolver`
-- [ ] Tạo implementation `GraphColoringSolver`
-- [ ] Tạo logic heuristic baseline
-- [ ] Nối với scorer chung
-- [ ] Test được trên input scheduling chuẩn
+- [x] Tạo implementation `GraphColoringSolver`
+- [x] Tạo logic heuristic baseline
+- [x] Nối với scorer chung
+- [x] Test được trên input scheduling chuẩn
 
 **Mục tiêu đóng task:**
 - Có solver baseline chạy được qua abstraction chung.
 
 #### Task D2. Implement `CPSATSolver`
-- [ ] Tạo implementation `CPSATSolver`
-- [ ] Mô hình hóa biến/ràng buộc cho CP-SAT
-- [ ] Nối với scorer chung
-- [ ] Test được trên input scheduling chuẩn
+- [x] Tạo implementation `CPSATSolver`
+- [x] Mô hình hóa biến/ràng buộc cho CP-SAT
+- [x] Nối với scorer chung
+- [x] Test được trên input scheduling chuẩn
 
 **Mục tiêu đóng task:**
 - Có solver CP-SAT chạy được qua abstraction chung.
 
 #### Task D3. Implement `TabuSearchSolver`
-- [ ] Tạo implementation `TabuSearchSolver`
-- [ ] Thiết kế neighborhood move
-- [ ] Thiết kế tabu memory / stopping criteria
-- [ ] Nối với scorer chung
-- [ ] Test được trên input scheduling chuẩn
+- [x] Tạo implementation `TabuSearchSolver`
+- [x] Thiết kế neighborhood move
+- [x] Thiết kế tabu memory / stopping criteria
+- [x] Nối với scorer chung
+- [x] Test được trên input scheduling chuẩn
 
 **Mục tiêu đóng task:**
 - Có solver Tabu Search chạy được qua abstraction chung.

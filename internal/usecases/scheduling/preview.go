@@ -27,6 +27,7 @@ type PreviewUseCase interface {
 type previewUseCase struct {
 	classRepo repositoryinterface.ClassRepository
 	roomRepo  repositoryinterface.RoomRepository
+	shiftRepo repositoryinterface.ShiftRepository
 	store     schedulingservice.PreviewStore[PreviewResult]
 	solver    schedulingservice.SchedulingSolver
 }
@@ -34,12 +35,14 @@ type previewUseCase struct {
 func NewPreviewUseCase(
 	classRepo repositoryinterface.ClassRepository,
 	roomRepo repositoryinterface.RoomRepository,
+	shiftRepo repositoryinterface.ShiftRepository,
 	store schedulingservice.PreviewStore[PreviewResult],
 	solver schedulingservice.SchedulingSolver,
 ) PreviewUseCase {
 	return &previewUseCase{
 		classRepo: classRepo,
 		roomRepo:  roomRepo,
+		shiftRepo: shiftRepo,
 		store:     store,
 		solver:    solver,
 	}
@@ -83,6 +86,12 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		return nil, err
 	}
 
+	shifts, err := uc.loadShifts(ctx)
+	if err != nil {
+		ctxLogger.Errorf("Failed to load shifts for scheduling preview: %v", err)
+		return nil, err
+	}
+
 	runID := utils.GenerateUUIDWithPrefix("sched-preview-")
 	result := PreviewResult{
 		RunID:       runID,
@@ -113,6 +122,13 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		})
 	}
 
+	if len(shifts) == 0 {
+		result.Conflicts = append(result.Conflicts, PreviewConflict{
+			Type:    "NO_ACTIVE_SHIFT",
+			Message: "Chưa có ca học nào đang hoạt động để sinh slot xếp lịch. Hãy tạo hoặc bật `Shift` trước khi chạy preview.",
+		})
+	}
+
 	output, err := uc.solver.Solve(ctx, schedulingservice.SolverInput{
 		DateFrom:   input.DateFrom,
 		DateTo:     input.DateTo,
@@ -121,6 +137,7 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		RoomIDs:    input.RoomIDs,
 		Classes:    classes,
 		Rooms:      rooms,
+		Shifts:     shifts,
 	})
 	if err != nil {
 		return nil, err
@@ -142,7 +159,7 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 func (uc *previewUseCase) loadClasses(ctx context.Context, input PreviewInput) ([]entities.Class, error) {
 	condition := repositories.NewCommonCondition()
 	condition.SetPaging(500, 1)
-	condition.SetPreload([]string{"Teacher", "Course", "Room", "ClassSchedules", "ClassSchedules.Room"})
+	condition.SetPreload([]string{"Teacher", "Course", "Room", "ClassSchedules", "ClassSchedules.Room", "ClassSchedules.Shift"})
 	condition.AddCondition("status", "OPEN", repositories.Equal)
 	if len(input.ClassIDs) > 0 {
 		condition.AddCondition("id", input.ClassIDs, repositories.In)
@@ -167,6 +184,30 @@ func (uc *previewUseCase) loadClasses(ctx context.Context, input PreviewInput) (
 		}
 	}
 	return classes, nil
+}
+
+func (uc *previewUseCase) loadShifts(ctx context.Context) ([]entities.Shift, error) {
+	condition := repositories.NewCommonCondition()
+	condition.SetPaging(500, 1)
+	condition.AddCondition("is_active", true, repositories.Equal)
+
+	output, err := uc.shiftRepo.GetByCondition(ctx, condition)
+	if err != nil {
+		return nil, err
+	}
+
+	shifts := make([]entities.Shift, 0)
+	if output == nil {
+		return shifts, nil
+	}
+
+	for _, item := range output.Data {
+		if item != nil {
+			shifts = append(shifts, *item)
+		}
+	}
+
+	return shifts, nil
 }
 
 func (uc *previewUseCase) loadRooms(ctx context.Context, input PreviewInput) ([]entities.Room, error) {

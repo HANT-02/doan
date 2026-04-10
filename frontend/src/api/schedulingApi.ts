@@ -20,6 +20,10 @@ export interface SchedulingAssignment {
     room_id: string;
     room_name: string;
     room_capacity: number;
+    shift_id?: string;
+    shift_code?: string;
+    shift_name?: string;
+    shift_type?: string;
     start_time: string;
     end_time: string;
     constraint_fit: string;

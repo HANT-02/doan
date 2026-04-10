@@ -25,37 +25,16 @@ func (s *legacyPreviewSolver) Label() string {
 }
 
 func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
-	variables, presetConflicts := buildVariables(input.Classes, input.TeacherIDs)
-	domains, domainConflicts := buildDomains(variables, input.Rooms, input, indexClassSchedules(input.Classes))
-	solver := newBacktrackingSolver(variables, domains, domainConflicts)
+	problem := prepareSchedulingProblem(input)
+	solver := newBacktrackingSolver(problem.variables, problem.domains, problem.noDomainConflicts)
 	assignments, solverConflicts := solver.Solve()
-	conflicts := append(presetConflicts, solverConflicts...)
 
-	summary := SolverSummary{
-		RequestedClasses:   len(input.Classes),
-		RequestedSessions:  len(variables),
-		ScheduledLessons:   len(assignments),
-		UnscheduledLessons: maxInt(len(variables)-len(assignments), 0),
-		ConflictCount:      len(conflicts),
-		SoftScore:          scoreAssignments(assignments),
+	assignmentsByID := make(map[string]PreviewAssignment, len(assignments))
+	for _, assignment := range assignments {
+		assignmentsByID[assignment.VariableID] = assignment
 	}
 
-	status := "FAILED"
-	switch {
-	case len(assignments) == 0:
-		status = "FAILED"
-	case len(conflicts) > 0:
-		status = "PARTIAL"
-	default:
-		status = "COMPLETED"
-	}
-
-	return &SolverOutput{
-		Status:      status,
-		Assignments: assignments,
-		Conflicts:   conflicts,
-		Summary:     summary,
-	}, nil
+	return buildSolverOutput(input, problem.variables, assignmentsByID, problem.presetConflicts, problem.noDomainConflicts, solverConflicts), nil
 }
 
 func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, []PreviewConflict) {
@@ -161,13 +140,14 @@ func buildDomains(
 	rooms []entities.Room,
 	input SolverInput,
 	classSchedulesByClass map[string][]entities.ClassSchedule,
+	defaultShifts []entities.Shift,
 ) (map[string][]DomainValue, map[string]PreviewConflict) {
 	domains := make(map[string][]DomainValue, len(variables))
 	noDomainConflicts := make(map[string]PreviewConflict, len(variables))
 
 	for _, variable := range variables {
 		classSchedules := classSchedulesByClass[variable.ClassID]
-		slots := generateTimeSlotsForVariable(input.DateFrom, input.DateTo, variable.DurationMinutes, classSchedules)
+		slots := generateTimeSlotsForVariable(input.DateFrom, input.DateTo, variable.DurationMinutes, classSchedules, defaultShifts)
 		values := make([]DomainValue, 0)
 		for _, room := range rooms {
 			if variable.PreferredRoomID != "" && variable.PreferredRoomID != room.ID {
@@ -207,29 +187,39 @@ func buildDomains(
 	return domains, noDomainConflicts
 }
 
-func generateTimeSlots(dateFrom, dateTo time.Time, durationMinutes int) []TimeSlot {
+func generateTimeSlots(dateFrom, dateTo time.Time, durationMinutes int, shifts []entities.Shift) []TimeSlot {
 	if dateTo.Before(dateFrom) {
 		dateTo = dateFrom
 	}
 
-	baseSlots := []struct {
-		hour   int
-		minute int
-	}{
-		{8, 0},
-		{10, 15},
-		{13, 30},
-		{15, 45},
-		{18, 0},
-		{20, 0},
-	}
-
 	slots := make([]TimeSlot, 0)
 	for day := startOfDay(dateFrom); !day.After(startOfDay(dateTo)); day = day.AddDate(0, 0, 1) {
-		for _, baseSlot := range baseSlots {
-			start := time.Date(day.Year(), day.Month(), day.Day(), baseSlot.hour, baseSlot.minute, 0, 0, day.Location())
+		for _, shift := range shifts {
+			if !shift.IsActive {
+				continue
+			}
+
+			startHour, startMinute, startOk := parseClockValue(shift.StartTime)
+			endHour, endMinute, endOk := parseClockValue(shift.EndTime)
+			if !startOk || !endOk {
+				continue
+			}
+
+			start := time.Date(day.Year(), day.Month(), day.Day(), startHour, startMinute, 0, 0, day.Location())
+			limitEnd := time.Date(day.Year(), day.Month(), day.Day(), endHour, endMinute, 0, 0, day.Location())
 			end := start.Add(time.Duration(durationMinutes) * time.Minute)
-			slots = append(slots, TimeSlot{Start: start, End: end})
+			if !end.After(start) || end.After(limitEnd) {
+				continue
+			}
+
+			slots = append(slots, TimeSlot{
+				Start:     start,
+				End:       end,
+				ShiftID:   shift.ID,
+				ShiftCode: shift.Code,
+				ShiftName: shift.Name,
+				ShiftType: shift.SessionType,
+			})
 		}
 	}
 
@@ -240,9 +230,10 @@ func generateTimeSlotsForVariable(
 	dateFrom, dateTo time.Time,
 	durationMinutes int,
 	classSchedules []entities.ClassSchedule,
+	defaultShifts []entities.Shift,
 ) []TimeSlot {
 	if len(classSchedules) == 0 {
-		return generateTimeSlots(dateFrom, dateTo, durationMinutes)
+		return generateTimeSlots(dateFrom, dateTo, durationMinutes, defaultShifts)
 	}
 
 	slots := make([]TimeSlot, 0)
@@ -252,8 +243,12 @@ func generateTimeSlotsForVariable(
 				continue
 			}
 
-			startHour, startMinute, startOk := parseClockValue(schedule.StartTime)
-			endHour, endMinute, endOk := parseClockValue(schedule.EndTime)
+			if schedule.ShiftID == "" || schedule.Shift.ID == "" || !schedule.Shift.IsActive {
+				continue
+			}
+
+			startHour, startMinute, startOk := parseClockValue(schedule.Shift.StartTime)
+			endHour, endMinute, endOk := parseClockValue(schedule.Shift.EndTime)
 			if !startOk || !endOk {
 				continue
 			}
@@ -266,7 +261,14 @@ func generateTimeSlotsForVariable(
 				continue
 			}
 
-			slot := TimeSlot{Start: start, End: end}
+			slot := TimeSlot{
+				Start:     start,
+				End:       end,
+				ShiftID:   schedule.Shift.ID,
+				ShiftCode: schedule.Shift.Code,
+				ShiftName: schedule.Shift.Name,
+				ShiftType: schedule.Shift.SessionType,
+			}
 			if schedule.RoomID != nil {
 				slot.PreferredRoomID = *schedule.RoomID
 			}
@@ -415,22 +417,7 @@ func (s *backtrackingSolver) greedyAssign(variables []Variable) map[string]Previ
 				continue
 			}
 
-			assignments[variable.ID] = PreviewAssignment{
-				VariableID:    variable.ID,
-				ClassID:       variable.ClassID,
-				ClassCode:     variable.ClassCode,
-				ClassName:     variable.ClassName,
-				SessionIndex:  variable.SessionIndex,
-				SessionTotal:  variable.SessionTotal,
-				TeacherID:     variable.TeacherID,
-				TeacherLabel:  variable.TeacherLabel,
-				RoomID:        value.RoomID,
-				RoomName:      value.RoomName,
-				RoomCapacity:  value.RoomCapacity,
-				StartTime:     value.TimeSlot.Start,
-				EndTime:       value.TimeSlot.End,
-				ConstraintFit: "HARD_OK_PARTIAL",
-			}
+			assignments[variable.ID] = newPreviewAssignment(variable, value, "HARD_OK_PARTIAL")
 			break
 		}
 	}
@@ -460,22 +447,7 @@ func (s *backtrackingSolver) backtrack(variables []Variable, assignments map[str
 			continue
 		}
 
-		assignments[variable.ID] = PreviewAssignment{
-			VariableID:    variable.ID,
-			ClassID:       variable.ClassID,
-			ClassCode:     variable.ClassCode,
-			ClassName:     variable.ClassName,
-			SessionIndex:  variable.SessionIndex,
-			SessionTotal:  variable.SessionTotal,
-			TeacherID:     variable.TeacherID,
-			TeacherLabel:  variable.TeacherLabel,
-			RoomID:        value.RoomID,
-			RoomName:      value.RoomName,
-			RoomCapacity:  value.RoomCapacity,
-			StartTime:     value.TimeSlot.Start,
-			EndTime:       value.TimeSlot.End,
-			ConstraintFit: "HARD_OK",
-		}
+		assignments[variable.ID] = newPreviewAssignment(variable, value, "HARD_OK")
 
 		originalDomains, forwardOK := s.forwardCheck(variable, assignments)
 		if forwardOK && s.backtrack(variables, assignments) {
@@ -513,28 +485,11 @@ func (s *backtrackingSolver) selectUnassignedVariable(variables []Variable, assi
 }
 
 func (s *backtrackingSolver) isConsistent(variable Variable, value DomainValue, assignments map[string]PreviewAssignment) bool {
-	if value.RoomCapacity < variable.ExpectedCapcity {
-		return false
-	}
 	if value.TimeSlot.End.Hour() > 22 || (value.TimeSlot.End.Hour() == 22 && value.TimeSlot.End.Minute() > 0) {
 		return false
 	}
 
-	for _, assignment := range assignments {
-		if overlaps(value.TimeSlot.Start, value.TimeSlot.End, assignment.StartTime, assignment.EndTime) {
-			if assignment.ClassID == variable.ClassID {
-				return false
-			}
-			if assignment.TeacherID == variable.TeacherID {
-				return false
-			}
-			if assignment.RoomID == value.RoomID {
-				return false
-			}
-		}
-	}
-
-	return true
+	return !hasConflict(variable, value, assignments)
 }
 
 func (s *backtrackingSolver) forwardCheck(variable Variable, assignments map[string]PreviewAssignment) (map[string][]DomainValue, bool) {
@@ -598,7 +553,7 @@ func explainNoDomain(variable Variable, rooms []entities.Room, slots []TimeSlot,
 				SessionIndex: variable.SessionIndex,
 				SessionTotal: variable.SessionTotal,
 				Type:         "CLASS_SCHEDULE_NO_SLOT",
-				Message:      fmt.Sprintf("Lịch mẫu của lớp không tạo được slot hợp lệ cho buổi %d/%d trong khoảng ngày đã chọn. Hãy kiểm tra `day_of_week`, `start_time`, `end_time` hoặc nới khoảng ngày preview.", variable.SessionIndex, variable.SessionTotal),
+				Message:      fmt.Sprintf("Lịch mẫu của lớp không tạo được slot hợp lệ cho buổi %d/%d trong khoảng ngày đã chọn. Hãy kiểm tra `day_of_week`, `shift_id` hoặc nới khoảng ngày preview.", variable.SessionIndex, variable.SessionTotal),
 			}
 		}
 
@@ -609,8 +564,8 @@ func explainNoDomain(variable Variable, rooms []entities.Room, slots []TimeSlot,
 			ClassName:    variable.ClassName,
 			SessionIndex: variable.SessionIndex,
 			SessionTotal: variable.SessionTotal,
-			Type:         "NO_SLOT_IN_RANGE",
-			Message:      fmt.Sprintf("Khoảng ngày đã chọn không sinh ra khung giờ hợp lệ cho buổi %d/%d của lớp này. Hãy nới khoảng ngày preview.", variable.SessionIndex, variable.SessionTotal),
+			Type:         "NO_ACTIVE_SHIFT",
+			Message:      fmt.Sprintf("Không có ca học khả dụng để sinh slot cho buổi %d/%d của lớp này. Hãy tạo hoặc kích hoạt `Shift` trước khi chạy preview.", variable.SessionIndex, variable.SessionTotal),
 		}
 	}
 
@@ -637,7 +592,7 @@ func explainNoDomain(variable Variable, rooms []entities.Room, slots []TimeSlot,
 			SessionIndex: variable.SessionIndex,
 			SessionTotal: variable.SessionTotal,
 			Type:         "CLASS_SCHEDULE_ROOM_UNAVAILABLE",
-			Message:      fmt.Sprintf("Lịch mẫu của lớp đang khóa buổi %d/%d vào phòng cụ thể, nhưng phòng đó không nằm trong tập phòng khả dụng hiện tại. Hãy kiểm tra `class_schedule.room_id` hoặc bỏ bớt bộ lọc phòng.", variable.SessionIndex, variable.SessionTotal),
+			Message:      fmt.Sprintf("Lịch mẫu của lớp đang khóa buổi %d/%d vào phòng cụ thể theo ca học đã chọn, nhưng phòng đó không nằm trong tập phòng khả dụng hiện tại. Hãy kiểm tra `class_schedule.room_id` hoặc bỏ bớt bộ lọc phòng.", variable.SessionIndex, variable.SessionTotal),
 		}
 	}
 

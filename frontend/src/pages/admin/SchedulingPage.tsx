@@ -72,6 +72,7 @@ const getConflictSeverity = (type: string): 'error' | 'warning' | 'info' => {
     switch (type) {
         case 'NO_CLASS_INPUT':
         case 'NO_ACTIVE_ROOM':
+        case 'NO_ACTIVE_SHIFT':
         case 'NO_VALID_DATE_RANGE':
             return 'error';
         case 'MISSING_TEACHER':
@@ -113,9 +114,11 @@ const getConflictActionHint = (type: string) => {
         case 'INVALID_COURSE_DURATION':
             return 'Gợi ý: cập nhật `session_duration_minutes` của khóa học để preview dùng đúng thời lượng buổi học.';
         case 'CLASS_SCHEDULE_NO_SLOT':
-            return 'Gợi ý: kiểm tra lịch mẫu của lớp và bảo đảm khung giờ mẫu đủ chứa thời lượng buổi học từ khóa học.';
+            return 'Gợi ý: kiểm tra lịch mẫu của lớp, `shift_id` đã gán và bảo đảm ca học đủ chứa thời lượng buổi học từ khóa học.';
         case 'CLASS_SCHEDULE_ROOM_UNAVAILABLE':
             return 'Gợi ý: kiểm tra `room_id` trong lịch mẫu của lớp hoặc nới lại bộ lọc phòng để giữ đúng phòng cố định theo lịch mẫu.';
+        case 'NO_ACTIVE_SHIFT':
+            return 'Gợi ý: vào Quản lý ca học để tạo hoặc kích hoạt ít nhất một `Shift` rồi chạy lại preview.';
         case 'NO_VALID_DATE_RANGE':
             return 'Gợi ý: chọn ngày kết thúc lớn hơn hoặc bằng ngày bắt đầu.';
         default:
@@ -181,8 +184,8 @@ export const SchedulingPage = () => {
         }
 
         return rows.filter((row) =>
-            [row.class_code, row.class_name, row.teacher_label, row.room_name, `buoi ${row.session_index}`]
-                .filter(Boolean)
+            [row.class_code, row.class_name, row.teacher_label, row.room_name, row.shift_code, row.shift_name, `buoi ${row.session_index}`]
+                .filter((value): value is string => typeof value === 'string' && value.length > 0)
                 .some((value) => value.toLowerCase().includes(keyword)),
         );
     }, [preview?.assignments, search]);
@@ -341,6 +344,22 @@ export const SchedulingPage = () => {
             ),
         },
         {
+            field: 'shift_name',
+            headerName: 'Ca học',
+            minWidth: 190,
+            flex: 0.9,
+            renderCell: (params: GridRenderCellParams<SchedulingAssignment>) => (
+                <Box>
+                    <Typography variant="body2">
+                        {params.row.shift_name || 'Ca tự do'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {params.row.shift_code ? `${params.row.shift_code} • ${params.row.shift_type || 'CUSTOM'}` : 'Sinh từ khoảng ngày preview'}
+                    </Typography>
+                </Box>
+            ),
+        },
+        {
             field: 'start_time',
             headerName: 'Thời gian',
             minWidth: 220,
@@ -424,7 +443,7 @@ export const SchedulingPage = () => {
                                 Bộ lọc chạy preview
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Chọn khoảng ngày và bộ lọc đầu vào tối thiểu để test hard constraints nền.
+                                Chọn khoảng ngày và bộ lọc đầu vào tối thiểu để test hard constraints nền. Slot xếp lịch sẽ được sinh từ module `Shift`.
                             </Typography>
                         </Box>
 
@@ -655,7 +674,7 @@ export const SchedulingPage = () => {
                                     size="small"
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
-                                    placeholder="Tìm lớp, giáo viên, phòng..."
+                                    placeholder="Tìm lớp, giáo viên, phòng, ca học..."
                                     sx={{ minWidth: { xs: '100%', md: 320 } }}
                                     InputProps={{
                                         startAdornment: (

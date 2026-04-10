@@ -28,6 +28,9 @@ var ServiceProviders = wire.NewSet(
 
 	// Scheduling preview store
 	NewSchedulingPreviewStore,
+	schedulingstore.NewGraphColoringSolver,
+	schedulingstore.NewCPSATSolver,
+	schedulingstore.NewTabuSearchSolver,
 	schedulingstore.NewSchedulingSolverCatalog,
 	schedulingstore.NewDefaultSchedulingSolver,
 

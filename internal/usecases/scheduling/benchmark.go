@@ -62,8 +62,8 @@ func (uc *benchmarkUseCase) Execute(_ context.Context, input BenchmarkInput) (*B
 			Label:              descriptor.Label,
 			Description:        descriptor.Description,
 			Readiness:          descriptor.Readiness,
-			ExecutionStatus:    "PLANNED",
-			Message:            "Phase A da chot contract benchmark. Metric chi duoc dien sau khi solver duoc implement o giai doan D/E.",
+			ExecutionStatus:    "READY_FOR_BENCHMARK",
+			Message:            "Solver da duoc implement o tang service. Metric benchmark se duoc dien khi buoc E chay benchmark thuc te.",
 			SelectedForMainAPI: false,
 		})
 	}
