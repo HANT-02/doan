@@ -8,12 +8,11 @@ import {
     AssignmentTurnedIn,
     UploadFile,
     ManageAccounts,
-    Security,
     AssignmentOutlined,
     MeetingRoom,
     Person,
     Dashboard,
-    Build
+    EventNote
 } from '@mui/icons-material';
 import { hasAnyRole } from '@/utils/roles';
 
@@ -58,6 +57,13 @@ export const NAV_ITEMS: NavItem[] = [
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
+        key: "admin-lessons",
+        labelVi: "Quản lý buổi học",
+        path: "/app/admin/lessons",
+        icon: EventNote, // We need to import EventNote at top
+        roles: ["ADMIN", "SUPER_ADMIN"]
+    },
+    {
         key: "admin-rooms",
         labelVi: "Quản lý phòng học",
         path: "/app/admin/rooms",
@@ -86,10 +92,10 @@ export const NAV_ITEMS: NavItem[] = [
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
-        key: "admin-ai-audit",
-        labelVi: "Kiểm duyệt tài liệu (AI)",
-        path: "/app/admin/audit",
-        icon: Security,
+        key: "admin-predictive",
+        labelVi: "Cảnh báo AT_RISK",
+        path: "/app/admin/predictive",
+        icon: AssignmentTurnedIn,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
     {
@@ -97,13 +103,6 @@ export const NAV_ITEMS: NavItem[] = [
         labelVi: "Quản lý tài khoản",
         path: "/app/admin/accounts",
         icon: ManageAccounts,
-        roles: ["ADMIN", "SUPER_ADMIN"]
-    },
-    {
-        key: "admin-devtools",
-        labelVi: "Công cụ kiểm thử (DevTools)",
-        path: "/app/admin/devtools",
-        icon: Build,
         roles: ["ADMIN", "SUPER_ADMIN"]
     },
 

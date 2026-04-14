@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"doan/internal/entities"
-	"doan/internal/repositories"
 	repositoryinterface "doan/internal/repositories/interface"
 	schedulingservice "doan/internal/services/scheduling"
 	"doan/pkg/logger"
@@ -74,19 +72,19 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		}, nil
 	}
 
-	classes, err := uc.loadClasses(ctx, input)
+	classes, err := loadSchedulingClasses(ctx, uc.classRepo, input.ClassIDs, input.TeacherIDs)
 	if err != nil {
 		ctxLogger.Errorf("Failed to load classes for scheduling preview: %v", err)
 		return nil, err
 	}
 
-	rooms, err := uc.loadRooms(ctx, input)
+	rooms, err := loadSchedulingRooms(ctx, uc.roomRepo, input.RoomIDs)
 	if err != nil {
 		ctxLogger.Errorf("Failed to load rooms for scheduling preview: %v", err)
 		return nil, err
 	}
 
-	shifts, err := uc.loadShifts(ctx)
+	shifts, err := loadActiveShifts(ctx, uc.shiftRepo)
 	if err != nil {
 		ctxLogger.Errorf("Failed to load shifts for scheduling preview: %v", err)
 		return nil, err
@@ -154,83 +152,4 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 
 	uc.store.Save(runID, result)
 	return &result, nil
-}
-
-func (uc *previewUseCase) loadClasses(ctx context.Context, input PreviewInput) ([]entities.Class, error) {
-	condition := repositories.NewCommonCondition()
-	condition.SetPaging(500, 1)
-	condition.SetPreload([]string{"Teacher", "Course", "Room", "ClassSchedules", "ClassSchedules.Room", "ClassSchedules.Shift"})
-	condition.AddCondition("status", "OPEN", repositories.Equal)
-	if len(input.ClassIDs) > 0 {
-		condition.AddCondition("id", input.ClassIDs, repositories.In)
-	}
-	if len(input.TeacherIDs) > 0 {
-		condition.AddCondition("teacher_id", input.TeacherIDs, repositories.In)
-	}
-
-	output, err := uc.classRepo.GetByCondition(ctx, condition)
-	if err != nil {
-		return nil, err
-	}
-
-	classes := make([]entities.Class, 0)
-	if output == nil {
-		return classes, nil
-	}
-
-	for _, item := range output.Data {
-		if item != nil {
-			classes = append(classes, *item)
-		}
-	}
-	return classes, nil
-}
-
-func (uc *previewUseCase) loadShifts(ctx context.Context) ([]entities.Shift, error) {
-	condition := repositories.NewCommonCondition()
-	condition.SetPaging(500, 1)
-	condition.AddCondition("is_active", true, repositories.Equal)
-
-	output, err := uc.shiftRepo.GetByCondition(ctx, condition)
-	if err != nil {
-		return nil, err
-	}
-
-	shifts := make([]entities.Shift, 0)
-	if output == nil {
-		return shifts, nil
-	}
-
-	for _, item := range output.Data {
-		if item != nil {
-			shifts = append(shifts, *item)
-		}
-	}
-
-	return shifts, nil
-}
-
-func (uc *previewUseCase) loadRooms(ctx context.Context, input PreviewInput) ([]entities.Room, error) {
-	condition := repositories.NewCommonCondition()
-	condition.SetPaging(500, 1)
-	if len(input.RoomIDs) > 0 {
-		condition.AddCondition("id", input.RoomIDs, repositories.In)
-	}
-
-	output, err := uc.roomRepo.GetByCondition(ctx, condition)
-	if err != nil {
-		return nil, err
-	}
-
-	rooms := make([]entities.Room, 0)
-	if output == nil {
-		return rooms, nil
-	}
-
-	for _, item := range output.Data {
-		if item != nil {
-			rooms = append(rooms, *item)
-		}
-	}
-	return rooms, nil
 }

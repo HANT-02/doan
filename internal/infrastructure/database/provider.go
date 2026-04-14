@@ -30,6 +30,7 @@ var DBProvider = wire.NewSet(
 	implement.NewLabelRepository,
 	implement.NewAuditLogRepository,
 	implement.NewApprovalDecisionRepository,
+	implement.NewClassScheduleRepository,
 )
 
 // ProvideDB wraps GetDBContext and panics on error (for Wire)

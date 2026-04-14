@@ -104,11 +104,11 @@ func (ctrl *ControllerV1) Benchmark(c *gin.Context) {
 		RoomIDs:    req.RoomIDs,
 	})
 	if err != nil {
-		rest.ResponseError(c, http.StatusInternalServerError, "Failed to build scheduling benchmark contract", err)
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to execute scheduling benchmark", err)
 		return
 	}
 
-	rest.ResponseSuccess(c, http.StatusOK, "Scheduling benchmark contract retrieved successfully", output)
+	rest.ResponseSuccess(c, http.StatusOK, "Scheduling benchmark executed successfully", output)
 }
 
 func (ctrl *ControllerV1) GetPreview(c *gin.Context) {

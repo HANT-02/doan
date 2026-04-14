@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"doan/cmd/http/controllers/account"
 	"doan/cmd/http/controllers/class"
 	"doan/cmd/http/controllers/course"
+	"doan/cmd/http/controllers/lesson"
 	"doan/cmd/http/controllers/material"
+	"doan/cmd/http/controllers/predictive"
 	"doan/cmd/http/controllers/program"
 	"doan/cmd/http/controllers/room"
 	"doan/cmd/http/controllers/scheduling"
@@ -17,6 +20,9 @@ import (
 
 // ControllerProviders provides all HTTP controllers with interface bindings
 var ControllerProviders = wire.NewSet(
+	account.NewAccountControllerV1,
+	wire.Bind(new(account.Controller), new(*account.ControllerV1)),
+
 	// User controllers
 	user.NewUserControllerV1,
 	user.NewUserControllerV2,
@@ -56,4 +62,12 @@ var ControllerProviders = wire.NewSet(
 	// Material controller
 	material.NewMaterialControllerV1,
 	wire.Bind(new(material.Controller), new(*material.ControllerV1)),
+
+	// Predictive controller
+	predictive.NewPredictiveControllerV1,
+	wire.Bind(new(predictive.Controller), new(*predictive.ControllerV1)),
+
+	// Lesson controller
+	lesson.NewLessonControllerV1,
+	wire.Bind(new(lesson.Controller), new(*lesson.ControllerV1)),
 )

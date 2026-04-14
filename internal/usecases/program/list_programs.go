@@ -42,6 +42,21 @@ func NewListProgramsUseCase(repo repointerface.ProgramRepository) ListProgramsUs
 func (uc *listProgramsUseCaseImpl) Execute(ctx context.Context, input ListProgramsInput) (*ListProgramsOutput, error) {
 	ctxLogger := logger.NewLogger(ctx)
 	condition := repositories.NewCommonCondition().WithPaging(uint64(input.Limit), uint64(input.Page))
+	condition.SetPreload([]string{"Courses"})
+	if input.Search != "" {
+		condition.AddOrCondition([]repositories.Condition{
+			{
+				Field: "name",
+				Value: input.Search,
+				Op:    repositories.ILikeContains,
+			},
+			{
+				Field: "code",
+				Value: input.Search,
+				Op:    repositories.ILikeContains,
+			},
+		})
+	}
 	if input.Track != "" {
 		condition.WithCondition("track", input.Track, "eq")
 	}

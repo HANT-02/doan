@@ -14,15 +14,18 @@ import (
 var _ Controller = (*ControllerV1)(nil)
 
 type ControllerV1 struct {
-	createClassUseCase    class.CreateClassUseCase
-	getClassUseCase       class.GetClassUseCase
-	getClassRosterUseCase class.GetClassRosterUseCase
-	updateClassUseCase    class.UpdateClassUseCase
-	deleteClassUseCase    class.DeleteClassUseCase
-	listClassesUseCase    class.ListClassesUseCase
-	enrollStudentsUseCase class.EnrollStudentsUseCase
-	removeStudentsUseCase class.RemoveStudentsUseCase
-	assignTeacherUseCase  class.AssignTeacherUseCase
+	createClassUseCase         class.CreateClassUseCase
+	getClassUseCase            class.GetClassUseCase
+	getClassRosterUseCase      class.GetClassRosterUseCase
+	updateClassUseCase         class.UpdateClassUseCase
+	deleteClassUseCase         class.DeleteClassUseCase
+	listClassesUseCase         class.ListClassesUseCase
+	enrollStudentsUseCase      class.EnrollStudentsUseCase
+	removeStudentsUseCase      class.RemoveStudentsUseCase
+	assignTeacherUseCase       class.AssignTeacherUseCase
+	getClassSchedulesUseCase   class.GetClassSchedulesUseCase
+	createClassScheduleUseCase class.CreateClassScheduleUseCase
+	deleteClassScheduleUseCase class.DeleteClassScheduleUseCase
 }
 
 func NewClassControllerV1(
@@ -35,17 +38,23 @@ func NewClassControllerV1(
 	enrollStudentsUseCase class.EnrollStudentsUseCase,
 	removeStudentsUseCase class.RemoveStudentsUseCase,
 	assignTeacherUseCase class.AssignTeacherUseCase,
+	getClassSchedulesUseCase class.GetClassSchedulesUseCase,
+	createClassScheduleUseCase class.CreateClassScheduleUseCase,
+	deleteClassScheduleUseCase class.DeleteClassScheduleUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
-		createClassUseCase:    createClassUseCase,
-		getClassUseCase:       getClassUseCase,
-		getClassRosterUseCase: getClassRosterUseCase,
-		updateClassUseCase:    updateClassUseCase,
-		deleteClassUseCase:    deleteClassUseCase,
-		listClassesUseCase:    listClassesUseCase,
-		enrollStudentsUseCase: enrollStudentsUseCase,
-		removeStudentsUseCase: removeStudentsUseCase,
-		assignTeacherUseCase:  assignTeacherUseCase,
+		createClassUseCase:         createClassUseCase,
+		getClassUseCase:            getClassUseCase,
+		getClassRosterUseCase:      getClassRosterUseCase,
+		updateClassUseCase:         updateClassUseCase,
+		deleteClassUseCase:         deleteClassUseCase,
+		listClassesUseCase:         listClassesUseCase,
+		enrollStudentsUseCase:      enrollStudentsUseCase,
+		removeStudentsUseCase:      removeStudentsUseCase,
+		assignTeacherUseCase:       assignTeacherUseCase,
+		getClassSchedulesUseCase:   getClassSchedulesUseCase,
+		createClassScheduleUseCase: createClassScheduleUseCase,
+		deleteClassScheduleUseCase: deleteClassScheduleUseCase,
 	}
 }
 
@@ -230,5 +239,51 @@ func (ctrl *ControllerV1) AssignTeacher(c *gin.Context) {
 		return
 	}
 
+	rest.ResponseSuccess(c, http.StatusOK, output.Message, nil)
+}
+
+func (ctrl *ControllerV1) GetClassSchedules(c *gin.Context) {
+	id := c.Param("id")
+	output, err := ctrl.getClassSchedulesUseCase.Execute(c.Request.Context(), class.GetClassSchedulesInput{ClassID: id})
+	if err != nil {
+		rest.ResponseError(c, http.StatusNotFound, "Failed to retrieve schedules", err)
+		return
+	}
+	rest.ResponseSuccess(c, http.StatusOK, "Schedules retrieved successfully", output)
+}
+
+func (ctrl *ControllerV1) CreateClassSchedule(c *gin.Context) {
+	id := c.Param("id")
+	var req CreateClassScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	output, err := ctrl.createClassScheduleUseCase.Execute(c.Request.Context(), class.CreateClassScheduleInput{
+		ClassID:   id,
+		ShiftID:   req.ShiftID,
+		DayOfWeek: req.DayOfWeek,
+		RoomID:    req.RoomID,
+	})
+	if err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to create schedule", err)
+		return
+	}
+	rest.ResponseSuccess(c, http.StatusCreated, "Schedule created successfully", output)
+}
+
+func (ctrl *ControllerV1) DeleteClassSchedule(c *gin.Context) {
+	id := c.Param("id")
+	scheduleId := c.Param("scheduleId")
+
+	output, err := ctrl.deleteClassScheduleUseCase.Execute(c.Request.Context(), class.DeleteClassScheduleInput{
+		ClassID:    id,
+		ScheduleID: scheduleId,
+	})
+	if err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to delete schedule", err)
+		return
+	}
 	rest.ResponseSuccess(c, http.StatusOK, output.Message, nil)
 }

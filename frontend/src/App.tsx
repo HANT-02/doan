@@ -35,8 +35,11 @@ import { ClassesPage } from '@/pages/admin/ClassesPage';
 import { StudentsPage } from '@/pages/admin/StudentsPage';
 import { ProgramPage } from '@/pages/admin/ProgramPage';
 import { CoursePage } from '@/pages/admin/CoursePage';
-import { DevToolsPage } from '@/pages/admin/DevToolsPage';
 import { SchedulingPage } from '@/pages/admin/SchedulingPage';
+import { PredictiveAlertsPage } from '@/pages/admin/PredictiveAlertsPage';
+import { AccountsPage } from '@/pages/admin/AccountsPage';
+import LessonsPage from '@/pages/admin/LessonsPage';
+import LessonDetailPage from '@/pages/admin/LessonDetailPage';
 
 // Placeholder & Error Pages
 import { PlaceholderPage } from '@/components/layout/PlaceholderPage';
@@ -102,8 +105,7 @@ function App() {
                 <Route element={<RoleRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
                   <Route element={<ErrorBoundary><Outlet /></ErrorBoundary>}>
                     <Route path="admin/overview" element={<AdminOverview />} />
-                    <Route path="admin/accounts" element={<PlaceholderPage title="Accounts & Roles" />} />
-                    <Route path="admin/legal" element={<PlaceholderPage title="Legal & Profiles" />} />
+                    <Route path="admin/accounts" element={<AccountsPage />} />
                     <Route path="admin/teachers" element={<TeachersPage />} />
                     <Route path="admin/teachers/new" element={<TeacherFormPage />} />
                     <Route path="admin/teachers/:id" element={<TeacherDetailPage />} />
@@ -114,9 +116,10 @@ function App() {
                     <Route path="admin/students" element={<StudentsPage />} />
                     <Route path="admin/rooms" element={<RoomsPage />} />
                     <Route path="admin/shifts" element={<ShiftsPage />} />
-                    <Route path="admin/devtools" element={<DevToolsPage />} />
                     <Route path="admin/scheduling" element={<SchedulingPage />} />
-                    <Route path="admin/audit" element={<ComplianceQueuePage />} />
+                    <Route path="admin/predictive" element={<PredictiveAlertsPage />} />
+                    <Route path="admin/lessons" element={<LessonsPage />} />
+                    <Route path="admin/lessons/:id" element={<LessonDetailPage />} />
                     <Route path="admin/conflicts" element={<PlaceholderPage title="Conflict Resolution" />} />
                     <Route path="admin/reports" element={<PlaceholderPage title="Reports & Analytics" />} />
                   </Route>

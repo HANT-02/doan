@@ -4,6 +4,7 @@ import (
 	_interface "doan/internal/infrastructure/queue/interface"
 	auditservice "doan/internal/services/audit"
 	"doan/internal/services/mailer"
+	predictiveservice "doan/internal/services/predictive"
 	schedulingstore "doan/internal/services/scheduling"
 	"doan/internal/services/security"
 	"doan/internal/services/user"
@@ -33,6 +34,7 @@ var ServiceProviders = wire.NewSet(
 	schedulingstore.NewTabuSearchSolver,
 	schedulingstore.NewSchedulingSolverCatalog,
 	schedulingstore.NewDefaultSchedulingSolver,
+	predictiveservice.NewAtRiskService,
 
 	// AI audit stub services
 	auditservice.NewLocalStorageService,

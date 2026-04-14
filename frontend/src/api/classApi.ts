@@ -19,6 +19,26 @@ export interface Class {
     updated_at: string;
 }
 
+export interface ClassSchedule {
+    id: string;
+    class_id: string;
+    shift_id: string;
+    room_id?: string;
+    day_of_week: string;
+    shift?: {
+        id: string;
+        name: string;
+        start_time: string;
+        end_time: string;
+    };
+    room?: {
+        id: string;
+        name: string;
+        code: string;
+    };
+}
+
+
 export interface ListClassesResponse {
     success: boolean;
     message: string;
@@ -52,6 +72,15 @@ export interface ClassRosterResponse {
     message: string;
     data: ClassRoster;
 }
+
+export interface ClassScheduleListResponse {
+    success: boolean;
+    message: string;
+    data: {
+        schedules: ClassSchedule[];
+    };
+}
+
 
 interface RawClassListResponse {
     success?: boolean;
@@ -196,6 +225,25 @@ export const classApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (_result, _error, { id }) => [{ type: 'Class', id }, { type: 'Class', id: 'LIST' }, { type: 'Teacher', id: 'LIST' }],
         }),
+        getClassSchedules: builder.query<ClassScheduleListResponse, string>({
+            query: (id) => `/v1/classes/${id}/schedules`,
+            providesTags: (_result, _error, id) => [{ type: 'Class', id: `SCHEDULES-${id}` }],
+        }),
+        createClassSchedule: builder.mutation<{ success: boolean; message: string; data: { schedule: ClassSchedule } }, { classId: string; shift_id: string; day_of_week: string; room_id?: string }>({
+            query: ({ classId, ...body }) => ({
+                url: `/v1/classes/${classId}/schedules`,
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: (_result, _error, { classId }) => [{ type: 'Class', id: `SCHEDULES-${classId}` }],
+        }),
+        deleteClassSchedule: builder.mutation<{ success: boolean; message: string }, { classId: string; scheduleId: string }>({
+            query: ({ classId, scheduleId }) => ({
+                url: `/v1/classes/${classId}/schedules/${scheduleId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (_result, _error, { classId }) => [{ type: 'Class', id: `SCHEDULES-${classId}` }],
+        }),
     }),
 });
 
@@ -209,4 +257,7 @@ export const {
     useEnrollStudentsMutation,
     useRemoveStudentsMutation,
     useAssignTeacherMutation,
+    useGetClassSchedulesQuery,
+    useCreateClassScheduleMutation,
+    useDeleteClassScheduleMutation,
 } = classApi;

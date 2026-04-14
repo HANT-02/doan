@@ -1,4 +1,4 @@
-.PHONY: wire generate run build test clean dev install-tools http-wire migration-wire migrate
+.PHONY: wire generate run build test clean dev install-tools http-wire migration-wire migrate benchmark-scheduling predictive-train
 
 # Install required tools
 install-tools:
@@ -54,6 +54,15 @@ seed:
 	@echo "Seeding database..."
 	go run cmd/cli/seed/main.go
 	@echo "Database seeded successfully!"
+
+# Run synthetic scheduling benchmark study
+benchmark-scheduling:
+	@echo "Running scheduling benchmark study..."
+	go run ./cmd/cli/scheduling_benchmark
+
+predictive-train:
+	@echo "Running minimal AT_RISK training..."
+	go run ./cmd/cli/predictive_train
 
 # Run migration down
 migrate-down: migration-wire
@@ -166,4 +175,3 @@ help:
 	@echo "  make docker-local-down - Stop local Docker services"
 	@echo ""
 	@echo "Quick start: make install-tools && make deps && make dev"
-

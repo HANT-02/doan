@@ -217,7 +217,7 @@ export const ProgramPage = () => {
             headerAlign: 'center',
             sortable: false,
             renderCell: (params: GridRenderCellParams<Program>) => (
-                <Typography variant="body2">{params.row.courses?.length || 0}</Typography>
+                <Typography variant="body2">{Array.isArray(params.row.courses) ? params.row.courses.length : '-'}</Typography>
             ),
         },
         {

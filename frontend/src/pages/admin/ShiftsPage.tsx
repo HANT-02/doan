@@ -19,6 +19,7 @@ import {
     AddRounded,
     DeleteOutlineRounded,
     EditOutlined,
+    PowerSettingsNewRounded,
     MoreVert,
     RefreshRounded,
     SearchRounded,
@@ -121,6 +122,32 @@ export const ShiftsPage = () => {
         setShiftToDelete(menuShift);
         setIsConfirmOpen(true);
         handleCloseMenu();
+    };
+
+    const handleToggleActive = async () => {
+        if (!menuShift) {
+            return;
+        }
+
+        try {
+            await updateShift({
+                id: menuShift.id,
+                body: {
+                    code: menuShift.code,
+                    name: menuShift.name,
+                    start_time: menuShift.start_time,
+                    end_time: menuShift.end_time,
+                    duration_minutes: menuShift.duration_minutes,
+                    session_type: menuShift.session_type,
+                    is_active: !menuShift.is_active,
+                    notes: menuShift.notes || '',
+                },
+            }).unwrap();
+            toast.success(menuShift.is_active ? 'Đã tạm ngưng ca học' : 'Đã kích hoạt ca học');
+            handleCloseMenu();
+        } catch (error) {
+            toast.error(getApiErrorMessage(error, 'Không thể cập nhật trạng thái ca học'));
+        }
     };
 
     const handleConfirmDelete = async () => {
@@ -368,6 +395,10 @@ export const ShiftsPage = () => {
                 <MenuItem onClick={() => handleEdit()}>
                     <EditOutlined fontSize="small" sx={{ mr: 1 }} />
                     Chỉnh sửa
+                </MenuItem>
+                <MenuItem onClick={() => void handleToggleActive()}>
+                    <PowerSettingsNewRounded fontSize="small" sx={{ mr: 1 }} />
+                    {menuShift?.is_active ? 'Tạm ngưng ca học' : 'Kích hoạt ca học'}
                 </MenuItem>
                 <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
                     <DeleteOutlineRounded fontSize="small" sx={{ mr: 1 }} />

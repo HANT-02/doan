@@ -46,7 +46,18 @@ func (uc *listShiftsUseCase) Execute(ctx context.Context, input ListShiftsInput)
 
 	commonCond := repositories.NewCommonCondition()
 	if input.Search != "" {
-		commonCond.AddCondition("name ILIKE ? OR code ILIKE ?", "%"+input.Search+"%", repositories.Like)
+		commonCond.AddOrCondition([]repositories.Condition{
+			{
+				Field: "name",
+				Value: input.Search,
+				Op:    repositories.ILikeContains,
+			},
+			{
+				Field: "code",
+				Value: input.Search,
+				Op:    repositories.ILikeContains,
+			},
+		})
 	}
 	if input.SessionType != "" {
 		commonCond.AddCondition("session_type", input.SessionType, repositories.Equal)
@@ -58,15 +69,17 @@ func (uc *listShiftsUseCase) Execute(ctx context.Context, input ListShiftsInput)
 		commonCond.SetPaging(uint64(input.Limit), uint64(input.Page))
 	}
 
-	orderBy := "created_at"
+	sortField := "created_at"
+	sortOrder := repositories.Desc
 	if input.SortBy != "" {
-		order := repositories.Asc
+		sortField = input.SortBy
 		if input.SortOrder == "desc" || input.SortOrder == "DESC" {
-			order = repositories.Desc
+			sortOrder = repositories.Desc
+		} else {
+			sortOrder = repositories.Asc
 		}
-		orderBy = input.SortBy + " " + order
 	}
-	commonCond.AddSorting(orderBy, "")
+	commonCond.AddSorting(sortField, sortOrder)
 
 	result, err := uc.shiftRepo.GetByCondition(ctx, commonCond)
 	if err != nil {

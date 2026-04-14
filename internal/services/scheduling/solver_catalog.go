@@ -46,6 +46,6 @@ func (c *staticSolverCatalog) GetSolver(key string) (SchedulingSolver, bool) {
 	return solver, ok
 }
 
-func NewDefaultSchedulingSolver() SchedulingSolver {
-	return NewLegacyPreviewSolver()
+func NewDefaultSchedulingSolver(cpSatSolver *cpSatSolver) SchedulingSolver {
+	return cpSatSolver
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,6 +33,7 @@ import {
     PersonOutline,
     RefreshRounded,
     SchoolOutlined,
+    EventNote,
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
@@ -48,6 +50,7 @@ import {
 import { useGetStudentsQuery, type Student } from '@/api/studentApi';
 import { useGetTeachersQuery, type Teacher } from '@/api/teacherApi';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import ClassScheduleTab from './ClassScheduleTab';
 
 const enrollStudentsSchema = z.object({
     student_ids: z.array(z.string()).min(1, 'Vui lòng chọn ít nhất một học sinh'),
@@ -112,6 +115,7 @@ export default function ClassDetailDialog({
     onClose,
     onEdit,
 }: ClassDetailDialogProps) {
+    const navigate = useNavigate();
     const [tab, setTab] = useState(0);
     const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
     const [rosterSearch, setRosterSearch] = useState('');
@@ -438,6 +442,20 @@ export default function ClassDetailDialog({
                                 </Typography>
                             </Grid>
                         </Grid>
+                        
+                        <Divider />
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button
+                                variant="outlined"
+                                startIcon={<EventNote />}
+                                onClick={() => {
+                                    onClose();
+                                    navigate(`/app/admin/lessons?class_id=${classId}`);
+                                }}
+                            >
+                                Quản lý buổi học
+                            </Button>
+                        </Box>
                     </Stack>
                 </Paper>
             </Stack>
@@ -656,11 +674,13 @@ export default function ClassDetailDialog({
                                     <Tab label="Thông tin lớp" />
                                     <Tab label="Danh sách học sinh" />
                                     <Tab label="Giáo viên phụ trách" />
+                                    <Tab label="Lịch tuần lớp" />
                                 </Tabs>
 
                                 {tab === 0 ? renderInfoTab() : null}
                                 {tab === 1 ? renderRosterTab() : null}
                                 {tab === 2 ? renderTeacherTab() : null}
+                                {tab === 3 && classId ? <ClassScheduleTab classId={classId} /> : null}
                             </Box>
                         </Stack>
                     ) : null}

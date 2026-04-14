@@ -2,9 +2,12 @@ package main
 
 import (
 	httpConfig "doan/cmd/http/config"
+	"doan/cmd/http/controllers/account"
 	"doan/cmd/http/controllers/class"
 	"doan/cmd/http/controllers/course"
+	lessons "doan/cmd/http/controllers/lesson"
 	"doan/cmd/http/controllers/material"
+	"doan/cmd/http/controllers/predictive"
 	"doan/cmd/http/controllers/program"
 	"doan/cmd/http/controllers/room"
 	"doan/cmd/http/controllers/scheduling"
@@ -35,6 +38,7 @@ type App struct {
 	restConfig             httpConfig.RestServer
 	userControllerV1       user.Controller
 	userControllerV2       user.Controller
+	accountControllerV1    account.Controller
 	classControllerV1      class.Controller
 	roomControllerV1       room.Controller
 	shiftControllerV1      shift.Controller
@@ -44,6 +48,8 @@ type App struct {
 	programControllerV1    program.Controller
 	schedulingControllerV1 scheduling.Controller
 	materialControllerV1   material.Controller
+	predictiveControllerV1 predictive.Controller
+	lessonControllerV1     lessons.Controller
 }
 
 func (a *App) initFlag() {
@@ -89,6 +95,7 @@ func (a *App) registerRoute() {
 
 	user.RegisterRoutesV1(api, a.userControllerV1)
 	user.RegisterRoutesV2(api, a.userControllerV2)
+	account.RegisterRoutesV1(api, a.accountControllerV1, config.GetManager())
 	class.RegisterRoutesV1(api, a.classControllerV1, config.GetManager())
 	room.RegisterRoutesV1(api, a.roomControllerV1, config.GetManager())
 	shift.RegisterRoutesV1(api, a.shiftControllerV1, config.GetManager())
@@ -98,6 +105,8 @@ func (a *App) registerRoute() {
 	program.RegisterRoutesV1(api, a.programControllerV1, config.GetManager())
 	scheduling.RegisterRoutesV1(api, a.schedulingControllerV1, config.GetManager())
 	material.RegisterRoutesV1(api, a.materialControllerV1, config.GetManager())
+	predictive.RegisterRoutesV1(api, a.predictiveControllerV1, config.GetManager())
+	lessons.RegisterRoutesV1(api, a.lessonControllerV1, config.GetManager())
 
 }
 
@@ -105,6 +114,7 @@ func inject(
 	app *App,
 	userControllerV1 *user.ControllerV1,
 	userControllerV2 *user.ControllerV2,
+	accountControllerV1 account.Controller,
 	classControllerV1 *class.ControllerV1,
 	roomControllerV1 *room.ControllerV1,
 	shiftControllerV1 shift.Controller,
@@ -114,9 +124,12 @@ func inject(
 	programControllerV1 program.Controller,
 	schedulingControllerV1 scheduling.Controller,
 	materialControllerV1 material.Controller,
+	predictiveControllerV1 predictive.Controller,
+	lessonControllerV1 lessons.Controller,
 ) error {
 	app.userControllerV1 = userControllerV1
 	app.userControllerV2 = userControllerV2
+	app.accountControllerV1 = accountControllerV1
 	app.classControllerV1 = classControllerV1
 	app.roomControllerV1 = roomControllerV1
 	app.shiftControllerV1 = shiftControllerV1
@@ -126,6 +139,8 @@ func inject(
 	app.programControllerV1 = programControllerV1
 	app.schedulingControllerV1 = schedulingControllerV1
 	app.materialControllerV1 = materialControllerV1
+	app.predictiveControllerV1 = predictiveControllerV1
+	app.lessonControllerV1 = lessonControllerV1
 	return nil
 }
 

@@ -1,9 +1,12 @@
 package usecases
 
 import (
+	"doan/internal/usecases/account"
 	"doan/internal/usecases/class"
 	"doan/internal/usecases/course"
+	"doan/internal/usecases/lesson"
 	"doan/internal/usecases/material"
+	"doan/internal/usecases/predictive"
 	"doan/internal/usecases/program"
 	"doan/internal/usecases/room"
 	"doan/internal/usecases/scheduling"
@@ -25,6 +28,14 @@ var UserUseCaseProviders = wire.NewSet(
 	user.NewResetPasswordUseCase,
 	user.NewChangePasswordUseCase,
 	user.NewVerifyOTPUseCase,
+)
+
+var AccountUseCaseProviders = wire.NewSet(
+	account.NewListUsersUseCase,
+	account.NewGetUserUseCase,
+	account.NewCreateUserUseCase,
+	account.NewUpdateUserUseCase,
+	account.NewResetUserPasswordUseCase,
 )
 
 var TeacherUseCaseProviders = wire.NewSet(
@@ -63,6 +74,9 @@ var ClassUseCaseProviders = wire.NewSet(
 	class.NewEnrollStudentsUseCase,
 	class.NewRemoveStudentsUseCase,
 	class.NewAssignTeacherUseCase,
+	class.NewGetClassSchedulesUseCase,
+	class.NewCreateClassScheduleUseCase,
+	class.NewDeleteClassScheduleUseCase,
 )
 
 var StudentUseCaseProviders = wire.NewSet(
@@ -106,8 +120,19 @@ var ProgramUseCaseProviders = wire.NewSet(
 	program.NewRemoveCoursesUseCase,
 )
 
+var PredictiveUseCaseProviders = wire.NewSet(
+	predictive.NewListStudentPredictionsUseCase,
+	predictive.NewGetModelMetadataUseCase,
+)
+
+var LessonUseCaseProviders = wire.NewSet(
+	lesson.NewListLessonsUseCase,
+	lesson.NewGetLessonUseCase,
+)
+
 var UseCaseProviders = wire.NewSet(
 	UserUseCaseProviders,
+	AccountUseCaseProviders,
 	TeacherUseCaseProviders,
 	RoomUseCaseProviders,
 	ShiftUseCaseProviders,
@@ -117,4 +142,6 @@ var UseCaseProviders = wire.NewSet(
 	MaterialUseCaseProviders,
 	CourseUseCaseProviders,
 	ProgramUseCaseProviders,
+	PredictiveUseCaseProviders,
+	LessonUseCaseProviders,
 )

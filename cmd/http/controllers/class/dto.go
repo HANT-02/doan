@@ -44,6 +44,12 @@ type AssignTeacherRequest struct {
 	TeacherID string `json:"teacher_id" binding:"required"`
 }
 
+type CreateClassScheduleRequest struct {
+	ShiftID   string  `json:"shift_id" binding:"required"`
+	DayOfWeek string  `json:"day_of_week" binding:"required"`
+	RoomID    *string `json:"room_id"`
+}
+
 type ClassResponse struct {
 	ID          string     `json:"id"`
 	Code        string     `json:"code"`

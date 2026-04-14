@@ -85,3 +85,16 @@ func (r *lessonRepository) FindOverlappingLessons(
 
 	return lessons, nil
 }
+
+func (r *lessonRepository) GetLessonWithRelations(ctx context.Context, id string) (*entities.Lesson, error) {
+	var lesson entities.Lesson
+	err := r.db.WithContext(ctx).
+		Preload("Class").
+		Preload("Teacher").
+		Preload("Room").
+		First(&lesson, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &lesson, nil
+}

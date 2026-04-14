@@ -6,11 +6,12 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  icon?: React.ReactNode;
   actions?: React.ReactNode;
   breadcrumbs?: { label: string; path?: string }[];
 }
 
-const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions, breadcrumbs }) => {
+const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, actions, breadcrumbs }) => {
   return (
     <Box sx={{ mb: 4 }}>
       {breadcrumbs && (
@@ -44,16 +45,23 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions, bread
         alignItems={{ xs: 'flex-start', sm: 'center' }}
         spacing={2}
       >
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-            {title}
-          </Typography>
-          {subtitle && (
-            <Typography variant="body1" color="text.secondary">
-              {subtitle}
-            </Typography>
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          {icon && (
+            <Box sx={{ display: 'flex', color: 'primary.main', '& > svg': { fontSize: 32 } }}>
+              {icon}
+            </Box>
           )}
-        </Box>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom={!subtitle} sx={{ fontWeight: 700, mb: subtitle ? 0.5 : 0 }}>
+              {title}
+            </Typography>
+            {subtitle && (
+              <Typography variant="body1" color="text.secondary">
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
+        </Stack>
         {actions && (
           <Box sx={{ alignSelf: { xs: 'flex-end', sm: 'center' } }}>
             {actions}

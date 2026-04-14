@@ -1236,29 +1236,31 @@ Ghi chú:
 - **Mức độ ưu tiên:** Cao
 - **Tác nhân chính:** Quản trị viên / người làm nghiên cứu giải thuật
 - **Tác nhân phụ:** Scheduling engine
-- **Mô tả ngắn:** Endpoint benchmark hiện trả về contract benchmark cho 3 solver `graph_coloring`, `cp_sat`, `tabu_search`, nhưng chưa trả metric benchmark thực.
+- **Mô tả ngắn:** Endpoint benchmark chạy thật 3 solver `graph_coloring`, `cp_sat`, `tabu_search` trên cùng input để trả metric so sánh và hỗ trợ chọn solver chính.
 - **Tiền điều kiện:** Admin đăng nhập.
 - **Điều kiện kích hoạt:** Admin gọi benchmark API.
-- **Hậu điều kiện thành công:** Nhận danh sách solver và readiness.
-- **Hậu điều kiện thất bại:** Không có contract benchmark.
+- **Hậu điều kiện thành công:** Nhận bảng so sánh solver gồm feasibility, hard violations, soft score, runtime và summary.
+- **Hậu điều kiện thất bại:** Không lấy được dữ liệu benchmark hoặc có solver lỗi khi thực thi.
 - **Dữ liệu đầu vào:** `date_from`, `date_to`, `class_ids[]`, `teacher_ids[]`, `room_ids[]`
 - **Dữ liệu đầu ra:** `BenchmarkOutput` gồm generatedAt, filters, mode, solvers[]
 - **Thực thể bị tác động:** Không cập nhật entity domain
-- **Quy tắc nghiệp vụ áp dụng:** Chưa có metric benchmark thật trong code hiện tại.
+- **Quy tắc nghiệp vụ áp dụng:** Benchmark dùng cùng filter với preview, không cập nhật entity domain, chỉ phục vụ ADMIN nội bộ/nghiên cứu.
 - **Luồng chính:**
   1. Admin gửi yêu cầu benchmark với cùng bộ filter như preview.
   2. Backend validate khoảng ngày.
-  3. Use case lấy danh mục solver từ `SolverCatalog`.
-  4. Trả về danh sách solver với label, description, readiness, execution status.
+  3. Use case nạp dữ liệu benchmark và lấy danh mục solver từ `SolverCatalog`.
+  4. Hệ thống chạy lần lượt 3 solver trên cùng input.
+  5. Hệ thống tổng hợp feasibility, hard violations, soft score, runtime và summary.
+  6. Trả về bảng benchmark để so sánh solver.
 - **Luồng thay thế:** Không có.
 - **Luồng ngoại lệ:**
   - E1. Request body invalid.
   - E2. date range invalid.
-  - E3. Lỗi build contract benchmark.
+  - E3. Lỗi thực thi benchmark hoặc solver không khả dụng.
 - **Ràng buộc phân quyền:** ADMIN.
 - **API / module / màn hình liên quan:** `POST /api/v1/scheduling/benchmark`, `internal/usecases/scheduling/benchmark.go`
 - **Ghi chú / điểm mơ hồ cần xác nhận:**
-  - Đây là use case **partial**; benchmark chưa chạy thực sự để sinh feasibility, runtime, hard violations.
+  - Quyết định solver chính đang được tài liệu hóa tại `docs/SCHEDULING_BENCHMARK_REPORT_2026-04-14.md`.
   - **Độ tin cậy:** Confirmed from code
 
 ## UC-SOL-04. Xác nhận preview để tạo lesson
