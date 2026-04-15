@@ -15,6 +15,9 @@ import { vi } from 'date-fns/locale';
 
 import { useGetLessonByIdQuery } from '@/api/lessonApi';
 import PageHeader from '@/components/common/PageHeader';
+import LessonAttendanceManager from '@/components/lesson/LessonAttendanceManager';
+import LessonSummaryEditor from '@/components/lesson/LessonSummaryEditor';
+import LessonAcademicRecordManager from '@/components/lesson/LessonAcademicRecordManager';
 
 export default function LessonDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -134,6 +137,10 @@ export default function LessonDetailPage() {
                     </Stack>
                 </Grid>
             </Grid>
+
+            <LessonAttendanceManager lessonId={id!} />
+            <LessonSummaryEditor lessonId={id!} />
+            <LessonAcademicRecordManager lessonId={id!} />
         </Stack>
     );
 }

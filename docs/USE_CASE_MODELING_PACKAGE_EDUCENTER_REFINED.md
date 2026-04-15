@@ -189,47 +189,49 @@ Ví dụ:
 | UC-LH-02.02 | Tìm kiếm học viên khả dụng để ghi danh | Con | Quản lý ghi danh lớp học | Implemented | Confirmed from code |
 | UC-LH-02.03 | Ghi danh học viên vào lớp | Con | Quản lý ghi danh lớp học | Implemented | Confirmed from code |
 | UC-LH-02.04 | Rút học viên khỏi lớp | Con | Quản lý ghi danh lớp học | Implemented | Confirmed from code |
-| UC-LH-03 | Quản lý lịch tuần lớp học | Tổng | ROOT | Missing API | Strongly inferred from code |
-| UC-LH-03.01 | Tạo lịch tuần cho lớp | Con | Quản lý lịch tuần lớp học | Missing API | Strongly inferred from code |
-| UC-LH-03.02 | Cập nhật lịch tuần cho lớp | Con | Quản lý lịch tuần lớp học | Missing API | Strongly inferred from code |
-| UC-LH-03.03 | Xóa lịch tuần của lớp | Con | Quản lý lịch tuần lớp học | Missing API | Strongly inferred from code |
+| UC-LH-03 | Quản lý lịch tuần lớp học | Tổng | ROOT | Implemented | Confirmed from code |
+| UC-LH-03.01 | Xem lịch tuần của lớp | Con | Quản lý lịch tuần lớp học | Implemented | Confirmed from code |
+| UC-LH-03.02 | Tạo lịch tuần cho lớp | Con | Quản lý lịch tuần lớp học | Implemented | Confirmed from code |
+| UC-LH-03.03 | Xóa lịch tuần của lớp | Con | Quản lý lịch tuần lớp học | Implemented | Confirmed from code |
+| UC-LH-03.04 | Cập nhật lịch tuần cho lớp | Con | Quản lý lịch tuần lớp học | Partial | Confirmed from code |
 
 ## 2.7 Nhóm xếp lịch và buổi học
 
 | Mã | Tên use case tiếng Việt | Cấp | Cha | Trạng thái | Mức độ chắc chắn |
 |---|---|---|---|---|---|
-| UC-XL-01 | Xếp lịch học | Tổng | ROOT | Partial | Confirmed from code |
+| UC-XL-01 | Xếp lịch học | Tổng | ROOT | Implemented | Confirmed from code |
 | UC-XL-01.01 | Tạo preview xếp lịch | Con | Xếp lịch học | Implemented | Confirmed from code |
 | UC-XL-01.02 | Xem preview xếp lịch | Con | Xếp lịch học | Implemented | Confirmed from code |
 | UC-XL-01.03 | Xem xung đột xếp lịch | Con | Xếp lịch học | Implemented | Confirmed from code |
 | UC-XL-01.04 | Giải quyết xung đột xếp lịch | Con | Xếp lịch học | Partial | Strongly inferred from code |
 | UC-XL-01.05 | Xác nhận preview để tạo buổi học | Con | Xếp lịch học | Implemented | Confirmed from code |
 | UC-XL-01.06 | Benchmark solver xếp lịch | Con | Xếp lịch học | Partial | Confirmed from code |
-| UC-BH-01 | Quản lý buổi học | Tổng | ROOT | Partial | Strongly inferred from code |
-| UC-BH-01.01 | Xem danh sách buổi học | Con | Quản lý buổi học | Missing API/UI đầy đủ | Strongly inferred from code |
-| UC-BH-01.02 | Xem chi tiết buổi học | Con | Quản lý buổi học | Missing API/UI đầy đủ | Strongly inferred from code |
+| UC-BH-01 | Quản lý buổi học | Tổng | ROOT | Implemented | Confirmed from code |
+| UC-BH-01.01 | Xem danh sách buổi học | Con | Quản lý buổi học | Implemented | Confirmed from code |
+| UC-BH-01.02 | Xem chi tiết buổi học | Con | Quản lý buổi học | Implemented | Confirmed from code |
 
 ## 2.8 Nhóm học vụ sau buổi học
 
 | Mã | Tên use case tiếng Việt | Cấp | Cha | Trạng thái | Mức độ chắc chắn |
 |---|---|---|---|---|---|
-| UC-HVU-01 | Quản lý điểm danh | Tổng | ROOT | Missing API | Strongly inferred from code |
-| UC-HVU-01.01 | Chấm điểm danh buổi học | Con | Quản lý điểm danh | Missing API | Strongly inferred from code |
-| UC-HVU-01.02 | Cập nhật điểm danh buổi học | Con | Quản lý điểm danh | Missing API | Strongly inferred from code |
-| UC-HVU-01.03 | Xem lịch sử điểm danh | Con | Quản lý điểm danh | Missing API/UI | Strongly inferred from code |
-| UC-HVU-02 | Quản lý tổng kết buổi học | Tổng | ROOT | Missing API | Strongly inferred from code |
-| UC-HVU-02.01 | Tạo tổng kết buổi học | Con | Quản lý tổng kết buổi học | Missing API | Strongly inferred from code |
-| UC-HVU-02.02 | Cập nhật tổng kết buổi học | Con | Quản lý tổng kết buổi học | Missing API | Strongly inferred from code |
-| UC-HVU-02.03 | Xem tổng kết buổi học | Con | Quản lý tổng kết buổi học | Missing API/UI | Strongly inferred from code |
-| UC-HVU-03 | Quản lý kết quả học tập | Tổng | ROOT | Missing API | Strongly inferred from code |
-| UC-HVU-03.01 | Ghi nhận kết quả học tập | Con | Quản lý kết quả học tập | Missing API | Strongly inferred from code |
-| UC-HVU-03.02 | Cập nhật kết quả học tập | Con | Quản lý kết quả học tập | Missing API | Strongly inferred from code |
-| UC-HVU-03.03 | Xem kết quả học tập | Con | Quản lý kết quả học tập | Missing API/UI | Strongly inferred from code |
-| UC-HVU-04 | Quản lý đơn xin phép | Tổng | ROOT | Missing API | Strongly inferred from code |
-| UC-HVU-04.01 | Tạo đơn xin phép | Con | Quản lý đơn xin phép | Missing API | Strongly inferred from code |
-| UC-HVU-04.02 | Xem danh sách đơn xin phép | Con | Quản lý đơn xin phép | Missing API | Strongly inferred from code |
-| UC-HVU-04.03 | Duyệt đơn xin phép | Con | Quản lý đơn xin phép | Missing API | Strongly inferred from code |
-| UC-HVU-04.04 | Từ chối đơn xin phép | Con | Quản lý đơn xin phép | Missing API | Strongly inferred from code |
+| UC-HVU-01 | Quản lý điểm danh | Tổng | ROOT | Implemented | Confirmed from code |
+| UC-HVU-01.01 | Chấm điểm danh buổi học | Con | Quản lý điểm danh | Implemented | Confirmed from code |
+| UC-HVU-01.02 | Cập nhật điểm danh buổi học | Con | Quản lý điểm danh | Implemented | Confirmed from code |
+| UC-HVU-01.03 | Xem lịch sử điểm danh | Con | Quản lý điểm danh | Implemented | Confirmed from code |
+| UC-HVU-02 | Quản lý tổng kết buổi học | Tổng | ROOT | Implemented | Confirmed from code |
+| UC-HVU-02.01 | Tạo tổng kết buổi học | Con | Quản lý tổng kết buổi học | Implemented | Confirmed from code |
+| UC-HVU-02.02 | Cập nhật tổng kết buổi học | Con | Quản lý tổng kết buổi học | Implemented | Confirmed from code |
+| UC-HVU-02.03 | Xem tổng kết buổi học | Con | Quản lý tổng kết buổi học | Implemented | Confirmed from code |
+| UC-HVU-03 | Quản lý kết quả học tập | Tổng | ROOT | Implemented | Confirmed from code |
+| UC-HVU-03.01 | Ghi nhận kết quả học tập | Con | Quản lý kết quả học tập | Implemented | Confirmed from code |
+| UC-HVU-03.02 | Cập nhật kết quả học tập | Con | Quản lý kết quả học tập | Implemented | Confirmed from code |
+| UC-HVU-03.03 | Xem kết quả học tập | Con | Quản lý kết quả học tập | Implemented | Confirmed from code |
+| UC-HVU-04 | Quản lý đơn xin phép | Tổng | ROOT | Implemented | Confirmed from code |
+| UC-HVU-04.01 | Tạo đơn xin phép | Con | Quản lý đơn xin phép | Implemented | Confirmed from code |
+| UC-HVU-04.02 | Xem danh sách đơn xin phép | Con | Quản lý đơn xin phép | Implemented | Confirmed from code |
+| UC-HVU-04.03 | Duyệt đơn xin phép | Con | Quản lý đơn xin phép | Implemented | Confirmed from code |
+| UC-HVU-04.04 | Từ chối đơn xin phép | Con | Quản lý đơn xin phép | Implemented | Confirmed from code |
+| UC-HVU-04.05 | Hủy đơn xin phép đang chờ duyệt | Con | Quản lý đơn xin phép | Implemented | Confirmed from code |
 
 ## 2.9 Nhóm tài liệu giảng dạy và kiểm duyệt
 
@@ -1037,4 +1039,3 @@ Nếu đi tiếp từ tài liệu này, bước tốt nhất là:
   2. lớp học và ghi danh,
   3. xếp lịch,
   4. tài liệu giảng dạy và kiểm duyệt.
-

@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"doan/cmd/http/controllers/academic"
 	"doan/cmd/http/controllers/account"
 	"doan/cmd/http/controllers/class"
 	"doan/cmd/http/controllers/course"
+	"doan/cmd/http/controllers/leave"
 	"doan/cmd/http/controllers/lesson"
 	"doan/cmd/http/controllers/material"
 	"doan/cmd/http/controllers/predictive"
@@ -22,6 +24,9 @@ import (
 var ControllerProviders = wire.NewSet(
 	account.NewAccountControllerV1,
 	wire.Bind(new(account.Controller), new(*account.ControllerV1)),
+
+	academic.NewAcademicControllerV1,
+	wire.Bind(new(academic.Controller), new(*academic.ControllerV1)),
 
 	// User controllers
 	user.NewUserControllerV1,
@@ -70,4 +75,7 @@ var ControllerProviders = wire.NewSet(
 	// Lesson controller
 	lesson.NewLessonControllerV1,
 	wire.Bind(new(lesson.Controller), new(*lesson.ControllerV1)),
+
+	leave.NewLeaveControllerV1,
+	wire.Bind(new(leave.Controller), new(*leave.ControllerV1)),
 )

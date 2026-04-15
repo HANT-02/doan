@@ -358,6 +358,7 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 - [x] Bỏ placeholder `Legal & Profiles` khỏi điều hướng chính
 - [x] Giữ lại và đổi tên rõ module `Quản lý tài khoản`
 - [x] Rà lại tài liệu backlog để scope UI khớp với scope đồ án
+- [x] Gộp các màn dữ liệu cơ bản thành cụm `Thông tin cơ bản` trong sidebar và khôi phục lối vào riêng cho `Khóa học`
 
 **Mục tiêu đóng task:**
 - Sidebar admin chỉ còn các module đúng scope đồ án; không còn nhánh AI Audit / DevTools gây lệch phạm vi.
@@ -397,32 +398,43 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 - `Lesson` không chỉ là dữ liệu nền mà trở thành module vận hành có thể xem và theo dõi được.
 
 #### Task G5. Hoàn thiện `Điểm danh` và `Tổng kết buổi học`
-- [ ] Tạo API chấm điểm danh theo lesson
-- [ ] Tạo API cập nhật trạng thái chuyên cần
-- [ ] Tạo API ghi chú buổi học
-- [ ] Tạo API ghi nội dung dạy
-- [ ] Tạo API giao bài tập
-- [ ] Tạo UI teacher/admin cho điểm danh và tổng kết buổi học
+- [x] Tạo API chấm điểm danh theo lesson
+- [x] Tạo API cập nhật trạng thái chuyên cần
+- [x] Tạo API ghi chú buổi học
+- [x] Tạo API ghi nội dung dạy
+- [x] Tạo API giao bài tập
+- [x] Tạo UI teacher/admin cho điểm danh và tổng kết buổi học
+- [x] Bổ sung phân quyền lesson operations cho `ADMIN` / `SUPER_ADMIN` / giáo viên phụ trách lesson
+- [x] Tái sử dụng cùng contract `lesson_id` cho admin detail và teacher portal để tránh lệch FE-BE
 
 **Mục tiêu đóng task:**
 - Sau mỗi lesson, hệ thống ghi nhận được chuyên cần và summary theo đúng nhánh nghiệp vụ trong sơ đồ.
 
 #### Task G6. Hoàn thiện `Kết quả học tập` và `Đơn xin phép`
-- [ ] Tạo API đánh giá bài tập
-- [ ] Tạo API đánh giá thái độ / tham gia
-- [ ] Tạo API chốt `academic_record`
-- [ ] Tạo API tạo đơn xin phép
-- [ ] Tạo API duyệt / từ chối đơn xin phép
-- [ ] Tạo UI phù hợp cho teacher/admin/student theo từng tác vụ
+- [x] Tạo API đánh giá bài tập
+- [x] Tạo API đánh giá thái độ / tham gia
+- [x] Tạo API chốt `academic_record`
+- [x] Tạo API tạo đơn xin phép
+- [x] Tạo API duyệt / từ chối đơn xin phép
+- [x] Tạo UI phù hợp cho teacher/admin/student theo từng tác vụ
+- [x] Tái sử dụng `lesson_id` làm trục teacher/admin cho `academic_record`
+- [x] Tạo actor-based flow cho `leave_request` để student tạo, teacher/admin duyệt, student hủy
 
 **Mục tiêu đóng task:**
 - Nhánh vận hành sau buổi học khép kín: từ lesson -> attendance -> summary -> academic record -> leave request.
 
 #### Task G7. Đối chiếu backlog với sơ đồ phân rã chức năng
-- [ ] Lập bảng map giữa từng nhánh trong sơ đồ và API/UI hiện có
-- [ ] Đánh dấu rõ `Implemented / Partial / Missing`
-- [ ] Chốt phần nào thuộc scope làm tiếp và phần nào chỉ ghi nhận ngoài scope
-- [ ] Cập nhật lại file task sau khi review scope
+- [x] Lập bảng map giữa từng nhánh trong sơ đồ và API/UI hiện có
+- [x] Đánh dấu rõ `Implemented / Partial / Missing`
+- [x] Chốt phần nào thuộc scope làm tiếp và phần nào chỉ ghi nhận ngoài scope
+- [x] Cập nhật lại file task sau khi review scope
+
+**Kết quả chốt 2026-04-15:**
+- [x] Tạo bảng đối chiếu chính thức tại `docs/FUNCTION_DECOMPOSITION_ALIGNMENT_2026-04-15.md`
+- [x] Cập nhật lại `USECASE_MASTER_CURRENT_AND_PLAN.md` để phản ánh `class_schedule`, `lesson`, `attendance`, `lesson_summary`, `academic_record`, `leave_request`, `predictive`
+- [x] Cập nhật lại `USE_CASE_MODELING_PACKAGE_EDUCENTER_REFINED.md` cho các trạng thái vừa hoàn tất ở `G3 -> G6`
+- [x] Chốt nhánh còn `Partial/Missing` cần làm tiếp: `teacher schedule FE`, `student timetable API + FE`, lifecycle `program publish/archive`, benchmark UI riêng
+- [x] Chốt nhánh ngoài scope chính: `AI Audit`, `Compliance mở rộng`, `DevTools`, `Consultation`, `AI Assistant`
 
 **Mục tiêu đóng task:**
 - Backlog, codebase và sơ đồ phân rã chức năng khớp nhau trước khi bước sang giai đoạn test/báo cáo.

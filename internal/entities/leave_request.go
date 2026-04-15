@@ -3,6 +3,8 @@ package entities
 import (
 	"github.com/lib/pq"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type LeaveRequest struct {
@@ -27,4 +29,5 @@ type LeaveRequest struct {
 	RejectionReason string         `gorm:"type:text" json:"rejection_reason"`
 	CreatedAt       time.Time      `gorm:"default:now()" json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }

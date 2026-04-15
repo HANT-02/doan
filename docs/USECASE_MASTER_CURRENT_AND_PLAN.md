@@ -35,9 +35,15 @@ File này **không đưa vào**:
    - 3 solver
    - benchmark
    - chọn solver chính
-3. Predictive analytics:
+3. Vận hành học vụ theo lesson:
+   - `lesson`
+   - `attendance`
+   - `lesson_summary`
+   - `academic_record`
+   - `leave_request`
+4. Predictive analytics:
    - `AT_RISK classification`
-   - train trong backend
+   - pipeline tối giản lấy dữ liệu từ DB
    - có prediction API
    - có màn hình cảnh báo
 
@@ -51,7 +57,7 @@ File này **không đưa vào**:
 
 - module đang chạy được;
 - module đang có backlog chính thức trong `PROJECT_TASKS.md`;
-- use case phục vụ trực tiếp cho scheduling hoặc predictive analytics.
+- use case phục vụ trực tiếp cho scheduling, vận hành học vụ theo lesson hoặc predictive analytics.
 
 ### Không đưa vào sơ đồ
 
@@ -60,7 +66,7 @@ File này **không đưa vào**:
 - `OCR/Gemini audit`
 - `Chatbot`
 - `Consultation / lead intake`
-- `Attendance`, `Lesson Summary`, `Academic Record`, `Leave Request` dưới dạng use case vận hành độc lập, vì hiện chưa nằm trong backlog triển khai chính.
+- `DevTools`
 
 ## 1.2 Cách hiểu “use case tổng” và “use case con”
 
@@ -103,10 +109,16 @@ Ví dụ:
 | UC-TONG-07 | Quản lý ca học | Đang có | Quản trị viên | CRUD `Shift` đã có |
 | UC-TONG-08 | Quản lý lớp học | Đang có | Quản trị viên | CRUD + chi tiết lớp |
 | UC-TONG-09 | Quản lý ghi danh lớp học | Đang có | Quản trị viên | add/remove học sinh trong lớp |
-| UC-TONG-10 | Xếp lịch học | Đang có / đang mở rộng | Quản trị viên | preview + commit đã có |
-| UC-TONG-11 | Benchmark thuật toán xếp lịch | Trong kế hoạch gần | Quản trị viên | admin API nội bộ |
-| UC-TONG-12 | Dự báo học sinh có nguy cơ học kém | Trong kế hoạch | Quản trị viên | predictive analytics |
-| UC-TONG-13 | Xem cảnh báo học sinh có nguy cơ học kém | Trong kế hoạch | Quản trị viên | UI cảnh báo |
+| UC-TONG-10 | Quản lý lịch tuần lớp học | Đang có | Quản trị viên | CRUD tối giản qua class detail |
+| UC-TONG-11 | Xếp lịch học | Đang có / đang mở rộng | Quản trị viên | preview + commit dùng solver chính |
+| UC-TONG-12 | Benchmark thuật toán xếp lịch | Đang có | Quản trị viên | benchmark API + CLI study |
+| UC-TONG-13 | Quản lý buổi học | Đang có | Quản trị viên, Giáo viên | list/detail lesson |
+| UC-TONG-14 | Quản lý điểm danh | Đang có | Quản trị viên, Giáo viên | theo `lesson_id` |
+| UC-TONG-15 | Quản lý tổng kết buổi học | Đang có | Quản trị viên, Giáo viên | theo `lesson_id` |
+| UC-TONG-16 | Quản lý kết quả học tập | Đang có | Quản trị viên, Giáo viên, Học sinh | teacher/admin nhập, student xem |
+| UC-TONG-17 | Quản lý đơn xin phép | Đang có | Quản trị viên, Giáo viên, Học sinh | actor-based flow |
+| UC-TONG-18 | Dự báo học sinh có nguy cơ học kém | Đang có | Quản trị viên | predictive analytics runtime tối giản |
+| UC-TONG-19 | Xem cảnh báo học sinh có nguy cơ học kém | Đang có | Quản trị viên | UI cảnh báo |
 
 ---
 
@@ -418,7 +430,35 @@ Ví dụ:
 1. `Ghi danh học sinh vào lớp`
 2. `Rút học sinh khỏi lớp`
 
-## 3.10 Xếp lịch học
+## 3.10 Quản lý lịch tuần lớp học
+
+### Use case tổng
+
+- `Quản lý lịch tuần lớp học`
+
+### Use case con đang có
+
+| Mã | Tên use case | Trạng thái |
+|---|---|---|
+| UC-LT-01 | Xem lịch tuần của lớp | Đang có |
+| UC-LT-02 | Tạo lịch tuần cho lớp | Đang có |
+| UC-LT-03 | Xóa lịch tuần của lớp | Đang có |
+
+### Use case còn thiếu để hoàn thiện lifecycle
+
+| Mã | Tên use case | Trạng thái |
+|---|---|---|
+| UC-LT-04 | Cập nhật lịch tuần của lớp | Chưa tách endpoint riêng, hiện xử lý qua create/delete |
+
+### Quan hệ đề xuất để vẽ
+
+#### `extend`
+
+- `Xem lịch tuần của lớp` `<<extend>>` `Xem chi tiết lớp học`
+- `Tạo lịch tuần cho lớp` `<<extend>>` `Xem chi tiết lớp học`
+- `Xóa lịch tuần của lớp` `<<extend>>` `Xem chi tiết lớp học`
+
+## 3.11 Xếp lịch học
 
 ### Use case tổng
 
@@ -437,9 +477,9 @@ Ví dụ:
 
 | Mã | Tên use case | Trạng thái |
 |---|---|---|
-| UC-XL-05 | Benchmark thuật toán xếp lịch | Trong kế hoạch gần |
-| UC-XL-06 | Chọn solver xếp lịch chính | Trong kế hoạch |
-| UC-XL-07 | Dùng solver chính cho API xếp lịch | Trong kế hoạch |
+| UC-XL-05 | Benchmark thuật toán xếp lịch | Đang có |
+| UC-XL-06 | Chọn solver xếp lịch chính | Đang có |
+| UC-XL-07 | Dùng solver chính cho API xếp lịch | Đang có |
 
 ### Quan hệ đề xuất để vẽ
 
@@ -471,23 +511,74 @@ Ví dụ:
 2. `Xác nhận preview để tạo buổi học`
 3. `Benchmark thuật toán xếp lịch`
 
-## 3.11 Predictive analytics
+## 3.12 Quản lý buổi học và học vụ sau buổi học
+
+### Use case tổng
+
+- `Quản lý buổi học`
+- `Quản lý điểm danh`
+- `Quản lý tổng kết buổi học`
+- `Quản lý kết quả học tập`
+- `Quản lý đơn xin phép`
+
+### Use case con đang có
+
+| Mã | Tên use case | Trạng thái |
+|---|---|---|
+| UC-BH-01 | Xem danh sách buổi học | Đang có |
+| UC-BH-02 | Xem chi tiết buổi học | Đang có |
+| UC-DD-01 | Xem điểm danh theo lesson | Đang có |
+| UC-DD-02 | Cập nhật điểm danh theo lesson | Đang có |
+| UC-TK-LESSON-01 | Xem tổng kết buổi học | Đang có |
+| UC-TK-LESSON-02 | Cập nhật tổng kết buổi học | Đang có |
+| UC-KQ-01 | Xem kết quả học tập theo lesson | Đang có |
+| UC-KQ-02 | Ghi nhận / cập nhật kết quả học tập | Đang có |
+| UC-KQ-03 | Chốt kết quả học tập | Đang có |
+| UC-PHEP-01 | Tạo đơn xin phép | Đang có |
+| UC-PHEP-02 | Xem danh sách đơn xin phép | Đang có |
+| UC-PHEP-03 | Duyệt đơn xin phép | Đang có |
+| UC-PHEP-04 | Từ chối đơn xin phép | Đang có |
+| UC-PHEP-05 | Hủy đơn xin phép đang chờ duyệt | Đang có |
+
+### Quan hệ đề xuất để vẽ
+
+#### `extend`
+
+- `Xem chi tiết buổi học` `<<extend>>` `Xem danh sách buổi học`
+- `Xem điểm danh theo lesson` `<<extend>>` `Xem chi tiết buổi học`
+- `Cập nhật điểm danh theo lesson` `<<extend>>` `Xem chi tiết buổi học`
+- `Xem tổng kết buổi học` `<<extend>>` `Xem chi tiết buổi học`
+- `Cập nhật tổng kết buổi học` `<<extend>>` `Xem chi tiết buổi học`
+- `Xem kết quả học tập theo lesson` `<<extend>>` `Xem chi tiết buổi học`
+- `Ghi nhận / cập nhật kết quả học tập` `<<extend>>` `Xem chi tiết buổi học`
+- `Chốt kết quả học tập` `<<extend>>` `Xem chi tiết buổi học`
+
+### Gợi ý sequence nên vẽ
+
+1. `Xem danh sách buổi học`
+2. `Cập nhật điểm danh theo lesson`
+3. `Cập nhật tổng kết buổi học`
+4. `Chốt kết quả học tập`
+5. `Tạo đơn xin phép`
+6. `Duyệt đơn xin phép`
+
+## 3.13 Predictive analytics
 
 ### Use case tổng
 
 - `Dự báo học sinh có nguy cơ học kém`
 
-### Use case con trong kế hoạch đã chốt
+### Use case con đang có
 
 | Mã | Tên use case | Trạng thái |
 |---|---|---|
-| UC-DB-01 | Xác định dữ liệu đầu vào dự báo | Trong kế hoạch |
-| UC-DB-02 | Huấn luyện mô hình phân loại nguy cơ học kém | Trong kế hoạch |
-| UC-DB-03 | Đánh giá mô hình dự báo | Trong kế hoạch |
-| UC-DB-04 | Dự báo nhãn nguy cơ học kém | Trong kế hoạch |
-| UC-DB-05 | Xem danh sách học sinh có nguy cơ học kém | Trong kế hoạch |
-| UC-DB-06 | Xem điểm số / mức độ rủi ro | Trong kế hoạch |
-| UC-DB-07 | Xem giải thích cơ bản cho kết quả dự báo | Trong kế hoạch |
+| UC-DB-01 | Xác định dữ liệu đầu vào dự báo | Đang có |
+| UC-DB-02 | Huấn luyện mô hình phân loại nguy cơ học kém | Đang có |
+| UC-DB-03 | Đánh giá mô hình dự báo | Đang có |
+| UC-DB-04 | Dự báo nhãn nguy cơ học kém | Đang có |
+| UC-DB-05 | Xem danh sách học sinh có nguy cơ học kém | Đang có |
+| UC-DB-06 | Xem điểm số / mức độ rủi ro | Đang có |
+| UC-DB-07 | Xem giải thích cơ bản cho kết quả dự báo | Đang có |
 
 ### Quan hệ đề xuất để vẽ
 
@@ -528,8 +619,14 @@ Ví dụ:
 - Quản lý ca học
 - Quản lý lớp học
 - Quản lý ghi danh lớp học
+- Quản lý lịch tuần lớp học
 - Xếp lịch học
 - Benchmark thuật toán xếp lịch
+- Quản lý buổi học
+- Quản lý điểm danh
+- Quản lý tổng kết buổi học
+- Quản lý kết quả học tập
+- Quản lý đơn xin phép
 - Dự báo học sinh có nguy cơ học kém
 - Xem cảnh báo học sinh có nguy cơ học kém
 
@@ -540,7 +637,9 @@ Ví dụ:
 - cụm giáo viên
 - cụm khóa học / chương trình
 - cụm lớp học / ghi danh
+- cụm lịch tuần lớp
 - cụm xếp lịch
+- cụm lesson / attendance / summary / academic record / leave request
 - cụm predictive analytics
 
 ## 4.2 Không nên vẽ vào scope hiện tại
@@ -550,17 +649,15 @@ Không nên đưa vào sơ đồ chính thức của đồ án ở thời điể
 - `Quản lý tài liệu giảng dạy`
 - `Phê duyệt tài liệu`
 - `Từ chối tài liệu`
-- `Quản lý đơn xin phép`
-- `Quản lý điểm danh`
-- `Quản lý tổng kết buổi học`
-- `Quản lý kết quả học tập`
 - `Quản lý tư vấn tuyển sinh`
+- `AI Assistant / Chatbot`
+- `DevTools`
 
 **Lý do:**
 
 1. `AI Audit/Compliance` đã bị loại khỏi backlog chính.
-2. `Attendance`, `Lesson Summary`, `Academic Record`, `Leave Request` chưa nằm trong luồng triển khai chính thức hiện tại của backlog.
-3. `Consultation` mới có entity, chưa có module vận hành.
+2. `Consultation` mới có entity, chưa có module vận hành.
+3. cụm compliance/audit không còn là trọng tâm backlog chính sau giai đoạn G.
 
 ---
 
@@ -594,11 +691,20 @@ Không nên đưa vào sơ đồ chính thức của đồ án ở thời điể
 16. `Xác nhận preview để tạo buổi học`
 17. `Benchmark thuật toán xếp lịch`
 
+### Nhóm vận hành theo lesson
+
+18. `Xem danh sách buổi học`
+19. `Cập nhật điểm danh theo lesson`
+20. `Cập nhật tổng kết buổi học`
+21. `Chốt kết quả học tập`
+22. `Tạo đơn xin phép`
+23. `Duyệt đơn xin phép`
+
 ### Nhóm predictive analytics
 
-18. `Huấn luyện mô hình phân loại nguy cơ học kém`
-19. `Dự báo nhãn nguy cơ học kém`
-20. `Xem danh sách học sinh có nguy cơ học kém`
+24. `Huấn luyện mô hình phân loại nguy cơ học kém`
+25. `Dự báo nhãn nguy cơ học kém`
+26. `Xem danh sách học sinh có nguy cơ học kém`
 
 ## 5.2 Lifeline chuẩn nên dùng cho nhóm CRUD
 
@@ -884,4 +990,3 @@ File này đã được rút gọn đúng scope:
    - phân rã CRUD,
    - bảng `include/extend`,
    - gợi ý sequence diagram.
-

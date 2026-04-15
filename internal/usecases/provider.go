@@ -4,7 +4,10 @@ import (
 	"doan/internal/usecases/account"
 	"doan/internal/usecases/class"
 	"doan/internal/usecases/course"
+	"doan/internal/usecases/leaveflow"
 	"doan/internal/usecases/lesson"
+	"doan/internal/usecases/lessonactivity"
+	"doan/internal/usecases/lessonrecord"
 	"doan/internal/usecases/material"
 	"doan/internal/usecases/predictive"
 	"doan/internal/usecases/program"
@@ -130,6 +133,27 @@ var LessonUseCaseProviders = wire.NewSet(
 	lesson.NewGetLessonUseCase,
 )
 
+var LessonActivityUseCaseProviders = wire.NewSet(
+	lessonactivity.NewGetLessonAttendanceUseCase,
+	lessonactivity.NewUpsertLessonAttendanceUseCase,
+	lessonactivity.NewGetLessonSummaryUseCase,
+	lessonactivity.NewUpsertLessonSummaryUseCase,
+)
+
+var LessonRecordUseCaseProviders = wire.NewSet(
+	lessonrecord.NewGetLessonAcademicRecordsUseCase,
+	lessonrecord.NewUpsertLessonAcademicRecordsUseCase,
+	lessonrecord.NewFinalizeLessonAcademicRecordsUseCase,
+	lessonrecord.NewListMyAcademicRecordsUseCase,
+)
+
+var LeaveFlowUseCaseProviders = wire.NewSet(
+	leaveflow.NewListLeaveRequestsUseCase,
+	leaveflow.NewCreateLeaveRequestUseCase,
+	leaveflow.NewUpdateLeaveRequestStatusUseCase,
+	leaveflow.NewCancelLeaveRequestUseCase,
+)
+
 var UseCaseProviders = wire.NewSet(
 	UserUseCaseProviders,
 	AccountUseCaseProviders,
@@ -144,4 +168,7 @@ var UseCaseProviders = wire.NewSet(
 	ProgramUseCaseProviders,
 	PredictiveUseCaseProviders,
 	LessonUseCaseProviders,
+	LessonActivityUseCaseProviders,
+	LessonRecordUseCaseProviders,
+	LeaveFlowUseCaseProviders,
 )
