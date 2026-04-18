@@ -10,5 +10,6 @@ import (
 type AttendanceRepository interface {
 	repositories.BaseRepository[entities.Attendance]
 	ListByLessonID(ctx context.Context, lessonID string) ([]entities.Attendance, error)
+	ListByLessonIDs(ctx context.Context, lessonIDs []string) ([]entities.Attendance, error)
 	GetByLessonAndStudent(ctx context.Context, lessonID, studentID string) (*entities.Attendance, error)
 }

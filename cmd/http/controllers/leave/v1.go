@@ -35,9 +35,10 @@ func NewLeaveControllerV1(
 
 func (ctrl *ControllerV1) ListLeaveRequests(c *gin.Context) {
 	output, err := ctrl.listLeaveRequestsUseCase.Execute(c.Request.Context(), leaveflow.ListLeaveRequestsInput{
-		Actor:   buildActor(c),
-		Status:  c.Query("status"),
-		ClassID: c.Query("class_id"),
+		Actor:     buildActor(c),
+		Status:    c.Query("status"),
+		ClassID:   c.Query("class_id"),
+		StudentID: c.Query("student_id"),
 	})
 	if err != nil {
 		rest.ResponseError(c, http.StatusBadRequest, "Failed to list leave requests", err)

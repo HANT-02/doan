@@ -486,10 +486,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Giáo viên xem được lịch dạy cá nhân theo tuần/tháng.
 
-- [ ] Tạo usecase `GetTeacherLessons` (lọc theo `teacher_id`, khoảng ngày, lớp)
-- [ ] Tạo repository query join `lessons` ← `classes` ← `class_schedules` theo teacher
-- [ ] Tạo controller + route `GET /api/teacher/lessons` (role guard: TEACHER)
-- [ ] Trả về thông tin ca học `shift`, phòng, lớp, ngày giờ
+- [x] Tạo usecase `GetTeacherLessons` (lọc theo `teacher_id`, khoảng ngày, lớp)
+- [x] Tạo repository query join `lessons` ← `classes` ← `class_schedules` theo teacher
+- [x] Tạo controller + route `GET /api/teacher/lessons` (role guard: TEACHER)
+- [x] Trả về thông tin ca học `shift`, phòng, lớp, ngày giờ
+
+**Kết quả chốt 2026-04-17:**
+- [x] Tạo flow actor-based mới tại `internal/usecases/teacherportal`
+- [x] Tạo controller riêng `cmd/http/controllers/teacherportal`
+- [x] Đăng ký route production-like `GET /api/v1/teacher/lessons`
+- [x] Resolve giáo viên theo `user_email` từ JWT thay vì nhận `teacher_id` từ client
+- [x] Enrich lesson với `shift` bằng `class_schedule` để FE teacher schedule dùng được trực tiếp
 
 **Mục tiêu đóng task:** API trả được danh sách buổi học cho giáo viên đang đăng nhập.
 
@@ -499,15 +506,23 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Giáo viên chấm điểm danh cho từng sinh viên trong buổi học.
 
-- [ ] Tạo usecase `MarkAttendance` (tạo hoặc cập nhật `Attendance` theo `lesson_id` + `student_id`)
-- [ ] Định nghĩa `AttendanceStatus`: `0=Vắng`, `1=Có mặt`, `2=Muộn`, `3=Xin phép`
-- [ ] Tạo usecase `GetAttendanceByLesson` (lấy toàn bộ danh sách điểm danh của một buổi)
-- [ ] Tạo usecase `GetAttendanceSummaryByStudent` (thống kê chuyên cần theo học sinh trong lớp)
-- [ ] Tạo controller + route:
-  - [ ] `GET /api/teacher/lessons/:lesson_id/attendance`
-  - [ ] `POST /api/teacher/lessons/:lesson_id/attendance` (submit cả buổi dạng mảng)
-  - [ ] `PUT /api/teacher/lessons/:lesson_id/attendance/:student_id` (cập nhật từng dòng)
-- [ ] Kiểm tra: chỉ giáo viên phụ trách buổi học mới được điểm danh
+- [x] Tạo usecase `MarkAttendance` (tạo hoặc cập nhật `Attendance` theo `lesson_id` + `student_id`)
+- [x] Định nghĩa `AttendanceStatus`: `0=Vắng`, `1=Có mặt`, `2=Muộn`, `3=Xin phép`
+- [x] Tạo usecase `GetAttendanceByLesson` (lấy toàn bộ danh sách điểm danh của một buổi)
+- [x] Tạo usecase `GetAttendanceSummaryByStudent` (thống kê chuyên cần theo học sinh trong lớp)
+- [x] Tạo controller + route:
+  - [x] `GET /api/teacher/lessons/:lesson_id/attendance`
+  - [x] `POST /api/teacher/lessons/:lesson_id/attendance` (submit cả buổi dạng mảng)
+  - [x] `PUT /api/teacher/lessons/:lesson_id/attendance/:student_id` (cập nhật từng dòng)
+- [x] Kiểm tra: chỉ giáo viên phụ trách buổi học mới được điểm danh
+
+**Kết quả triển khai:**
+- [x] Tạo flow `teacherportal` riêng cho attendance, bọc lại usecase `lessonactivity` theo contract teacher `0=Vắng, 1=Có mặt, 2=Muộn, 3=Xin phép`
+- [x] Mở route production-like:
+  - [x] `GET /api/v1/teacher/lessons/:lesson_id/attendance`
+  - [x] `POST /api/v1/teacher/lessons/:lesson_id/attendance`
+  - [x] `PUT /api/v1/teacher/lessons/:lesson_id/attendance/:student_id`
+- [x] Bổ sung route hỗ trợ thống kê chuyên cần theo lớp cho teacher: `GET /api/v1/teacher/classes/:class_id/attendance-summary`
 
 **Mục tiêu đóng task:** Sau mỗi buổi, `attendance` có dữ liệu đầy đủ cho toàn bộ học sinh.
 
@@ -517,13 +532,19 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Giáo viên ghi nhận nội dung dạy, bài tập, ghi chú sau mỗi buổi.
 
-- [ ] Tạo usecase `UpsertLessonSummary` (tạo mới hoặc cập nhật `LessonSummary` theo `lesson_id`)
-- [ ] Tạo usecase `GetLessonSummary` (lấy theo `lesson_id`)
-- [ ] Tạo controller + route:
-  - [ ] `GET /api/teacher/lessons/:lesson_id/summary`
-  - [ ] `PUT /api/teacher/lessons/:lesson_id/summary`
-- [ ] Field cần hỗ trợ: `topic`, `lesson_content`, `class_feedback`, `homework`, `homework_deadline`, `teacher_notes`
-- [ ] Kiểm tra: chỉ giáo viên phụ trách mới được ghi
+- [x] Tạo usecase `UpsertLessonSummary` (tạo mới hoặc cập nhật `LessonSummary` theo `lesson_id`)
+- [x] Tạo usecase `GetLessonSummary` (lấy theo `lesson_id`)
+- [x] Tạo controller + route:
+  - [x] `GET /api/teacher/lessons/:lesson_id/summary`
+  - [x] `PUT /api/teacher/lessons/:lesson_id/summary`
+- [x] Field cần hỗ trợ: `topic`, `lesson_content`, `class_feedback`, `homework`, `homework_deadline`, `teacher_notes`
+- [x] Kiểm tra: chỉ giáo viên phụ trách mới được ghi
+
+**Kết quả triển khai:**
+- [x] Tạo flow `teacherportal` riêng cho lesson summary, bọc lại usecase `lessonactivity` để teacher dùng route riêng nhưng vẫn giữ chung business rule
+- [x] Mở route production-like:
+  - [x] `GET /api/v1/teacher/lessons/:lesson_id/summary`
+  - [x] `PUT /api/v1/teacher/lessons/:lesson_id/summary`
 
 **Mục tiêu đóng task:** Mỗi buổi học có thể có đúng một `LessonSummary` đầy đủ thông tin.
 
@@ -533,15 +554,23 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Giáo viên nhập điểm bài tập, thái độ, kết quả cho từng học sinh sau buổi học.
 
-- [ ] Tạo usecase `UpsertAcademicRecord` (tạo/cập nhật `AcademicRecord` theo `lesson_summary_id` + `student_id`)
-- [ ] Tạo usecase `GetAcademicRecordsByLesson` (lấy tất cả kết quả của một buổi)
-- [ ] Tạo usecase `GetAcademicRecordsByStudent` (lịch sử điểm của một học sinh trong lớp)
-- [ ] Tạo usecase `FinalizeAcademicRecord` (set `is_completed = true`, tính `total_score`)
-- [ ] Tạo controller + route:
-  - [ ] `GET /api/teacher/lessons/:lesson_id/records`
-  - [ ] `PUT /api/teacher/lessons/:lesson_id/records/:student_id`
-  - [ ] `POST /api/teacher/lessons/:lesson_id/records/finalize`
-- [ ] Field cần hỗ trợ: `homework_completed`, `homework_score`, `attitude_rating`, `participation_score`, `personal_comment`
+- [x] Tạo usecase `UpsertAcademicRecord` (tạo/cập nhật `AcademicRecord` theo `lesson_summary_id` + `student_id`)
+- [x] Tạo usecase `GetAcademicRecordsByLesson` (lấy tất cả kết quả của một buổi)
+- [x] Tạo usecase `GetAcademicRecordsByStudent` (lịch sử điểm của một học sinh trong lớp)
+- [x] Tạo usecase `FinalizeAcademicRecord` (set `is_completed = true`, tính `total_score`)
+- [x] Tạo controller + route:
+  - [x] `GET /api/teacher/lessons/:lesson_id/records`
+  - [x] `PUT /api/teacher/lessons/:lesson_id/records/:student_id`
+  - [x] `POST /api/teacher/lessons/:lesson_id/records/finalize`
+- [x] Field cần hỗ trợ: `homework_completed`, `homework_score`, `attitude_rating`, `participation_score`, `personal_comment`
+
+**Kết quả triển khai:**
+- [x] Tạo flow `teacherportal` riêng cho academic record, bọc lại usecase `lessonrecord` theo contract teacher portal
+- [x] Mở route production-like:
+  - [x] `GET /api/v1/teacher/lessons/:lesson_id/records`
+  - [x] `PUT /api/v1/teacher/lessons/:lesson_id/records/:student_id`
+  - [x] `POST /api/v1/teacher/lessons/:lesson_id/records/finalize`
+- [x] Bổ sung route hỗ trợ lịch sử điểm theo học sinh trong lớp: `GET /api/v1/teacher/classes/:class_id/students/:student_id/records`
 
 **Mục tiêu đóng task:** Giáo viên nhập được điểm số và đánh giá cho từng học sinh, khóa kết quả sau khi hoàn tất.
 
@@ -551,14 +580,22 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Giáo viên xem danh sách đơn xin nghỉ liên quan đến lớp mình và duyệt/từ chối.
 
-- [ ] Tạo usecase `ListLeaveRequestsForTeacher` (lọc theo lớp do giáo viên phụ trách, lọc theo `status`)
-- [ ] Tạo usecase `ApproveLeaveRequest` (set `status=APPROVED`, ghi `approved_by_id`, `approved_at`)
-- [ ] Tạo usecase `RejectLeaveRequest` (set `status=REJECTED`, ghi `rejection_reason`)
-- [ ] Tạo controller + route:
-  - [ ] `GET /api/teacher/leave-requests` (có filter `class_id`, `status`, `student_id`)
-  - [ ] `POST /api/teacher/leave-requests/:id/approve`
-  - [ ] `POST /api/teacher/leave-requests/:id/reject`
-- [ ] Kiểm tra: chỉ duyệt đơn thuộc lớp giáo viên phụ trách
+- [x] Tạo usecase `ListLeaveRequestsForTeacher` (lọc theo lớp do giáo viên phụ trách, lọc theo `status`)
+- [x] Tạo usecase `ApproveLeaveRequest` (set `status=APPROVED`, ghi `approved_by_id`, `approved_at`)
+- [x] Tạo usecase `RejectLeaveRequest` (set `status=REJECTED`, ghi `rejection_reason`)
+- [x] Tạo controller + route:
+  - [x] `GET /api/teacher/leave-requests` (có filter `class_id`, `status`, `student_id`)
+  - [x] `POST /api/teacher/leave-requests/:id/approve`
+  - [x] `POST /api/teacher/leave-requests/:id/reject`
+- [x] Kiểm tra: chỉ duyệt đơn thuộc lớp giáo viên phụ trách
+
+**Kết quả triển khai:**
+- [x] Tạo flow `teacherportal` riêng cho leave request, bọc lại `leaveflow` theo route teacher portal
+- [x] Bổ sung lọc `student_id` vào `leaveflow.ListLeaveRequestsInput`
+- [x] Mở route production-like:
+  - [x] `GET /api/v1/teacher/leave-requests`
+  - [x] `POST /api/v1/teacher/leave-requests/:id/approve`
+  - [x] `POST /api/v1/teacher/leave-requests/:id/reject`
 
 **Mục tiêu đóng task:** Vòng đời đơn xin phép khép kín: sinh viên tạo → giáo viên duyệt/từ chối.
 
@@ -566,10 +603,16 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task I6. Frontend - Trang lịch giảng dạy (`/app/teacher/schedule`)
 
-- [ ] Hiển thị danh sách buổi học theo tuần (calendar view hoặc list view theo ngày)
-- [ ] Hiển thị: tên lớp, tên ca (`shift.name`), phòng, thời gian
-- [ ] Click vào buổi học → điều hướng sang chi tiết buổi học (điểm danh + tổng kết)
-- [ ] Tích hợp API `GET /api/teacher/lessons`
+- [x] Hiển thị danh sách buổi học theo tuần (calendar view hoặc list view theo ngày)
+- [x] Hiển thị: tên lớp, tên ca (`shift.name`), phòng, thời gian
+- [x] Click vào buổi học → điều hướng sang chi tiết buổi học (điểm danh + tổng kết)
+- [x] Tích hợp API `GET /api/teacher/lessons`
+
+**Kết quả triển khai:**
+- [x] Tạo `teacherPortalApi` cho `GET /api/v1/teacher/lessons` và các endpoint chi tiết buổi học liên quan
+- [x] Thay placeholder `/app/teacher/schedule` bằng màn lịch giảng dạy thật, dạng list theo tuần
+- [x] Tạo route chi tiết buổi học `/app/teacher/lessons/:lessonId`
+- [x] Đồng bộ `teacher/attendance` và `teacher/journal` sang dùng cùng nguồn lesson từ teacher portal, hỗ trợ preselect theo `lessonId`
 
 **Mục tiêu đóng task:** Giáo viên thấy được lịch dạy cá nhân trên UI.
 
@@ -577,12 +620,18 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task I7. Frontend - Trang điểm danh (`/app/teacher/attendance`)
 
-- [ ] Chọn lớp → chọn buổi học → hiển thị danh sách học sinh trong buổi
-- [ ] Cho mỗi học sinh chọn trạng thái: Có mặt / Vắng / Muộn / Xin phép
-- [ ] Hiển thị đơn xin phép liên quan (nếu có) bên cạnh tên học sinh
-- [ ] Nút "Lưu điểm danh" → submit toàn bộ danh sách
-- [ ] Tab "Theo dõi chuyên cần" → bảng tổng hợp số buổi có mặt/vắng/muộn của từng học sinh trong lớp
-- [ ] Tích hợp API `GET/POST /api/teacher/lessons/:lesson_id/attendance`
+- [x] Chọn lớp → chọn buổi học → hiển thị danh sách học sinh trong buổi
+- [x] Cho mỗi học sinh chọn trạng thái: Có mặt / Vắng / Muộn / Xin phép
+- [x] Hiển thị đơn xin phép liên quan (nếu có) bên cạnh tên học sinh
+- [x] Nút "Lưu điểm danh" → submit toàn bộ danh sách
+- [x] Tab "Theo dõi chuyên cần" → bảng tổng hợp số buổi có mặt/vắng/muộn của từng học sinh trong lớp
+- [x] Tích hợp API `GET/POST /api/teacher/lessons/:lesson_id/attendance`
+
+**Kết quả triển khai:**
+- [x] Dùng `teacherPortalApi` cho toàn bộ flow teacher attendance thay vì dùng lại route admin `/v1/lessons`
+- [x] Màn `/app/teacher/attendance` có 2 tab: điểm danh theo buổi và theo dõi chuyên cần theo lớp
+- [x] Hỗ trợ preselect `lessonId` khi đi từ lịch giảng dạy / chi tiết buổi học sang màn điểm danh
+- [x] Gắn đơn xin phép liên quan theo học sinh và buổi học đang chọn
 
 **Mục tiêu đóng task:** Giáo viên điểm danh và xem được tổng hợp chuyên cần trên UI.
 

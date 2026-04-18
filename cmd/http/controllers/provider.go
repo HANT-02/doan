@@ -15,6 +15,7 @@ import (
 	"doan/cmd/http/controllers/shift"
 	"doan/cmd/http/controllers/student"
 	"doan/cmd/http/controllers/teacher"
+	"doan/cmd/http/controllers/teacherportal"
 	"doan/cmd/http/controllers/user"
 
 	"github.com/google/wire"
@@ -47,6 +48,9 @@ var ControllerProviders = wire.NewSet(
 	// Teacher controller
 	teacher.NewTeacherControllerV1,
 	wire.Bind(new(teacher.Controller), new(*teacher.ControllerV1)),
+
+	teacherportal.NewTeacherPortalControllerV1,
+	wire.Bind(new(teacherportal.Controller), new(*teacherportal.ControllerV1)),
 
 	// Student controller
 	student.NewStudentControllerV1,

@@ -16,6 +16,7 @@ import (
 	"doan/cmd/http/controllers/shift"
 	"doan/cmd/http/controllers/student"
 	"doan/cmd/http/controllers/teacher"
+	"doan/cmd/http/controllers/teacherportal"
 	"doan/cmd/http/controllers/user"
 	_ "doan/cmd/http/docs"
 	"doan/cmd/http/middleware"
@@ -46,6 +47,7 @@ type App struct {
 	roomControllerV1       room.Controller
 	shiftControllerV1      shift.Controller
 	teacherControllerV1    teacher.Controller
+	teacherPortalV1        teacherportal.Controller
 	studentControllerV1    student.Controller
 	courseControllerV1     course.Controller
 	programControllerV1    program.Controller
@@ -105,6 +107,7 @@ func (a *App) registerRoute() {
 	room.RegisterRoutesV1(api, a.roomControllerV1, config.GetManager())
 	shift.RegisterRoutesV1(api, a.shiftControllerV1, config.GetManager())
 	teacher.RegisterRoutesV1(api, a.teacherControllerV1, config.GetManager())
+	teacherportal.RegisterRoutesV1(api, a.teacherPortalV1, config.GetManager())
 	student.RegisterRoutesV1(api, a.studentControllerV1, config.GetManager())
 	course.RegisterRoutesV1(api, a.courseControllerV1, config.GetManager())
 	program.RegisterRoutesV1(api, a.programControllerV1, config.GetManager())
@@ -126,6 +129,7 @@ func inject(
 	roomControllerV1 *room.ControllerV1,
 	shiftControllerV1 shift.Controller,
 	teacherControllerV1 teacher.Controller,
+	teacherPortalV1 teacherportal.Controller,
 	studentControllerV1 student.Controller,
 	courseControllerV1 course.Controller,
 	programControllerV1 program.Controller,
@@ -143,6 +147,7 @@ func inject(
 	app.roomControllerV1 = roomControllerV1
 	app.shiftControllerV1 = shiftControllerV1
 	app.teacherControllerV1 = teacherControllerV1
+	app.teacherPortalV1 = teacherPortalV1
 	app.studentControllerV1 = studentControllerV1
 	app.courseControllerV1 = courseControllerV1
 	app.programControllerV1 = programControllerV1

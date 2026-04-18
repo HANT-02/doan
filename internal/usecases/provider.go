@@ -16,6 +16,7 @@ import (
 	"doan/internal/usecases/shift"
 	"doan/internal/usecases/student"
 	"doan/internal/usecases/teacher"
+	"doan/internal/usecases/teacherportal"
 	"doan/internal/usecases/user"
 
 	"github.com/google/wire"
@@ -49,6 +50,23 @@ var TeacherUseCaseProviders = wire.NewSet(
 	teacher.NewGetTeacherTimetableUseCase,
 	teacher.NewListTeachersUseCase,
 	teacher.NewUpdateTeacherUseCase,
+)
+
+var TeacherPortalUseCaseProviders = wire.NewSet(
+	teacherportal.NewGetTeacherLessonsUseCase,
+	teacherportal.NewGetAttendanceByLessonUseCase,
+	teacherportal.NewMarkAttendanceUseCase,
+	teacherportal.NewSubmitLessonAttendanceUseCase,
+	teacherportal.NewGetAttendanceSummaryByStudentUseCase,
+	teacherportal.NewGetLessonSummaryUseCase,
+	teacherportal.NewUpsertLessonSummaryUseCase,
+	teacherportal.NewGetAcademicRecordsByLessonUseCase,
+	teacherportal.NewUpsertAcademicRecordUseCase,
+	teacherportal.NewFinalizeAcademicRecordUseCase,
+	teacherportal.NewGetAcademicRecordsByStudentUseCase,
+	teacherportal.NewListLeaveRequestsForTeacherUseCase,
+	teacherportal.NewApproveLeaveRequestUseCase,
+	teacherportal.NewRejectLeaveRequestUseCase,
 )
 
 var RoomUseCaseProviders = wire.NewSet(
@@ -158,6 +176,7 @@ var UseCaseProviders = wire.NewSet(
 	UserUseCaseProviders,
 	AccountUseCaseProviders,
 	TeacherUseCaseProviders,
+	TeacherPortalUseCaseProviders,
 	RoomUseCaseProviders,
 	ShiftUseCaseProviders,
 	ClassUseCaseProviders,

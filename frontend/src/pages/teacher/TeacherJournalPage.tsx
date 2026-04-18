@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Alert,
     MenuItem,
@@ -7,48 +7,30 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { skipToken } from '@reduxjs/toolkit/query';
+import { useSearchParams } from 'react-router-dom';
 
-import { useGetLessonsQuery } from '@/api/lessonApi';
-import { useGetTeachersQuery } from '@/api/teacherApi';
+import { useGetTeacherLessonsQuery } from '@/api/teacherPortalApi';
 import PageHeader from '@/components/common/PageHeader';
 import LessonSummaryEditor from '@/components/lesson/LessonSummaryEditor';
 import LessonAcademicRecordManager from '@/components/lesson/LessonAcademicRecordManager';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function TeacherJournalPage() {
-    const { user } = useAuth();
-    const { data: teachersResponse, isLoading: isLoadingTeachers } = useGetTeachersQuery(
-        user?.email ? { search: user.email, limit: 20 } : skipToken,
-    );
-
-    const currentTeacher = useMemo(() => {
-        const teachers = teachersResponse?.data?.teachers || [];
-        if (!user?.email) {
-            return null;
-        }
-        return teachers.find((teacher) => teacher.email === user.email) || teachers[0] || null;
-    }, [teachersResponse, user?.email]);
-
-    const { data: lessonsResponse, isLoading: isLoadingLessons } = useGetLessonsQuery(
-        currentTeacher
-            ? {
-                teacher_id: currentTeacher.id,
-                limit: 200,
-                sortBy: 'date_start',
-                sortOrder: 'asc',
-            }
-            : skipToken,
-    );
+    const [searchParams] = useSearchParams();
+    const preselectedLessonId = searchParams.get('lessonId') || '';
+    const { data: lessonsResponse, isLoading: isLoadingLessons } = useGetTeacherLessonsQuery();
 
     const lessons = lessonsResponse?.data?.lessons || [];
     const [selectedLessonId, setSelectedLessonId] = useState('');
 
     useEffect(() => {
+        if (preselectedLessonId && lessons.some((lesson) => lesson.id === preselectedLessonId)) {
+            setSelectedLessonId(preselectedLessonId);
+            return;
+        }
         if (!selectedLessonId && lessons.length > 0) {
             setSelectedLessonId(lessons[0].id);
         }
-    }, [lessons, selectedLessonId]);
+    }, [lessons, selectedLessonId, preselectedLessonId]);
 
     return (
         <Stack sx={{ p: { xs: 2, md: 4 } }} spacing={3}>
@@ -56,16 +38,6 @@ export default function TeacherJournalPage() {
                 title="Sổ đầu bài"
                 subtitle="Ghi nhận nội dung đã dạy, phản hồi lớp và bài tập sau từng buổi học."
             />
-
-            {!user?.email ? (
-                <Alert severity="warning">Không tìm thấy email người dùng hiện tại để đối chiếu hồ sơ giáo viên.</Alert>
-            ) : null}
-
-            {!isLoadingTeachers && user?.email && !currentTeacher ? (
-                <Alert severity="warning">
-                    Không tìm thấy hồ sơ giáo viên trùng với email đăng nhập hiện tại. Hãy kiểm tra dữ liệu teacher trong hệ thống.
-                </Alert>
-            ) : null}
 
             <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
                 <Stack spacing={2}>
@@ -78,11 +50,11 @@ export default function TeacherJournalPage() {
                         value={selectedLessonId}
                         onChange={(event) => setSelectedLessonId(event.target.value)}
                         fullWidth
-                        disabled={isLoadingTeachers || isLoadingLessons || !lessons.length}
+                        disabled={isLoadingLessons || !lessons.length}
                     >
                         {lessons.map((lesson) => (
                             <MenuItem key={lesson.id} value={lesson.id}>
-                                {lesson.class?.name || lesson.class_id} - {new Date(lesson.date_start).toLocaleString('vi-VN')}
+                                {lesson.class_name} - {new Date(lesson.date_start).toLocaleString('vi-VN')}
                             </MenuItem>
                         ))}
                     </TextField>
@@ -104,7 +76,7 @@ export default function TeacherJournalPage() {
                 </Stack>
             ) : (
                 <Alert severity="info">
-                    {isLoadingTeachers || isLoadingLessons
+                    {isLoadingLessons
                         ? 'Đang tải danh sách buổi học...'
                         : 'Chưa có buổi học nào được phân công cho giáo viên này.'}
                 </Alert>

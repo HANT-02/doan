@@ -21,6 +21,8 @@ import { ChangePasswordPage } from '@/pages/ChangePasswordPage';
 import { AdminOverview } from '@/pages/admin/AdminOverview';
 import AdminLeaveRequestsPage from '@/pages/admin/AdminLeaveRequestsPage';
 import { TeacherOverview } from '@/pages/teacher/TeacherOverview';
+import TeacherLessonDetailPage from '@/pages/teacher/TeacherLessonDetailPage';
+import TeacherSchedulePage from '@/pages/teacher/TeacherSchedulePage';
 import TeacherAttendancePage from '@/pages/teacher/TeacherAttendancePage';
 import TeacherJournalPage from '@/pages/teacher/TeacherJournalPage';
 import TeacherLeavesPage from '@/pages/teacher/TeacherLeavesPage';
@@ -139,10 +141,11 @@ const AppRoutes = () => {
           </Route>
 
           {/* Teacher Routes */}
-          <Route path="teacher" element={<RoleRoute allowedRoles={['TEACHER']} />}>
-            <Route index element={<Navigate to="overview" replace />} />
-            <Route path="overview" element={<TeacherOverview />} />
-            <Route path="schedule" element={<PlaceholderPage title="My Schedule" />} />
+            <Route path="teacher" element={<RoleRoute allowedRoles={['TEACHER']} />}>
+              <Route index element={<Navigate to="overview" replace />} />
+              <Route path="overview" element={<TeacherOverview />} />
+              <Route path="schedule" element={<TeacherSchedulePage />} />
+              <Route path="lessons/:lessonId" element={<TeacherLessonDetailPage />} />
             <Route path="attendance" element={<TeacherAttendancePage />} />
             <Route path="journal" element={<TeacherJournalPage />} />
             <Route path="leaves" element={<TeacherLeavesPage />} />

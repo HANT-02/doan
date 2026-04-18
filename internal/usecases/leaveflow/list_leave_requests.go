@@ -10,9 +10,10 @@ import (
 )
 
 type ListLeaveRequestsInput struct {
-	Actor   Actor
-	Status  string
-	ClassID string
+	Actor     Actor
+	Status    string
+	ClassID   string
+	StudentID string
 }
 
 type ListLeaveRequestsOutput struct {
@@ -47,8 +48,9 @@ func NewListLeaveRequestsUseCase(
 func (uc *listLeaveRequestsUseCase) Execute(ctx context.Context, input ListLeaveRequestsInput) (*ListLeaveRequestsOutput, error) {
 	ctxLogger := logger.NewLogger(ctx)
 	filter := repointerface.LeaveRequestFilter{
-		Status:  input.Status,
-		ClassID: input.ClassID,
+		Status:    input.Status,
+		ClassID:   input.ClassID,
+		StudentID: input.StudentID,
 	}
 
 	switch input.Actor.Role {
