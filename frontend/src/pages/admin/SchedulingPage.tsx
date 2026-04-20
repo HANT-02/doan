@@ -55,7 +55,7 @@ const schedulingSchema = z.object({
 
 type SchedulingFormValues = z.infer<typeof schedulingSchema>;
 
-const previewSteps = ['Cấu hình đầu vào', 'Chạy CSP preview', 'Rà soát kết quả'];
+const previewSteps = ['Cấu hình đầu vào', 'Chạy preview', 'Rà soát kết quả'];
 const formatDateInput = (value: Date) => {
     const year = value.getFullYear();
     const month = `${value.getMonth() + 1}`.padStart(2, '0');
@@ -397,11 +397,11 @@ export const SchedulingPage = () => {
     return (
         <Box>
             <PageHeader
-                title="Xếp lịch (CSP)"
-                subtitle="Trigger thuật toán CSP, xem preview xếp lịch và rà soát conflict trước khi commit."
+                title="Xếp lịch"
+                subtitle="Trigger thuật toán, xem preview xếp lịch và rà soát conflict trước khi commit."
                 breadcrumbs={[
                     { label: 'Tổng quan', path: '/app/admin/overview' },
-                    { label: 'Xếp lịch (CSP)' },
+                    { label: 'Xếp lịch' },
                 ]}
                 actions={
                     <Stack direction="row" spacing={1}>

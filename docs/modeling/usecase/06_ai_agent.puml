@@ -2,7 +2,7 @@
 /' 
 MÔ TẢ SƠ ĐỒ
 Mục tiêu: Phác thảo những khả năng cốt lõi do AI System xử lý ngầm dưới dạng System Actor.
-Phạm vi: Luồng quét, dán nhãn tài liệu và thuật toán Xếp lịch CSP tự động.
+Phạm vi: Luồng quét, dán nhãn tài liệu và thuật toán Xếp lịch tự động.
 Assumptions:
 - AI vận hành qua các module Backend độc lập tác động vào state database chung.
 - Tích hợp với External Services như OCR Engine và LLM (Gemini API) cho module phân tích.
@@ -14,7 +14,7 @@ left to right direction
 actor "AI Agent\n(System)" as ai
 actor "External Services\n(OCR, Gemini API)" as ext
 
-package "Thuật toán Xếp lịch CSP (Core)" {
+package "Thuật toán Xếp lịch (Core)" {
   usecase "Tính toán Backtracking (Constraint Check)" as uc_csp
   usecase "Xác định & Báo cáo tập xung đột lịch" as uc_conflict
 }

@@ -1,14 +1,14 @@
 @startuml 03_scheduling
 /'
 MÔ TẢ SƠ ĐỒ
-Mục tiêu: Mô hình hóa cấu trúc Classes cho thuật toán Xếp lịch tự động bằng Constraint Satisfaction Problem (CSP).
-Phạm vi: Các khái niệm cơ bản của CSP như Variable, Domain, Constraint và class giải thuật BacktrackingSolver.
+Mục tiêu: Mô hình hóa cấu trúc Classes cho thuật toán Xếp lịch tự động.
+Phạm vi: Các khái niệm cơ bản của xếp lịch tự động như Variable, Domain, Constraint và class giải thuật BacktrackingSolver.
 Assumptions:
 - Mẫu Strategy Design Pattern dùng cho Heuristics và Constraints để dễ mở rộng.
 - Việc tính điểm SoftConstraintScorer giúp tối ưu hóa thuật toán.
 '/
 
-title Class Diagram - Scheduling CSP Model
+title Class Diagram - Scheduling Model
 
 interface Constraint {
   + evaluate(assignment: Assignment): Boolean

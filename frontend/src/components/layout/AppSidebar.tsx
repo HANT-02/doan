@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getNavItemsByRole, type NavItem } from '@/config/nav';
@@ -44,7 +44,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isMobileOpen, onMobileCl
     const [collapsed, setCollapsed] = useState(false);
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
-    const navItems = getNavItemsByRole(user?.role);
+    const navItems = useMemo(() => getNavItemsByRole(user?.role), [user?.role]);
 
     const isItemActive = (item: NavItem): boolean => {
         if (item.path && location.pathname.startsWith(item.path)) {
@@ -62,15 +62,17 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isMobileOpen, onMobileCl
 
     useEffect(() => {
         setOpenGroups((prev) => {
+            let hasChanges = false;
             const next = { ...prev };
 
             navItems.forEach((item) => {
-                if (item.children?.length && isItemActive(item)) {
+                if (item.children?.length && isItemActive(item) && !prev[item.key]) {
                     next[item.key] = true;
+                    hasChanges = true;
                 }
             });
 
-            return next;
+            return hasChanges ? next : prev;
         });
     }, [location.pathname, navItems]);
 

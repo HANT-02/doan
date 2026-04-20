@@ -15,6 +15,7 @@ import (
 	"doan/internal/usecases/scheduling"
 	"doan/internal/usecases/shift"
 	"doan/internal/usecases/student"
+	"doan/internal/usecases/studentportal"
 	"doan/internal/usecases/teacher"
 	"doan/internal/usecases/teacherportal"
 	"doan/internal/usecases/user"
@@ -108,6 +109,12 @@ var StudentUseCaseProviders = wire.NewSet(
 	student.NewListStudentsUseCase,
 )
 
+var StudentPortalUseCaseProviders = wire.NewSet(
+	studentportal.NewGetStudentTimetableUseCase,
+	studentportal.NewGetMyAttendanceUseCase,
+	studentportal.NewGetMyAcademicRecordsUseCase,
+)
+
 var SchedulingUseCaseProviders = wire.NewSet(
 	scheduling.NewPreviewUseCase,
 	scheduling.NewBenchmarkUseCase,
@@ -181,6 +188,7 @@ var UseCaseProviders = wire.NewSet(
 	ShiftUseCaseProviders,
 	ClassUseCaseProviders,
 	StudentUseCaseProviders,
+	StudentPortalUseCaseProviders,
 	SchedulingUseCaseProviders,
 	MaterialUseCaseProviders,
 	CourseUseCaseProviders,

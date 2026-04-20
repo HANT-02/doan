@@ -639,11 +639,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task I8. Frontend - Trang sổ đầu bài / tổng kết buổi học (`/app/teacher/journal`)
 
-- [ ] Chọn lớp → chọn buổi → hiển thị form tổng kết buổi học
-- [ ] Form: `topic`, `lesson_content`, `homework`, `homework_deadline`, `teacher_notes`, `class_feedback`
-- [ ] Auto-save hoặc nút Lưu tổng kết
-- [ ] Danh sách điều hướng các buổi đã/chưa có tổng kết
-- [ ] Tích hợp API `GET/PUT /api/teacher/lessons/:lesson_id/summary`
+- [x] Chọn lớp → chọn buổi → hiển thị form tổng kết buổi học
+- [x] Form: `topic`, `lesson_content`, `homework`, `homework_deadline`, `teacher_notes`, `class_feedback`
+- [x] Auto-save hoặc nút Lưu tổng kết
+- [x] Danh sách điều hướng các buổi đã/chưa có tổng kết
+- [x] Tích hợp API `GET/PUT /api/teacher/lessons/:lesson_id/summary`
+
+**Kết quả triển khai:**
+- [x] Tạo `TeacherLessonSummaryEditor` riêng cho teacher portal, dùng đúng `teacherPortalApi` thay vì tái dùng route admin
+- [x] Màn `/app/teacher/journal` có flow `chọn lớp -> chọn buổi -> ghi tổng kết`, kèm panel điều hướng các buổi trong lớp
+- [x] Danh sách buổi hiển thị trạng thái `Đã tổng kết / Chưa tổng kết` theo từng lesson
+- [x] Hỗ trợ preselect `lessonId` khi đi từ lịch giảng dạy / chi tiết buổi học sang màn sổ đầu bài
 
 **Mục tiêu đóng task:** Giáo viên ghi chép sổ đầu bài cho từng buổi học trên UI.
 
@@ -651,10 +657,16 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task I9. Frontend - Vào điểm học sinh (tích hợp trong chi tiết buổi học)
 
-- [ ] Trong màn chi tiết buổi học: tab "Kết quả học tập"
-- [ ] Bảng danh sách học sinh với input: `homework_completed`, `homework_score`, `attitude_rating`, `participation_score`, `personal_comment`
-- [ ] Nút "Chốt kết quả" → gọi finalize, khóa input sau khi hoàn tất
-- [ ] Tích hợp API `GET/PUT /api/teacher/lessons/:lesson_id/records`
+- [x] Trong màn chi tiết buổi học: tab "Kết quả học tập"
+- [x] Bảng danh sách học sinh với input: `homework_completed`, `homework_score`, `attitude_rating`, `participation_score`, `personal_comment`
+- [x] Nút "Chốt kết quả" → gọi finalize, khóa input sau khi hoàn tất
+- [x] Tích hợp API `GET/PUT /api/teacher/lessons/:lesson_id/records`
+
+**Kết quả triển khai:**
+- [x] Mở tab `Kết quả học tập` ngay trong `TeacherLessonDetailPage`
+- [x] Tạo `TeacherLessonAcademicRecordManager` riêng cho teacher portal, dùng đúng contract `GET /records`, `PUT /records/:student_id`, `POST /records/finalize`
+- [x] Hỗ trợ lưu theo các dòng đã thay đổi và khóa toàn bộ input sau khi finalize xong
+- [x] Hiển thị trạng thái `Tạm lưu / Đã chốt` cho từng học sinh cùng thống kê số dòng chờ lưu
 
 **Mục tiêu đóng task:** Giáo viên nhập và confirm điểm số học sinh cho từng buổi học.
 
@@ -662,11 +674,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task I10. Frontend - Trang duyệt đơn xin nghỉ (tích hợp trong portal giáo viên)
 
-- [ ] Thêm nav item `teacher-leaves`: "Đơn xin phép" vào `nav.ts`
-- [ ] Trang `/app/teacher/leaves`: danh sách đơn xin phép (filter: lớp, trạng thái, học sinh)
-- [ ] Hiển thị: tên học sinh, lớp, ngày xin nghỉ, lý do, tài liệu đính kèm
-- [ ] Nút Duyệt / Từ chối + ô nhập lý do từ chối
-- [ ] Tích hợp API `GET /api/teacher/leave-requests`, `POST .../approve`, `POST .../reject`
+- [x] Thêm nav item `teacher-leaves`: "Đơn xin phép" vào `nav.ts`
+- [x] Trang `/app/teacher/leaves`: danh sách đơn xin phép (filter: lớp, trạng thái, học sinh)
+- [x] Hiển thị: tên học sinh, lớp, ngày xin nghỉ, lý do, tài liệu đính kèm
+- [x] Nút Duyệt / Từ chối + ô nhập lý do từ chối
+- [x] Tích hợp API `GET /api/teacher/leave-requests`, `POST .../approve`, `POST .../reject`
+
+**Kết quả triển khai:**
+- [x] Giữ route/nav `teacher-leaves` và thay nội dung sang page teacher portal thật tại `TeacherLeavesPage`
+- [x] Dùng đúng `teacherPortalApi` cho list/filter/approve/reject thay vì tái dùng flow admin chung
+- [x] Hỗ trợ filter theo `lớp`, `trạng thái`, `học sinh`
+- [x] Hiển thị tài liệu đính kèm, buổi học liên quan và lý do từ chối nếu đơn đã bị reject
 
 **Mục tiêu đóng task:** Giáo viên duyệt/từ chối đơn xin phép trực tiếp trên UI.
 
@@ -686,10 +704,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Học sinh xem được lịch học của mình.
 
-- [ ] Tạo usecase `GetStudentTimetable` (lọc theo `student_id`, khoảng ngày)
-- [ ] Query join: `enrollments` → `classes` → `lessons` → `class_schedules` → `shifts` → `rooms`
-- [ ] Tạo controller + route `GET /api/student/timetable` (role guard: STUDENT)
-- [ ] Trả về danh sách buổi học: tên lớp, giáo viên, ca học, phòng, ngày
+- [x] Tạo usecase `GetStudentTimetable` (lọc theo `student_id`, khoảng ngày)
+- [x] Query join: `enrollments` → `classes` → `lessons` → `class_schedules` → `shifts` → `rooms`
+- [x] Tạo controller + route `GET /api/student/timetable` (role guard: STUDENT)
+- [x] Trả về danh sách buổi học: tên lớp, giáo viên, ca học, phòng, ngày
+
+**Kết quả triển khai:**
+- [x] Tạo flow actor-based mới tại `internal/usecases/studentportal`
+- [x] Tạo controller riêng `cmd/http/controllers/studentportal`
+- [x] Đăng ký route production-like `GET /api/v1/student/timetable`
+- [x] Resolve học sinh theo `user_email` từ JWT thay vì nhận `student_id` từ client
+- [x] Enrich lesson với `shift`, `teacher`, `room` để FE student timetable dùng trực tiếp
 
 **Mục tiêu đóng task:** Học sinh xem được thời khóa biểu cá nhân qua API.
 
@@ -699,10 +724,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Học sinh xem được lịch sử chuyên cần của bản thân.
 
-- [ ] Tạo usecase `GetMyAttendance` (lọc theo `student_id`, `class_id`, khoảng ngày)
-- [ ] Tính tổng hợp: tổng buổi, số buổi có mặt, vắng, muộn, xin phép
-- [ ] Thêm cảnh báo nếu số buổi vắng vượt ngưỡng (ví dụ > 20%)
-- [ ] Tạo controller + route `GET /api/student/attendance`
+- [x] Tạo usecase `GetMyAttendance` (lọc theo `student_id`, `class_id`, khoảng ngày)
+- [x] Tính tổng hợp: tổng buổi, số buổi có mặt, vắng, muộn, xin phép
+- [x] Thêm cảnh báo nếu số buổi vắng vượt ngưỡng (ví dụ > 20%)
+- [x] Tạo controller + route `GET /api/student/attendance`
+
+**Kết quả triển khai:**
+- [x] Mở route production-like `GET /api/v1/student/attendance`
+- [x] Trả về cả `summary` và danh sách từng buổi học kèm trạng thái điểm danh của chính học sinh
+- [x] Hỗ trợ lọc theo `class_id`, `from`, `to`
+- [x] Enrich mỗi attendance record với `class`, `teacher`, `shift`, `room` để FE student dùng trực tiếp
+- [x] Cảnh báo khi `absent_rate > 20%`
 
 **Mục tiêu đóng task:** Học sinh tự theo dõi chuyên cần và nhận cảnh báo nếu cần.
 
@@ -712,10 +744,16 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Học sinh xem điểm số và đánh giá từng buổi học.
 
-- [ ] Tạo usecase `GetMyAcademicRecords` (lọc theo `student_id`, `class_id`, khoảng ngày)
-- [ ] Join: `academic_records` → `lesson_summaries` → `lessons`
-- [ ] Tính điểm trung bình tổng hợp theo lớp
-- [ ] Tạo controller + route `GET /api/student/academic-records`
+- [x] Tạo usecase `GetMyAcademicRecords` (lọc theo `student_id`, `class_id`, khoảng ngày)
+- [x] Join: `academic_records` → `lesson_summaries` → `lessons`
+- [x] Tính điểm trung bình tổng hợp theo lớp
+- [x] Tạo controller + route `GET /api/student/academic-records`
+
+**Kết quả triển khai:**
+- [x] Mở route production-like `GET /api/v1/student/academic-records`
+- [x] Trả về cả `records` và `class_summaries` để FE student results dùng trực tiếp
+- [x] Hỗ trợ lọc theo `class_id`, `from`, `to`
+- [x] Enrich mỗi record với `lesson`, `teacher`, `shift`, `room`, `topic`, `homework`
 
 **Mục tiêu đóng task:** Học sinh xem được điểm số và nhận xét từng buổi học.
 

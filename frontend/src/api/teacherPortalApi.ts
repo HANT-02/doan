@@ -103,6 +103,15 @@ export interface TeacherLessonSummaryResponse {
     };
 }
 
+export interface UpsertTeacherLessonSummaryPayload {
+    topic: string;
+    lesson_content: string;
+    class_feedback: string;
+    homework: string;
+    homework_deadline?: string | null;
+    teacher_notes: string;
+}
+
 export interface TeacherLeaveRequest {
     id: string;
     student: {
@@ -140,6 +149,43 @@ export interface TeacherLeaveRequestsResponse {
     message: string;
     data: {
         requests: TeacherLeaveRequest[];
+    };
+}
+
+export interface TeacherLeaveRequestStatusResponse {
+    success: boolean;
+    message: string;
+    data: {
+        request_id: string;
+        status: string;
+    };
+}
+
+export interface TeacherLessonAcademicRecord {
+    record_id?: string;
+    lesson_summary_id?: string;
+    student: {
+        id: string;
+        code: string;
+        full_name: string;
+    };
+    homework_completed: boolean;
+    homework_score: number;
+    attitude_rating: number;
+    participation_score: number;
+    personal_comment: string;
+    total_score: number;
+    is_completed: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface TeacherLessonAcademicRecordsResponse {
+    success: boolean;
+    message: string;
+    data: {
+        lesson: TeacherLesson;
+        records: TeacherLessonAcademicRecord[];
     };
 }
 
@@ -231,6 +277,59 @@ export const teacherPortalApi = baseApi.injectEndpoints({
             }),
             providesTags: (_result, _error, lessonId) => [{ type: 'Lesson', id: `TEACHER-SUMMARY-${lessonId}` }],
         }),
+        upsertTeacherLessonSummary: builder.mutation<{ success: boolean; message: string; data: TeacherLessonSummary | null }, {
+            lessonId: string;
+            body: UpsertTeacherLessonSummaryPayload;
+        }>({
+            query: ({ lessonId, body }) => ({
+                url: `/v1/teacher/lessons/${lessonId}/summary`,
+                method: 'PUT',
+                body,
+            }),
+            transformResponse: (response: any) => ({
+                success: response?.success ?? false,
+                message: response?.message ?? '',
+                data: response?.data ?? null,
+            }),
+            invalidatesTags: (_result, _error, { lessonId }) => [{ type: 'Lesson', id: `TEACHER-SUMMARY-${lessonId}` }],
+        }),
+        getTeacherLessonAcademicRecords: builder.query<TeacherLessonAcademicRecordsResponse, string>({
+            query: (lessonId) => `/v1/teacher/lessons/${lessonId}/records`,
+            transformResponse: (response: any) => ({
+                success: response?.success ?? false,
+                message: response?.message ?? '',
+                data: {
+                    lesson: response?.data?.lesson,
+                    records: response?.data?.records ?? [],
+                },
+            }),
+            providesTags: (_result, _error, lessonId) => [{ type: 'AcademicRecord', id: `TEACHER-LESSON-${lessonId}` }],
+        }),
+        upsertTeacherLessonAcademicRecord: builder.mutation<{ success: boolean; message: string; data?: { saved_count?: number } }, {
+            lessonId: string;
+            studentId: string;
+            body: {
+                homework_completed: boolean;
+                homework_score: number;
+                attitude_rating: number;
+                participation_score: number;
+                personal_comment: string;
+            };
+        }>({
+            query: ({ lessonId, studentId, body }) => ({
+                url: `/v1/teacher/lessons/${lessonId}/records/${studentId}`,
+                method: 'PUT',
+                body,
+            }),
+            invalidatesTags: (_result, _error, { lessonId }) => [{ type: 'AcademicRecord', id: `TEACHER-LESSON-${lessonId}` }],
+        }),
+        finalizeTeacherLessonAcademicRecords: builder.mutation<{ success: boolean; message: string; data?: { finalized_count?: number } }, string>({
+            query: (lessonId) => ({
+                url: `/v1/teacher/lessons/${lessonId}/records/finalize`,
+                method: 'POST',
+            }),
+            invalidatesTags: (_result, _error, lessonId) => [{ type: 'AcademicRecord', id: `TEACHER-LESSON-${lessonId}` }],
+        }),
         getTeacherLeaveRequests: builder.query<TeacherLeaveRequestsResponse, GetTeacherLeaveRequestsParams | void>({
             query: (params) => ({
                 url: '/v1/teacher/leave-requests',
@@ -245,6 +344,21 @@ export const teacherPortalApi = baseApi.injectEndpoints({
             }),
             providesTags: [{ type: 'LeaveRequest', id: 'TEACHER-LIST' }],
         }),
+        approveTeacherLeaveRequest: builder.mutation<TeacherLeaveRequestStatusResponse, string>({
+            query: (id) => ({
+                url: `/v1/teacher/leave-requests/${id}/approve`,
+                method: 'POST',
+            }),
+            invalidatesTags: [{ type: 'LeaveRequest', id: 'TEACHER-LIST' }],
+        }),
+        rejectTeacherLeaveRequest: builder.mutation<TeacherLeaveRequestStatusResponse, { id: string; rejection_reason: string }>({
+            query: ({ id, rejection_reason }) => ({
+                url: `/v1/teacher/leave-requests/${id}/reject`,
+                method: 'POST',
+                body: { rejection_reason },
+            }),
+            invalidatesTags: [{ type: 'LeaveRequest', id: 'TEACHER-LIST' }],
+        }),
     }),
 });
 
@@ -254,5 +368,11 @@ export const {
     useSubmitTeacherLessonAttendanceMutation,
     useGetTeacherAttendanceSummaryQuery,
     useGetTeacherLessonSummaryQuery,
+    useUpsertTeacherLessonSummaryMutation,
+    useGetTeacherLessonAcademicRecordsQuery,
+    useUpsertTeacherLessonAcademicRecordMutation,
+    useFinalizeTeacherLessonAcademicRecordsMutation,
     useGetTeacherLeaveRequestsQuery,
+    useApproveTeacherLeaveRequestMutation,
+    useRejectTeacherLeaveRequestMutation,
 } = teacherPortalApi;

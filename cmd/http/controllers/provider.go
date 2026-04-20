@@ -14,6 +14,7 @@ import (
 	"doan/cmd/http/controllers/scheduling"
 	"doan/cmd/http/controllers/shift"
 	"doan/cmd/http/controllers/student"
+	"doan/cmd/http/controllers/studentportal"
 	"doan/cmd/http/controllers/teacher"
 	"doan/cmd/http/controllers/teacherportal"
 	"doan/cmd/http/controllers/user"
@@ -55,6 +56,9 @@ var ControllerProviders = wire.NewSet(
 	// Student controller
 	student.NewStudentControllerV1,
 	wire.Bind(new(student.Controller), new(*student.ControllerV1)),
+
+	studentportal.NewStudentPortalControllerV1,
+	wire.Bind(new(studentportal.Controller), new(*studentportal.ControllerV1)),
 
 	// Course controller
 	course.NewCourseControllerV1,

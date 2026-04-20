@@ -69,7 +69,7 @@ Prefix: `/v1` or `/v2` for specific user routes.
 - `DELETE /v1/programs/:id/courses`: Remove courses from program
 
 ## Scheduling
-- `POST /v1/scheduling/preview`: Trigger CSP scheduling preview
+- `POST /v1/scheduling/preview`: Scheduling preview
 - `GET /v1/scheduling/preview/latest`: Get the latest preview result
 - `GET /v1/scheduling/preview/:id`: Get a preview result by run ID
 - `POST /v1/scheduling/commit`: Commit scaffold for a preview run

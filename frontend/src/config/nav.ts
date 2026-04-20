@@ -102,7 +102,7 @@ export const NAV_ITEMS: NavItem[] = [
     },
     {
         key: 'admin-scheduling',
-        labelVi: 'Xếp lịch (CSP)',
+        labelVi: 'Xếp lịch',
         path: '/app/admin/scheduling',
         icon: CalendarMonth,
         roles: ['ADMIN', 'SUPER_ADMIN'],

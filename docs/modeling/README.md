@@ -34,7 +34,7 @@ Khu vực này được chia làm 4 thành phần thiết kế chính (A/B/C/D):
 - `05_material_upload_audit_approval.puml`: Luồng Teacher Upload -> Background Queue gọi OCR/Gemini API -> Compliance xem/duyệt -> Alert Alert.
 - `06_student_leave_request.puml`: Luồng Học sinh xin phép nghỉ phép trực tuyến & Teacher xem sự thay đổi (Scaffold).
 
-### D. Scheduling Modeling (CSP) (`/scheduling`)
+### D. Scheduling Modeling (`/scheduling`)
 *(Đặc tả riêng về Lõi trí tuệ hệ thống: Bài toán thuật toán Xếp Lịch)*
 - `01_csp_model.md`: Định nghĩa Toán học của Variables $V$, Domains $D$ và Các bộ phận Constraints $C$ cứng/mềm.
 - `02_backtracking_flow.puml`: Sơ đồ Nhánh Hoạt động (Activity Diagram) của vòng lặp Đệ quy Tìm kiếm Quay lui (DFS/Forward Checking).

@@ -56,6 +56,8 @@ func (r *academicRecordRepository) ListByStudentID(ctx context.Context, studentI
 		Preload("LessonSummary").
 		Preload("LessonSummary.Lesson").
 		Preload("LessonSummary.Lesson.Class").
+		Preload("LessonSummary.Lesson.Teacher").
+		Preload("LessonSummary.Lesson.Room").
 		Where("student_id = ?", studentID).
 		Order("created_at DESC").
 		Find(&records).Error

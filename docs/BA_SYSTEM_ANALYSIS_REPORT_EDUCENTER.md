@@ -1275,7 +1275,7 @@ Hệ thống đã có nền middleware auth và role check, nhưng phân quyền
 | SCR-08 | Quản lý ca học | Admin | có |
 | SCR-09 | Quản lý lớp học | Admin | có |
 | SCR-10 | Chi tiết lớp / roster | Admin | có |
-| SCR-11 | Xếp lịch (CSP) | Admin | có |
+| SCR-11 | Xếp lịch | Admin | có |
 | SCR-12 | Tài liệu giảng dạy của giáo viên | Teacher | có |
 | SCR-13 | Hàng chờ duyệt tài liệu | Compliance/Admin | có |
 | SCR-14 | Tổng quan admin | Admin | có nhưng nhiều mock data |
