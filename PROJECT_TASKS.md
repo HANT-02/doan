@@ -763,14 +763,23 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Học sinh tự tạo đơn xin phép nghỉ/muộn.
 
-- [ ] Tạo usecase `CreateLeaveRequest` (validate: `apply_date`, `class_id` phải thuộc lớp đã enroll)
-- [ ] Tạo usecase `GetMyLeaveRequests` (lịch sử đơn của học sinh, filter theo `status`, `class_id`)
-- [ ] Tạo usecase `CancelLeaveRequest` (hủy đơn nếu còn PENDING)
-- [ ] Tạo controller + route:
-  - [ ] `GET /api/student/leave-requests`
-  - [ ] `POST /api/student/leave-requests`
-  - [ ] `DELETE /api/student/leave-requests/:id` (cancel nếu PENDING)
-- [ ] Hỗ trợ upload `documents` (URL danh sách)
+- [x] Tạo usecase `CreateLeaveRequest` (validate: `apply_date`, `class_id` phải thuộc lớp đã enroll)
+- [x] Tạo usecase `GetMyLeaveRequests` (lịch sử đơn của học sinh, filter theo `status`, `class_id`)
+- [x] Tạo usecase `CancelLeaveRequest` (hủy đơn nếu còn PENDING)
+- [x] Tạo controller + route:
+  - [x] `GET /api/student/leave-requests`
+  - [x] `POST /api/student/leave-requests`
+  - [x] `DELETE /api/student/leave-requests/:id` (cancel nếu PENDING)
+- [x] Hỗ trợ upload `documents` (URL danh sách)
+
+**Kết quả triển khai:**
+- [x] Tạo flow `studentportal` riêng cho leave request, bọc lại `leaveflow` để student dùng route riêng nhưng vẫn giữ chung business rule
+- [x] Mở route production-like:
+  - [x] `GET /api/v1/student/leave-requests`
+  - [x] `POST /api/v1/student/leave-requests`
+  - [x] `DELETE /api/v1/student/leave-requests/:id`
+- [x] Validate `class_id` theo enrollment vẫn dùng lõi `leaveflow.CreateLeaveRequest`
+- [x] Trả về đầy đủ `documents`, `class`, `lesson`, `rejection_reason` để FE student leaves dùng trực tiếp
 
 **Mục tiêu đóng task:** Học sinh tạo và theo dõi được đơn xin phép của mình.
 
@@ -780,10 +789,18 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu:** Học sinh xem kết quả dự báo nguy cơ học kém của bản thân.
 
-- [ ] Tạo usecase `GetMyAtRiskPrediction` (gọi prediction engine từ module `predictive`)
-- [ ] Trả về: `risk_label`, `risk_score`, top features ảnh hưởng
-- [ ] Tạo controller + route `GET /api/student/at-risk`
-- [ ] Kết nối với pipeline ML đã có ở Task F3
+- [x] Tạo usecase `GetMyAtRiskPrediction` (gọi prediction engine từ module `predictive`)
+- [x] Trả về: `risk_label`, `risk_score`, top features ảnh hưởng
+- [x] Tạo controller + route `GET /api/student/at-risk`
+- [x] Kết nối với pipeline ML đã có ở Task F3
+
+**Kết quả triển khai:**
+- [x] Tạo flow `studentportal` riêng cho at-risk prediction, resolve học sinh theo `user_email` trong JWT
+- [x] Mở route production-like:
+  - [x] `GET /api/v1/student/at-risk`
+- [x] Tái dùng `AtRiskService` hiện có, không tạo nhánh prediction mới ngoài module `predictive`
+- [x] Trả về prediction hiện tại mạnh nhất của chính học sinh, gồm `risk_label`, `risk_score`, `risk_band`, `primary_reason`, `reasons`, `top_features`, `feature_summary`
+- [x] Nếu pipeline chưa có dữ liệu prediction hiện tại thì API vẫn trả thành công với `prediction = null`
 
 **Mục tiêu đóng task:** Học sinh xem được mức độ nguy cơ học kém và lý do cảnh báo.
 
@@ -791,10 +808,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task J6. Frontend - Trang thời khóa biểu sinh viên (`/app/student/timetable`)
 
-- [ ] Hiển thị lịch học theo tuần (calendar grid hoặc danh sách theo ngày)
-- [ ] Mỗi buổi: tên lớp, ca học (`shift.name`), phòng, giáo viên, trạng thái (sắp tới / đã qua)
-- [ ] Hiển thị đơn xin phép tương ứng nếu có
-- [ ] Tích hợp API `GET /api/student/timetable`
+- [x] Hiển thị lịch học theo tuần (calendar grid hoặc danh sách theo ngày)
+- [x] Mỗi buổi: tên lớp, ca học (`shift.name`), phòng, giáo viên, trạng thái (sắp tới / đã qua)
+- [x] Hiển thị đơn xin phép tương ứng nếu có
+- [x] Tích hợp API `GET /api/student/timetable`
+
+**Kết quả triển khai:**
+- [x] Tạo `studentPortalApi` riêng cho phase J, tách khỏi các API admin cũ
+- [x] Thay route placeholder `/app/student/timetable` bằng page thật
+- [x] Hiển thị lịch theo tuần dạng danh sách theo ngày, có điều hướng `tuần trước / tuần này / tuần sau`
+- [x] Mỗi buổi hiển thị `class`, `shift`, `room`, `teacher`, trạng thái thời gian và ghi chú
+- [x] Kết hợp thêm `GET /api/v1/student/leave-requests` để gắn badge đơn phép liên quan trực tiếp trên từng buổi học
 
 **Mục tiêu đóng task:** Học sinh xem thời khóa biểu trực tiếp trên UI.
 
@@ -802,10 +826,18 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task J7. Frontend - Theo dõi điểm danh cá nhân (tích hợp trong timetable hoặc trang riêng)
 
-- [ ] Bảng tổng hợp chuyên cần: tổng buổi / có mặt / vắng / muộn / xin phép
-- [ ] Hiển thị chi tiết từng buổi và trạng thái điểm danh
-- [ ] Banner cảnh báo nếu tỷ lệ vắng vượt ngưỡng
-- [ ] Tích hợp API `GET /api/student/attendance`
+- [x] Bảng tổng hợp chuyên cần: tổng buổi / có mặt / vắng / muộn / xin phép
+- [x] Hiển thị chi tiết từng buổi và trạng thái điểm danh
+- [x] Banner cảnh báo nếu tỷ lệ vắng vượt ngưỡng
+- [x] Tích hợp API `GET /api/student/attendance`
+
+**Kết quả triển khai:**
+- [x] Mở rộng `studentPortalApi` với `GET /api/v1/student/attendance`
+- [x] Tích hợp trực tiếp vào màn `/app/student/timetable` để giữ sidebar gọn
+- [x] Thêm bộ lọc lớp dùng chung cho lịch học, đơn xin phép và chuyên cần
+- [x] Hiển thị phần tổng hợp chuyên cần và bảng chi tiết từng buổi với trạng thái điểm danh
+- [x] Gắn badge điểm danh trực tiếp lên từng lesson card trong lịch học tuần
+- [x] Hiển thị banner cảnh báo khi `absent_rate` vượt ngưỡng từ backend
 
 **Mục tiêu đóng task:** Học sinh chủ động theo dõi chuyên cần của mình.
 
@@ -813,10 +845,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task J8. Frontend - Trang kết quả học tập (`/app/student/results`)
 
-- [ ] Danh sách lớp đã đăng ký → chọn lớp → xem điểm theo từng buổi
-- [ ] Bảng điểm: `homework_score`, `attitude_rating`, `participation_score`, `total_score`, `personal_comment`
-- [ ] Hiển thị điểm trung bình tổng hợp, biểu đồ tiến độ nếu có thể
-- [ ] Tích hợp API `GET /api/student/academic-records`
+- [x] Danh sách lớp đã đăng ký → chọn lớp → xem điểm theo từng buổi
+- [x] Bảng điểm: `homework_score`, `attitude_rating`, `participation_score`, `total_score`, `personal_comment`
+- [x] Hiển thị điểm trung bình tổng hợp, biểu đồ tiến độ nếu có thể
+- [x] Tích hợp API `GET /api/student/academic-records`
+
+**Kết quả triển khai:**
+- [x] Chuyển `StudentResultsPage` sang dùng `studentPortalApi` thay cho API academic cũ
+- [x] Thêm bộ lọc `theo lớp` dựa trên `class_summaries` và `records`
+- [x] Hiển thị bảng điểm theo từng buổi với `homework_score`, `attitude_rating`, `participation_score`, `total_score`, `personal_comment`
+- [x] Hiển thị phần tổng hợp theo lớp và block tiến độ học tập bằng `LinearProgress`
+- [x] Giữ UI đủ nhẹ, không thêm chart library mới để tránh tăng độ phức tạp không cần thiết
 
 **Mục tiêu đóng task:** Học sinh xem điểm và nhận xét của giáo viên qua UI.
 
@@ -824,10 +863,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task J9. Frontend - Trang đơn xin nghỉ (`/app/student/leaves`)
 
-- [ ] Form tạo đơn: chọn lớp, ngày, loại đơn (`LEAVE`/`LATE`/`EARLY`), lý do, đính kèm file
-- [ ] Danh sách đơn đã tạo: hiển thị trạng thái `PENDING / APPROVED / REJECTED`, lý do từ chối
-- [ ] Nút Hủy đơn nếu còn PENDING
-- [ ] Tích hợp API `GET/POST /api/student/leave-requests`
+- [x] Form tạo đơn: chọn lớp, ngày, loại đơn (`LEAVE`/`LATE`/`EARLY`), lý do, đính kèm file
+- [x] Danh sách đơn đã tạo: hiển thị trạng thái `PENDING / APPROVED / REJECTED`, lý do từ chối
+- [x] Nút Hủy đơn nếu còn PENDING
+- [x] Tích hợp API `GET/POST /api/student/leave-requests`
+
+**Kết quả triển khai:**
+- [x] Bỏ wrapper `LeaveRequestsPage` dùng API cũ, thay bằng page student riêng theo phase J
+- [x] Mở rộng `studentPortalApi` với `POST /api/v1/student/leave-requests` và `DELETE /api/v1/student/leave-requests/:id`
+- [x] Form tạo đơn có `lớp`, `ngày`, `loại đơn`, `lý do`, `documents` dạng URL, và số phút cho `LATE/EARLY`
+- [x] Danh sách đơn hiển thị đầy đủ `status`, `rejection_reason`, `documents`
+- [x] Cho phép hủy đơn nếu trạng thái còn `PENDING`
 
 **Mục tiêu đóng task:** Học sinh tạo và theo dõi đơn xin phép hoàn toàn trên UI.
 
@@ -835,10 +881,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task J10. Frontend - Cảnh báo dự báo kết quả kém (tích hợp vào trang kết quả hoặc overview)
 
-- [ ] Hiển thị badge / card cảnh báo AT_RISK nếu `risk_label = AT_RISK`
-- [ ] Hiển thị `risk_score` và các yếu tố ảnh hưởng chính (top features)
-- [ ] Gợi ý hành động: liên hệ giáo viên, cải thiện chuyên cần, hoàn thành bài tập
-- [ ] Tích hợp API `GET /api/student/at-risk`
+- [x] Hiển thị badge / card cảnh báo AT_RISK nếu `risk_label = AT_RISK`
+- [x] Hiển thị `risk_score` và các yếu tố ảnh hưởng chính (top features)
+- [x] Gợi ý hành động: liên hệ giáo viên, cải thiện chuyên cần, hoàn thành bài tập
+- [x] Tích hợp API `GET /api/student/at-risk`
+
+**Kết quả triển khai:**
+- [x] Mở rộng `studentPortalApi` với `GET /api/v1/student/at-risk`
+- [x] Thay `StudentOverview` mock bằng dashboard dùng dữ liệu thật từ timetable, attendance, academic records và at-risk prediction
+- [x] Hiển thị card cảnh báo AT_RISK trên overview với `risk_score`, `risk_band`, `primary_reason`, `top_features`
+- [x] Sinh gợi ý hành động trực tiếp từ feature snapshot như chuyên cần, bài tập và điểm trung bình
+- [x] Bổ sung alert tóm tắt AT_RISK trên trang `/app/student/results` để nhánh cảnh báo gắn chặt với kết quả học tập
 
 **Mục tiêu đóng task:** Học sinh nhận cảnh báo sớm và có thông tin hướng dẫn cải thiện.
 

@@ -27,6 +27,7 @@ import TeacherAttendancePage from '@/pages/teacher/TeacherAttendancePage';
 import TeacherJournalPage from '@/pages/teacher/TeacherJournalPage';
 import TeacherLeavesPage from '@/pages/teacher/TeacherLeavesPage';
 import { StudentOverview } from '@/pages/student/StudentOverview';
+import StudentTimetablePage from '@/pages/student/StudentTimetablePage';
 import StudentResultsPage from '@/pages/student/StudentResultsPage';
 import StudentLeavesPage from '@/pages/student/StudentLeavesPage';
 import { ComplianceOverview } from '@/pages/compliance/ComplianceOverview';
@@ -157,7 +158,7 @@ const AppRoutes = () => {
           <Route path="student" element={<RoleRoute allowedRoles={['STUDENT', 'PARENT']} />}>
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<StudentOverview />} />
-            <Route path="timetable" element={<PlaceholderPage title="My Timetable" />} />
+            <Route path="timetable" element={<StudentTimetablePage />} />
             <Route path="results" element={<StudentResultsPage />} />
             <Route path="leaves" element={<StudentLeavesPage />} />
             <Route path="consulting" element={<PlaceholderPage title="Course Consulting" />} />

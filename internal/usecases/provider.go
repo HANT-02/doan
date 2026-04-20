@@ -113,6 +113,10 @@ var StudentPortalUseCaseProviders = wire.NewSet(
 	studentportal.NewGetStudentTimetableUseCase,
 	studentportal.NewGetMyAttendanceUseCase,
 	studentportal.NewGetMyAcademicRecordsUseCase,
+	studentportal.NewGetMyAtRiskPredictionUseCase,
+	studentportal.NewListMyLeaveRequestsUseCase,
+	studentportal.NewCreateMyLeaveRequestUseCase,
+	studentportal.NewCancelMyLeaveRequestUseCase,
 )
 
 var SchedulingUseCaseProviders = wire.NewSet(
