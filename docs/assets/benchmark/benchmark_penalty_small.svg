@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720">
+  <rect width="1400" height="720" fill="#f8fafc"/>
+  <text x="90" y="80" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#1f2937">Độ phạt soft constraint ở scenario small</text>
+  <text x="90" y="120" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">Giá trị càng gần 0 càng tốt. Biểu đồ dùng độ lớn penalty để nhìn rõ khác biệt chất lượng nghiệm.</text>
+
+  <text x="90" y="260" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#111827">CP-SAT</text>
+  <rect x="280" y="230" width="8" height="40" fill="#2563eb"/>
+  <text x="310" y="258" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1f2937">0 điểm phạt</text>
+
+  <text x="90" y="400" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#111827">Tabu Search</text>
+  <rect x="280" y="370" width="340" height="40" fill="#0f172a"/>
+  <text x="640" y="398" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1f2937">30 điểm phạt</text>
+
+  <text x="90" y="540" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#111827">Graph Coloring</text>
+  <rect x="280" y="510" width="510" height="40" fill="#60a5fa"/>
+  <text x="810" y="538" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1f2937">45 điểm phạt</text>
+
+  <line x1="280" y1="620" x2="840" y2="620" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="280" y="660" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748b">0</text>
+  <text x="620" y="660" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748b">30</text>
+  <text x="790" y="660" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748b">45</text>
+</svg>

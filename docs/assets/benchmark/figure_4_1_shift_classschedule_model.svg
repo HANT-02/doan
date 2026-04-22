@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#f8fafc"/>
+  <text x="80" y="86" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#0f172a">Hình 4.1. Minh họa mô hình Shift và ClassSchedule trong scheduling</text>
+  <text x="80" y="126" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">Hai thực thể nghiệp vụ này là nền để solver sinh ra các slot hợp lệ trước khi tạo preview assignment.</text>
+
+  <rect x="80" y="190" width="390" height="560" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="80" y="190" width="390" height="86" rx="28" fill="#2563eb"/>
+  <text x="120" y="244" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Shift</text>
+  <text x="120" y="308" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Mô tả ca học chuẩn của trung tâm</text>
+  <rect x="118" y="340" width="314" height="64" rx="16" fill="#eff6ff"/>
+  <text x="142" y="379" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">code: ca1</text>
+  <rect x="118" y="420" width="314" height="64" rx="16" fill="#eff6ff"/>
+  <text x="142" y="459" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">name: Ca học số 1</text>
+  <rect x="118" y="500" width="314" height="64" rx="16" fill="#eff6ff"/>
+  <text x="142" y="539" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">start_time: 07:00</text>
+  <rect x="118" y="580" width="314" height="64" rx="16" fill="#eff6ff"/>
+  <text x="142" y="619" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">end_time: 09:00</text>
+  <rect x="118" y="660" width="314" height="64" rx="16" fill="#eff6ff"/>
+  <text x="142" y="699" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">duration_minutes: 120</text>
+
+  <rect x="605" y="190" width="390" height="560" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="605" y="190" width="390" height="86" rx="28" fill="#0f172a"/>
+  <text x="645" y="244" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#ffffff">ClassSchedule</text>
+  <text x="645" y="308" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Mô tả lịch tuần cố định của từng lớp</text>
+  <rect x="643" y="340" width="314" height="64" rx="16" fill="#f8fafc"/>
+  <text x="667" y="379" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">class_id: CLS-MATH-01</text>
+  <rect x="643" y="420" width="314" height="64" rx="16" fill="#f8fafc"/>
+  <text x="667" y="459" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">day_of_week: MONDAY</text>
+  <rect x="643" y="500" width="314" height="64" rx="16" fill="#f8fafc"/>
+  <text x="667" y="539" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">shift_id: ca1</text>
+  <rect x="643" y="580" width="314" height="64" rx="16" fill="#f8fafc"/>
+  <text x="667" y="619" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">room_id: ROOM-A101 (optional)</text>
+  <rect x="643" y="660" width="314" height="64" rx="16" fill="#f8fafc"/>
+  <text x="667" y="699" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">is_active: true</text>
+
+  <rect x="1130" y="190" width="390" height="560" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="1130" y="190" width="390" height="86" rx="28" fill="#10b981"/>
+  <text x="1170" y="244" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Solver Input / Slot Generation</text>
+  <text x="1170" y="308" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Miền giá trị được sinh ra từ Shift + ClassSchedule</text>
+  <rect x="1168" y="346" width="314" height="94" rx="18" fill="#ecfdf5"/>
+  <text x="1192" y="382" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#065f46">Slot 1</text>
+  <text x="1192" y="414" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#065f46">MONDAY | ca1 | 07:00-09:00 | ROOM-A101</text>
+  <rect x="1168" y="460" width="314" height="94" rx="18" fill="#ecfdf5"/>
+  <text x="1192" y="496" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#065f46">Slot 2</text>
+  <text x="1192" y="528" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#065f46">WEDNESDAY | ca1 | 07:00-09:00 | ROOM-A102</text>
+  <rect x="1168" y="574" width="314" height="132" rx="18" fill="#eff6ff"/>
+  <text x="1192" y="612" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">Preview assignment sẽ chọn từ các slot trên</text>
+  <text x="1192" y="646" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">sau khi kiểm tra:</text>
+  <text x="1210" y="678" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">- teacher conflict</text>
+  <text x="1210" y="706" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">- class conflict</text>
+
+  <path d="M470 470 C520 470, 555 470, 605 470" fill="none" stroke="#94a3b8" stroke-width="5"/>
+  <polygon points="605,470 585,458 585,482" fill="#94a3b8"/>
+  <path d="M995 470 C1045 470, 1080 470, 1130 470" fill="none" stroke="#94a3b8" stroke-width="5"/>
+  <polygon points="1130,470 1110,458 1110,482" fill="#94a3b8"/>
+
+  <rect x="488" y="776" width="624" height="80" rx="20" fill="#dbeafe" stroke="#93c5fd" stroke-width="2"/>
+  <text x="518" y="824" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#1e3a8a">Ý nghĩa: Shift chuẩn hóa khung giờ, ClassSchedule chuẩn hóa lịch tuần, từ đó solver làm việc trên miền slot thống nhất.</text>
+</svg>

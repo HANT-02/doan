@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900">
+  <rect width="1500" height="900" fill="#f8fafc"/>
+  <text x="70" y="82" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#0f172a">Hình 4.8. Sơ đồ lập luận lựa chọn CP-SAT làm solver chính</text>
+  <text x="70" y="122" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">Quyết định được đưa ra dựa trên benchmark thực nghiệm, không dựa trên cảm tính hay mô tả lý thuyết đơn lẻ.</text>
+
+  <rect x="560" y="170" width="380" height="84" rx="22" fill="#1e293b"/>
+  <text x="612" y="222" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#ffffff">Benchmark 3 solver trên cùng input</text>
+
+  <rect x="120" y="340" width="360" height="130" rx="24" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <text x="156" y="392" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">Bước 1. Kiểm tra hard constraints</text>
+  <text x="156" y="428" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Cả 3 thuật toán đều đạt feasibility = 1.000</text>
+  <text x="156" y="456" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">và hard violation = 0 ở small, medium, large.</text>
+
+  <rect x="570" y="340" width="360" height="130" rx="24" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <text x="606" y="392" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">Bước 2. So sánh chất lượng nghiệm</text>
+  <text x="606" y="428" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Scenario small tạo được khác biệt soft score:</text>
+  <text x="606" y="456" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">CP-SAT = 0, Tabu = -30, Graph = -45.</text>
+
+  <rect x="1020" y="340" width="360" height="130" rx="24" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <text x="1056" y="392" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">Bước 3. So sánh chi phí runtime</text>
+  <text x="1056" y="428" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Graph rất nhanh nhưng không thắng về chất lượng.</text>
+  <text x="1056" y="456" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Tabu chậm nhất ở scenario large.</text>
+
+  <rect x="370" y="580" width="760" height="120" rx="28" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="420" y="630" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#1e3a8a">Kết luận đánh giá</text>
+  <text x="420" y="666" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">Graph Coloring + Heuristic phù hợp làm baseline runtime.</text>
+  <text x="420" y="696" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">Tabu Search có giá trị học thuật nhưng chưa tạo ưu thế đủ rõ trong benchmark hiện tại.</text>
+
+  <rect x="470" y="770" width="560" height="84" rx="24" fill="#2563eb"/>
+  <text x="586" y="822" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Chọn CP-SAT làm solver chính</text>
+
+  <g stroke="#94a3b8" stroke-width="5" fill="none">
+    <line x1="750" y1="254" x2="750" y2="314"/>
+    <line x1="300" y1="470" x2="300" y2="520"/>
+    <line x1="750" y1="470" x2="750" y2="520"/>
+    <line x1="1200" y1="470" x2="1200" y2="520"/>
+    <line x1="300" y1="520" x2="750" y2="520"/>
+    <line x1="750" y1="520" x2="1200" y2="520"/>
+    <line x1="750" y1="520" x2="750" y2="580"/>
+    <line x1="750" y1="700" x2="750" y2="770"/>
+  </g>
+  <g fill="#94a3b8">
+    <polygon points="750,314 738,294 762,294"/>
+    <polygon points="750,580 738,560 762,560"/>
+    <polygon points="750,770 738,750 762,750"/>
+  </g>
+</svg>

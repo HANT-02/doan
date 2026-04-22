@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="840" viewBox="0 0 1500 840">
+  <rect width="1500" height="840" fill="#f5f7fb"/>
+  <text x="70" y="84" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#0f172a">Hình 4.3. Tổng quan ba scenario benchmark small, medium, large</text>
+  <text x="70" y="124" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">Ba scenario được dùng để đo feasibility, hard violation, soft score, runtime và stability của ba solver trên cùng một chuẩn input.</text>
+
+  <rect x="70" y="180" width="420" height="580" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="540" y="180" width="420" height="580" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="1010" y="180" width="420" height="580" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+
+  <rect x="100" y="210" width="160" height="44" rx="16" fill="#dbeafe"/>
+  <text x="130" y="240" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1d4ed8">SMALL</text>
+  <rect x="570" y="210" width="180" height="44" rx="16" fill="#dbeafe"/>
+  <text x="602" y="240" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1d4ed8">MEDIUM</text>
+  <rect x="1040" y="210" width="160" height="44" rx="16" fill="#dbeafe"/>
+  <text x="1072" y="240" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1d4ed8">LARGE</text>
+
+  <text x="105" y="304" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Quy mô dữ liệu</text>
+  <text x="105" y="340" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 6 lớp học</text>
+  <text x="105" y="370" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 4 giáo viên</text>
+  <text x="105" y="400" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 3 phòng học</text>
+  <text x="105" y="430" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 3 ca học</text>
+  <text x="105" y="460" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 12 session yêu cầu</text>
+  <text x="105" y="520" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Mục tiêu đánh giá</text>
+  <text x="105" y="556" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Tạo khác biệt về soft score</text>
+  <text x="105" y="586" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Kiểm tra chất lượng nghiệm</text>
+  <text x="105" y="616" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Đo hành vi của solver ở bài toán nhỏ</text>
+  <rect x="105" y="666" width="350" height="58" rx="18" fill="#eff6ff"/>
+  <text x="128" y="702" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">7 lần chạy / solver để lấy số liệu trung bình</text>
+
+  <text x="575" y="304" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Quy mô dữ liệu</text>
+  <text x="575" y="340" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 10 lớp học</text>
+  <text x="575" y="370" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 5 giáo viên</text>
+  <text x="575" y="400" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 4 phòng học</text>
+  <text x="575" y="430" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 3 ca học</text>
+  <text x="575" y="460" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 30 session yêu cầu</text>
+  <text x="575" y="520" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Mục tiêu đánh giá</text>
+  <text x="575" y="556" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- So sánh runtime mức trung bình</text>
+  <text x="575" y="586" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Kiểm tra độ ổn định khi ràng buộc tăng</text>
+  <text x="575" y="616" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Quan sát solver khi soft score bằng nhau</text>
+  <rect x="575" y="666" width="350" height="58" rx="18" fill="#eff6ff"/>
+  <text x="598" y="702" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">Cùng một SolverInput cho cả 3 thuật toán</text>
+
+  <text x="1045" y="304" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Quy mô dữ liệu</text>
+  <text x="1045" y="340" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 16 lớp học</text>
+  <text x="1045" y="370" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 7 giáo viên</text>
+  <text x="1045" y="400" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 5 phòng học</text>
+  <text x="1045" y="430" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 3 ca học</text>
+  <text x="1045" y="460" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- 64 session yêu cầu</text>
+  <text x="1045" y="520" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Mục tiêu đánh giá</text>
+  <text x="1045" y="556" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Quan sát runtime ở bài toán lớn</text>
+  <text x="1045" y="586" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Kiểm tra khả năng giữ feasibility 1.000</text>
+  <text x="1045" y="616" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- So sánh chi phí của CP-SAT và Tabu</text>
+  <rect x="1045" y="666" width="350" height="58" rx="18" fill="#eff6ff"/>
+  <text x="1068" y="702" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1e3a8a">Dùng để ra quyết định chọn solver production-like</text>
+</svg>

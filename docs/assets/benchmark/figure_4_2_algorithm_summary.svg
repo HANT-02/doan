@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="980" viewBox="0 0 1800 980">
+  <rect width="1800" height="980" fill="#f8fafc"/>
+  <text x="70" y="84" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#0f172a">Hình 4.2. Bảng tóm tắt nguyên lý hoạt động của ba thuật toán scheduling</text>
+  <text x="70" y="124" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">Hình minh họa này có thể đặt ngay sau mục 4.4 để người đọc nhìn nhanh đặc điểm, quy trình và vai trò của từng solver.</text>
+
+  <rect x="70" y="180" width="1660" height="90" fill="#1e293b"/>
+  <text x="100" y="235" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#ffffff">Thuật toán</text>
+  <text x="340" y="235" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#ffffff">Nguyên lý cốt lõi</text>
+  <text x="770" y="235" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#ffffff">Quy trình hoạt động</text>
+  <text x="1230" y="235" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#ffffff">Ưu điểm</text>
+  <text x="1505" y="235" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#ffffff">Hạn chế</text>
+
+  <rect x="70" y="270" width="1660" height="210" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="70" y="480" width="1660" height="220" fill="#f8fbff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="70" y="700" width="1660" height="220" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <line x1="280" y1="180" x2="280" y2="920" stroke="#dbe3f0" stroke-width="2"/>
+  <line x1="720" y1="180" x2="720" y2="920" stroke="#dbe3f0" stroke-width="2"/>
+  <line x1="1180" y1="180" x2="1180" y2="920" stroke="#dbe3f0" stroke-width="2"/>
+  <line x1="1460" y1="180" x2="1460" y2="920" stroke="#dbe3f0" stroke-width="2"/>
+
+  <text x="98" y="332" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">Graph Coloring</text>
+  <text x="98" y="366" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">+ Heuristic</text>
+  <text x="310" y="324" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Mô hình mỗi session là một đỉnh của đồ thị xung đột;</text>
+  <text x="310" y="352" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">mỗi màu tương ứng với một slot thời gian hợp lệ.</text>
+  <text x="310" y="390" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Sau khi chọn slot, thuật toán mới gán room phù hợp.</text>
+  <text x="750" y="314" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">1. Chuẩn hóa variables, domains, adjacency.</text>
+  <text x="750" y="344" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">2. Ưu tiên biến có domain nhỏ và degree lớn.</text>
+  <text x="750" y="374" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">3. Gom candidate theo slot và tính penalty.</text>
+  <text x="750" y="404" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">4. Chọn candidate đầu tiên hợp lệ có penalty thấp nhất.</text>
+  <text x="1210" y="324" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Runtime rất nhanh</text>
+  <text x="1210" y="354" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Dễ giải thích</text>
+  <text x="1210" y="384" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Phù hợp làm baseline</text>
+  <text x="1490" y="324" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Phụ thuộc heuristic</text>
+  <text x="1490" y="354" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Chất lượng nghiệm</text>
+  <text x="1490" y="382" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">  có thể kém hơn</text>
+
+  <text x="98" y="552" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#1d4ed8">CP-SAT</text>
+  <text x="310" y="534" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Hướng tối ưu hóa ràng buộc có nhánh cận nhẹ.</text>
+  <text x="310" y="562" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Không gian tìm kiếm được cắt tỉa dựa trên khả năng</text>
+  <text x="310" y="590" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">vượt nghiệm tốt nhất hiện tại.</text>
+  <text x="750" y="520" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">1. Sắp biến theo domain_size và session_total.</text>
+  <text x="750" y="550" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">2. DFS theo candidate hợp lệ.</text>
+  <text x="750" y="580" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">3. Cắt nhánh nếu không còn cơ hội vượt bestAssigned.</text>
+  <text x="750" y="610" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">4. Chọn nghiệm theo số session đã xếp và soft score.</text>
+  <text x="1210" y="534" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Nghiệm sạch hard constraint</text>
+  <text x="1210" y="564" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Chất lượng nghiệm tốt</text>
+  <text x="1210" y="594" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Cân bằng giữa đúng và tốt</text>
+  <text x="1490" y="534" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Runtime cao hơn baseline</text>
+  <text x="1490" y="564" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Cần giới hạn node</text>
+
+  <text x="98" y="772" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#0f172a">Tabu Search</text>
+  <text x="310" y="754" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Metaheuristic dựa trên local search và tabu list.</text>
+  <text x="310" y="782" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">Liên tục cải thiện nghiệm hiện tại nhưng tránh quay lại</text>
+  <text x="310" y="810" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">các move vừa đi qua bằng bộ nhớ ngắn hạn.</text>
+  <text x="750" y="740" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">1. Sinh nghiệm khởi tạo bằng greedy.</text>
+  <text x="750" y="770" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">2. Tạo lân cận quanh current solution.</text>
+  <text x="750" y="800" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">3. Chấm penalty và kiểm tra tabu / aspiration.</text>
+  <text x="750" y="830" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">4. Cập nhật current, best và tabu list.</text>
+  <text x="1210" y="754" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Giá trị học thuật tốt</text>
+  <text x="1210" y="784" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Khám phá không gian nghiệm rộng</text>
+  <text x="1490" y="754" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Runtime cao</text>
+  <text x="1490" y="784" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Nhạy với nghiệm khởi tạo</text>
+  <text x="1490" y="812" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0f172a">- Chưa vượt CP-SAT</text>
+</svg>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="920" viewBox="0 0 1500 920">
+  <rect width="1500" height="920" fill="#f8fafc"/>
+  <text x="90" y="80" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#1f2937">So sánh runtime trung bình giữa các solver</text>
+  <text x="90" y="120" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">Đơn vị: mili giây. Chiều dài thanh được scale theo giá trị lớn nhất là Tabu Search ở scenario large.</text>
+
+  <rect x="980" y="70" width="18" height="18" fill="#60a5fa"/>
+  <text x="1010" y="84" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Graph Coloring</text>
+  <rect x="1180" y="70" width="18" height="18" fill="#2563eb"/>
+  <text x="1210" y="84" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">CP-SAT</text>
+  <rect x="1320" y="70" width="18" height="18" fill="#0f172a"/>
+  <text x="1350" y="84" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Tabu Search</text>
+
+  <text x="90" y="210" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#111827">Small</text>
+  <rect x="250" y="180" width="1" height="34" fill="#60a5fa"/>
+  <rect x="250" y="225" width="57" height="34" fill="#0f172a"/>
+  <rect x="250" y="270" width="193" height="34" fill="#2563eb"/>
+  <text x="460" y="294" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">CP-SAT 104.286 ms</text>
+  <text x="324" y="249" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Tabu 30.143 ms</text>
+  <text x="270" y="204" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Graph 0.000 ms</text>
+
+  <text x="90" y="420" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#111827">Medium</text>
+  <rect x="250" y="390" width="1" height="34" fill="#60a5fa"/>
+  <rect x="250" y="435" width="430" height="34" fill="#0f172a"/>
+  <rect x="250" y="480" width="531" height="34" fill="#2563eb"/>
+  <text x="800" y="504" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">CP-SAT 287.143 ms</text>
+  <text x="698" y="459" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Tabu 232.429 ms</text>
+  <text x="270" y="414" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Graph 0.143 ms</text>
+
+  <text x="90" y="630" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#111827">Large</text>
+  <rect x="250" y="600" width="3" height="34" fill="#60a5fa"/>
+  <rect x="250" y="645" width="1020" height="34" fill="#0f172a"/>
+  <rect x="250" y="690" width="544" height="34" fill="#2563eb"/>
+  <text x="1290" y="669" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Tabu 1619.571 ms</text>
+  <text x="812" y="714" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">CP-SAT 863.000 ms</text>
+  <text x="270" y="624" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1f2937">Graph 1.429 ms</text>
+
+  <line x1="250" y1="780" x2="1320" y2="780" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="250" y="820" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748b">0 ms</text>
+  <text x="790" y="820" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748b">~810 ms</text>
+  <text x="1260" y="820" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748b">~1620 ms</text>
+</svg>

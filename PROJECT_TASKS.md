@@ -444,12 +444,12 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 ### Giai đoạn H - Kiểm thử, báo cáo, bảo vệ
 
 #### Task H1. Kiểm thử scheduling
-- [ ] Test dữ liệu nhỏ
-- [ ] Test dữ liệu trung bình
-- [ ] Test dữ liệu lớn hơn
-- [ ] Test conflict cases
-- [ ] Test benchmark API
-- [ ] Test preview/commit sau khi chọn solver chính
+- [x] Test dữ liệu nhỏ
+- [x] Test dữ liệu trung bình
+- [x] Test dữ liệu lớn hơn
+- [x] Test conflict cases
+- [x] Test benchmark API
+- [x] Test preview/commit sau khi chọn solver chính
 
 #### Task H2. Kiểm thử predictive analytics
 - [ ] Kiểm tra pipeline train/evaluate
@@ -459,16 +459,16 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task H3. Cập nhật báo cáo đồ án
 - [ ] Viết lại mục tiêu dự án theo hướng mới
-- [ ] Bổ sung chương benchmark scheduling
-- [ ] Bổ sung phần `Shift` và mô hình thời gian
+- [x] Bổ sung chương benchmark scheduling
+- [x] Bổ sung phần `Shift` và mô hình thời gian
 - [ ] Bổ sung phần predictive analytics classification
-- [ ] Bổ sung đánh giá và lựa chọn thuật toán
+- [x] Bổ sung đánh giá và lựa chọn thuật toán
 
 #### Task H4. Chuẩn bị bảo vệ
-- [ ] Tạo demo flow scheduling benchmark
-- [ ] Tạo demo flow scheduling production-like
+- [x] Tạo demo flow scheduling benchmark
+- [x] Tạo demo flow scheduling production-like
 - [ ] Tạo demo flow predictive analytics
-- [ ] Chuẩn bị slide và câu hỏi phản biện
+- [x] Chuẩn bị slide và câu hỏi phản biện
 
 ---
 

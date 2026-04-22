@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860">
+  <rect width="1400" height="860" fill="#eef2ff"/>
+  <rect x="90" y="80" width="1220" height="700" rx="24" fill="#111827"/>
+  <circle cx="135" cy="120" r="10" fill="#ef4444"/>
+  <circle cx="165" cy="120" r="10" fill="#f59e0b"/>
+  <circle cx="195" cy="120" r="10" fill="#10b981"/>
+  <text x="250" y="128" font-family="Menlo, Monaco, Consolas, monospace" font-size="24" fill="#e5e7eb">terminal - scheduling benchmark artifact</text>
+
+  <text x="130" y="185" font-family="Menlo, Monaco, Consolas, monospace" font-size="24" fill="#93c5fd">$ env GOCACHE=/tmp/go-build go run ./cmd/cli/scheduling_benchmark</text>
+  <text x="130" y="240" font-family="Menlo, Monaco, Consolas, monospace" font-size="22" fill="#f9fafb"># Scheduling Benchmark Study</text>
+  <text x="130" y="285" font-family="Menlo, Monaco, Consolas, monospace" font-size="20" fill="#d1d5db">Generated at: 2026-04-22T09:14:15+07:00</text>
+  <text x="130" y="320" font-family="Menlo, Monaco, Consolas, monospace" font-size="20" fill="#d1d5db">Recommended solver: cp_sat (CP-SAT)</text>
+
+  <text x="130" y="390" font-family="Menlo, Monaco, Consolas, monospace" font-size="21" fill="#93c5fd">Scenario small</text>
+  <text x="130" y="425" font-family="Menlo, Monaco, Consolas, monospace" font-size="19" fill="#e5e7eb">CP-SAT: feasibility 1.000 | hard 0 | soft 0 | avg 104.286 ms</text>
+  <text x="130" y="455" font-family="Menlo, Monaco, Consolas, monospace" font-size="19" fill="#e5e7eb">Tabu Search: feasibility 1.000 | hard 0 | soft -30 | avg 30.143 ms</text>
+  <text x="130" y="485" font-family="Menlo, Monaco, Consolas, monospace" font-size="19" fill="#e5e7eb">Graph Coloring: feasibility 1.000 | hard 0 | soft -45 | avg 0.000 ms</text>
+
+  <text x="130" y="550" font-family="Menlo, Monaco, Consolas, monospace" font-size="21" fill="#93c5fd">Scenario medium</text>
+  <text x="130" y="585" font-family="Menlo, Monaco, Consolas, monospace" font-size="19" fill="#e5e7eb">Graph Coloring: feasibility 1.000 | hard 0 | soft 0 | avg 0.143 ms</text>
+  <text x="130" y="615" font-family="Menlo, Monaco, Consolas, monospace" font-size="19" fill="#e5e7eb">Tabu Search: feasibility 1.000 | hard 0 | soft 0 | avg 232.429 ms</text>
+  <text x="130" y="645" font-family="Menlo, Monaco, Consolas, monospace" font-size="19" fill="#e5e7eb">CP-SAT: feasibility 1.000 | hard 0 | soft 0 | avg 287.143 ms</text>
+
+  <text x="130" y="710" font-family="Menlo, Monaco, Consolas, monospace" font-size="21" fill="#93c5fd">Scenario large</text>
+  <text x="130" y="745" font-family="Menlo, Monaco, Consolas, monospace" font-size="19" fill="#e5e7eb">Graph Coloring: 1.429 ms | CP-SAT: 863.000 ms | Tabu Search: 1619.571 ms</text>
+</svg>

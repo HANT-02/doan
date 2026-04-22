@@ -1183,6 +1183,14 @@ Các ràng buộc chính của bài toán scheduling gồm:
 
 Việc triển khai nhiều solver trên cùng một chuẩn input giúp việc benchmark trở nên có ý nghĩa hơn và cho phép chọn solver mặc định dựa trên dữ liệu thay vì cảm tính.
 
+Về mặt cơ chế hoạt động, ba solver được hiểu ngắn gọn như sau:
+
+- `Graph Coloring + heuristic` xem mỗi session là một đỉnh của đồ thị xung đột, sau đó sắp xếp các đỉnh khó trước và gán slot/phòng theo penalty thấp nhất. Thuật toán này rất nhanh và phù hợp làm baseline.
+- `CP-SAT` đi theo hướng tìm kiếm ràng buộc: sắp thứ tự biến theo độ khó, thử các candidate hợp lệ, cắt nhánh khi không thể vượt nghiệm tốt nhất đang có, và chọn nghiệm tốt nhất theo số buổi xếp được rồi mới đến soft score.
+- `Tabu Search` bắt đầu từ một nghiệm khởi tạo, sau đó lặp qua các bước chuyển trong lân cận, dùng tabu list để tránh quay lại trạng thái gần nhất và cải thiện penalty của nghiệm theo thời gian.
+
+Chi tiết mã giả và phân tích từng thuật toán được trình bày đầy đủ trong tài liệu benchmark riêng tại [docs/SCHEDULING_BENCHMARK_REPORT_2026-04-14.md](/Users/hant/golang/doan/docs/SCHEDULING_BENCHMARK_REPORT_2026-04-14.md).
+
 ## 4.5 Bộ dữ liệu benchmark
 
 **Bảng 4.1. Bộ dữ liệu benchmark**
@@ -1195,15 +1203,37 @@ Việc triển khai nhiều solver trên cùng một chuẩn input giúp việc 
 
 Việc sử dụng dữ liệu benchmark tổng hợp có kiểm soát giúp bảo đảm các solver được so sánh trên cùng một điều kiện đầu vào, từ đó tạo cơ sở hợp lý để phân tích runtime, khả năng tìm nghiệm và độ ổn định của từng thuật toán.
 
+![Hình 4.1 - Tổng quan ba scenario benchmark](assets/benchmark/benchmark_dataset_overview.svg)
+
+**Hình 4.1.** Tổng quan ba scenario benchmark dùng trong nghiên cứu scheduling.
+
 ## 4.6 Kết quả benchmark
 
-Theo kết quả benchmark hiện có trong project, cả ba solver đều tạo được nghiệm khả thi trong các scenario đã thiết kế, nhưng chất lượng nghiệm và runtime có sự khác biệt. Solver heuristic có lợi thế rất rõ về tốc độ, trong khi `CP-SAT` cho thấy cân bằng tốt hơn giữa tốc độ và chất lượng nghiệm ở những case có độ phức tạp cao hơn. `Tabu Search` đóng vai trò tham chiếu về mặt phương pháp nhưng chưa tạo ra ưu thế đủ lớn để trở thành lựa chọn mặc định.
+Benchmark chính thức được chạy lại ngày `2026-04-22` bằng artifact CLI `cmd/cli/scheduling_benchmark`. Kết quả cho thấy cả ba solver đều đạt `feasibility = 1.000` và `hard violation = 0` trên cả ba scenario. Tuy nhiên, sự khác biệt xuất hiện rõ ở hai trục: chất lượng nghiệm tại scenario `small` và runtime khi dữ liệu tăng lên `medium/large`.
 
-**[Chèn Hình 4.1: Bảng benchmark ba solver]**
+**Bảng 4.2. Kết quả benchmark scheduling chính thức**
 
-**[Chèn Hình 4.2: Biểu đồ so sánh runtime giữa các solver]**
+| Scenario | Solver | Feasibility | Hard violations | Soft score | Avg runtime (ms) | Stable |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Small | CP-SAT | 1.000 | 0 | 0 | 104.286 | true |
+| Small | Tabu Search | 1.000 | 0 | -30 | 30.143 | true |
+| Small | Graph Coloring + Heuristic | 1.000 | 0 | -45 | 0.000 | true |
+| Medium | Graph Coloring + Heuristic | 1.000 | 0 | 0 | 0.143 | true |
+| Medium | Tabu Search | 1.000 | 0 | 0 | 232.429 | true |
+| Medium | CP-SAT | 1.000 | 0 | 0 | 287.143 | true |
+| Large | Graph Coloring + Heuristic | 1.000 | 0 | 0 | 1.429 | true |
+| Large | CP-SAT | 1.000 | 0 | 0 | 863.000 | true |
+| Large | Tabu Search | 1.000 | 0 | 0 | 1619.571 | true |
 
-**[Chèn Hình 4.3: Biểu đồ so sánh chất lượng nghiệm]**
+`Graph Coloring + Heuristic` có ưu thế mạnh nhất về tốc độ, nhưng ở scenario `small` lại để soft score thấp hơn `CP-SAT`. `Tabu Search` giữ vai trò tham chiếu học thuật cho nhánh metaheuristic, song không tạo ra lợi thế chất lượng đủ rõ để bù chi phí runtime cao hơn. `CP-SAT` là solver cân bằng nhất giữa tính đúng, chất lượng nghiệm và khả năng trình bày trong đồ án.
+
+![Hình 4.2 - Biểu đồ runtime benchmark](assets/benchmark/benchmark_runtime_comparison.svg)
+
+**Hình 4.2.** So sánh runtime trung bình giữa ba solver trên ba scenario.
+
+![Hình 4.3 - Biểu đồ quality small scenario](assets/benchmark/benchmark_penalty_small.svg)
+
+**Hình 4.3.** So sánh độ phạt soft constraint ở scenario `small`.
 
 ## 4.7 Quyết định lựa chọn solver chính
 
@@ -1212,6 +1242,8 @@ Từ kết quả benchmark, `CP-SAT` được lựa chọn làm solver mặc đ�
 1. Solver duy trì được nghiệm sạch theo hard constraints.
 2. Chất lượng nghiệm tốt hơn ở các scenario có sự phân biệt về soft score.
 3. Runtime vẫn ở mức chấp nhận được cho phạm vi vận hành và demo của đồ án.
+
+Ngoài ba lý do trên, benchmark còn cho thấy `CP-SAT` giữ được độ ổn định kết quả qua nhiều lần chạy và vẫn hoàn tất ở scenario `large` trong thời gian dưới 1 giây trung bình. Điều này khiến `CP-SAT` trở thành lựa chọn hợp lý nhất cho API scheduling chính, trong khi hai solver còn lại vẫn được giữ lại để benchmark, so sánh và trình bày chiều sâu kỹ thuật của đề tài.
 
 ## 4.8 Hướng phát triển bài toán AT_RISK
 

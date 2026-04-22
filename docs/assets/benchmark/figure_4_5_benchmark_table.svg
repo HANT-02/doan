@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="980" viewBox="0 0 2100 980">
+  <rect width="2100" height="980" fill="#ffffff"/>
+  <text x="60" y="72" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#0f172a">Hình 4.5. Bảng benchmark ba solver với đầy đủ số liệu đo</text>
+  <text x="60" y="110" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">Số liệu chính thức ngày 22/04/2026, mỗi scenario chạy 7 lần cho từng solver.</text>
+
+  <rect x="60" y="150" width="1980" height="80" fill="#1e293b"/>
+  <text x="90" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Scenario</text>
+  <text x="270" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Solver</text>
+  <text x="650" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Feasibility</text>
+  <text x="860" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Hard violation</text>
+  <text x="1100" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Soft score</text>
+  <text x="1310" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Runtime TB (ms)</text>
+  <text x="1585" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Runtime min-max</text>
+  <text x="1865" y="200" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Stable</text>
+
+  <g font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#0f172a">
+    <rect x="60" y="230" width="1980" height="75" fill="#f8fafc"/>
+    <text x="90" y="277">Small</text><text x="270" y="277">Graph Coloring + Heuristic</text><text x="670" y="277">1.000</text><text x="920" y="277">0</text><text x="1120" y="277">-45.000</text><text x="1350" y="277">0.000</text><text x="1610" y="277">0 - 0</text><text x="1885" y="277">true</text>
+    <rect x="60" y="305" width="1980" height="75" fill="#ffffff"/>
+    <text x="90" y="352">Small</text><text x="270" y="352">CP-SAT</text><text x="670" y="352">1.000</text><text x="920" y="352">0</text><text x="1120" y="352">0.000</text><text x="1350" y="352">104.286</text><text x="1610" y="352">98 - 124</text><text x="1885" y="352">true</text>
+    <rect x="60" y="380" width="1980" height="75" fill="#f8fafc"/>
+    <text x="90" y="427">Small</text><text x="270" y="427">Tabu Search</text><text x="670" y="427">1.000</text><text x="920" y="427">0</text><text x="1120" y="427">-30.000</text><text x="1350" y="427">30.143</text><text x="1610" y="427">28 - 32</text><text x="1885" y="427">true</text>
+
+    <rect x="60" y="455" width="1980" height="75" fill="#ffffff"/>
+    <text x="90" y="502">Medium</text><text x="270" y="502">Graph Coloring + Heuristic</text><text x="670" y="502">1.000</text><text x="920" y="502">0</text><text x="1120" y="502">0.000</text><text x="1350" y="502">0.143</text><text x="1610" y="502">0 - 1</text><text x="1885" y="502">true</text>
+    <rect x="60" y="530" width="1980" height="75" fill="#f8fafc"/>
+    <text x="90" y="577">Medium</text><text x="270" y="577">CP-SAT</text><text x="670" y="577">1.000</text><text x="920" y="577">0</text><text x="1120" y="577">0.000</text><text x="1350" y="577">287.143</text><text x="1610" y="577">273 - 325</text><text x="1885" y="577">true</text>
+    <rect x="60" y="605" width="1980" height="75" fill="#ffffff"/>
+    <text x="90" y="652">Medium</text><text x="270" y="652">Tabu Search</text><text x="670" y="652">1.000</text><text x="920" y="652">0</text><text x="1120" y="652">0.000</text><text x="1350" y="652">232.429</text><text x="1610" y="652">219 - 256</text><text x="1885" y="652">true</text>
+
+    <rect x="60" y="680" width="1980" height="75" fill="#f8fafc"/>
+    <text x="90" y="727">Large</text><text x="270" y="727">Graph Coloring + Heuristic</text><text x="670" y="727">1.000</text><text x="920" y="727">0</text><text x="1120" y="727">0.000</text><text x="1350" y="727">1.429</text><text x="1610" y="727">1 - 2</text><text x="1885" y="727">true</text>
+    <rect x="60" y="755" width="1980" height="75" fill="#ffffff"/>
+    <text x="90" y="802">Large</text><text x="270" y="802">CP-SAT</text><text x="670" y="802">1.000</text><text x="920" y="802">0</text><text x="1120" y="802">0.000</text><text x="1350" y="802">863.000</text><text x="1610" y="802">820 - 954</text><text x="1885" y="802">true</text>
+    <rect x="60" y="830" width="1980" height="75" fill="#f8fafc"/>
+    <text x="90" y="877">Large</text><text x="270" y="877">Tabu Search</text><text x="670" y="877">1.000</text><text x="920" y="877">0</text><text x="1120" y="877">0.000</text><text x="1350" y="877">1619.571</text><text x="1610" y="877">1591 - 1671</text><text x="1885" y="877">true</text>
+  </g>
+
+  <g stroke="#dbe3f0" stroke-width="2">
+    <line x1="220" y1="150" x2="220" y2="905"/>
+    <line x1="620" y1="150" x2="620" y2="905"/>
+    <line x1="830" y1="150" x2="830" y2="905"/>
+    <line x1="1060" y1="150" x2="1060" y2="905"/>
+    <line x1="1280" y1="150" x2="1280" y2="905"/>
+    <line x1="1555" y1="150" x2="1555" y2="905"/>
+    <line x1="1835" y1="150" x2="1835" y2="905"/>
+  </g>
+</svg>

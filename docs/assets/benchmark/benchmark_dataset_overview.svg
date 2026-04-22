@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+  <rect width="1400" height="760" fill="#f5f7fb"/>
+  <text x="70" y="90" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#1f2937">Bộ dữ liệu benchmark scheduling</text>
+  <text x="70" y="130" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">Ba scenario chuẩn dùng để so sánh Graph Coloring, CP-SAT và Tabu Search trên cùng miền dữ liệu.</text>
+
+  <rect x="70" y="190" width="390" height="470" rx="26" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="505" y="190" width="390" height="470" rx="26" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="940" y="190" width="390" height="470" rx="26" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+
+  <text x="110" y="250" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#2563eb">Scenario small</text>
+  <text x="545" y="250" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#2563eb">Scenario medium</text>
+  <text x="980" y="250" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#2563eb">Scenario large</text>
+
+  <text x="110" y="305" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">6 lớp học</text>
+  <text x="110" y="345" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">4 giáo viên</text>
+  <text x="110" y="385" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">3 phòng học</text>
+  <text x="110" y="425" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">3 ca học</text>
+  <text x="110" y="465" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">12 session yêu cầu</text>
+  <text x="110" y="505" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">7 lần chạy</text>
+  <text x="110" y="565" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">Mục tiêu:</text>
+  <text x="110" y="598" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">- đo feasibility baseline</text>
+  <text x="110" y="628" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">- so sánh soft score bước đầu</text>
+
+  <text x="545" y="305" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">10 lớp học</text>
+  <text x="545" y="345" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">5 giáo viên</text>
+  <text x="545" y="385" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">4 phòng học</text>
+  <text x="545" y="425" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">3 ca học</text>
+  <text x="545" y="465" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">30 session yêu cầu</text>
+  <text x="545" y="505" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">7 lần chạy</text>
+  <text x="545" y="565" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">Mục tiêu:</text>
+  <text x="545" y="598" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">- xem độ ổn định khi ràng buộc tăng</text>
+  <text x="545" y="628" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">- so sánh runtime ở mức trung bình</text>
+
+  <text x="980" y="305" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">16 lớp học</text>
+  <text x="980" y="345" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">7 giáo viên</text>
+  <text x="980" y="385" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">5 phòng học</text>
+  <text x="980" y="425" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">3 ca học</text>
+  <text x="980" y="465" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">64 session yêu cầu</text>
+  <text x="980" y="505" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#111827">7 lần chạy</text>
+  <text x="980" y="565" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">Mục tiêu:</text>
+  <text x="980" y="598" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">- đánh giá scalability</text>
+  <text x="980" y="628" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4b5563">- đánh giá stability và runtime lớn</text>
+</svg>

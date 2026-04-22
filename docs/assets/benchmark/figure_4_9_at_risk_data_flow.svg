@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="940" viewBox="0 0 1680 940">
+  <rect width="1680" height="940" fill="#f8fafc"/>
+  <text x="70" y="82" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#0f172a">Hình 4.9. Luồng dữ liệu phục vụ bài toán dự báo AT_RISK</text>
+  <text x="70" y="122" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#475569">Nhánh predictive kế thừa dữ liệu học vụ đã được chuẩn hóa sau lesson để hình thành feature set cho cảnh báo sớm.</text>
+
+  <rect x="70" y="190" width="300" height="90" rx="22" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="70" y="310" width="300" height="90" rx="22" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="70" y="430" width="300" height="90" rx="22" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="70" y="550" width="300" height="90" rx="22" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <rect x="70" y="670" width="300" height="90" rx="22" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+
+  <text x="116" y="244" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">Attendance</text>
+  <text x="116" y="362" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">LessonSummary</text>
+  <text x="116" y="482" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">AcademicRecord</text>
+  <text x="116" y="602" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">LeaveRequest</text>
+  <text x="116" y="722" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#2563eb">Student / Enrollment</text>
+
+  <rect x="520" y="250" width="320" height="450" rx="28" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="566" y="314" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#1e3a8a">Feature Engineering</text>
+  <text x="560" y="366" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">- absent_rate</text>
+  <text x="560" y="400" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">- late_count / excused_count</text>
+  <text x="560" y="434" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">- homework completion rate</text>
+  <text x="560" y="468" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">- homework_score average</text>
+  <text x="560" y="502" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">- attitude / participation average</text>
+  <text x="560" y="536" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">- approved leave pattern</text>
+  <text x="560" y="570" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">- class engagement snapshot</text>
+  <text x="560" y="620" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">Output trung gian:</text>
+  <text x="560" y="654" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1e3a8a">student_class_snapshot / training_row</text>
+
+  <rect x="980" y="250" width="300" height="200" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <text x="1032" y="314" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#0f172a">Labeling</text>
+  <text x="1018" y="366" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">AT_RISK / NOT_AT_RISK</text>
+  <text x="1018" y="400" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">horizon: 28 ngày</text>
+
+  <rect x="980" y="500" width="300" height="200" rx="28" fill="#ffffff" stroke="#dbe3f0" stroke-width="2"/>
+  <text x="1018" y="564" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#0f172a">Model tối giản</text>
+  <text x="1018" y="616" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Rule-based baseline</text>
+  <text x="1018" y="648" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0f172a">Logistic Regression</text>
+
+  <rect x="1410" y="330" width="210" height="290" rx="28" fill="#dcfce7" stroke="#86efac" stroke-width="2"/>
+  <text x="1450" y="392" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#166534">Student Portal</text>
+  <text x="1440" y="446" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#166534">- risk_score</text>
+  <text x="1440" y="476" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#166534">- risk_band</text>
+  <text x="1440" y="506" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#166534">- primary_reason</text>
+  <text x="1440" y="536" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#166534">- top_features</text>
+  <text x="1440" y="566" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#166534">- cảnh báo sớm</text>
+
+  <g stroke="#94a3b8" stroke-width="4" fill="none">
+    <line x1="370" y1="235" x2="520" y2="330"/>
+    <line x1="370" y1="355" x2="520" y2="395"/>
+    <line x1="370" y1="475" x2="520" y2="460"/>
+    <line x1="370" y1="595" x2="520" y2="525"/>
+    <line x1="370" y1="715" x2="520" y2="590"/>
+    <line x1="840" y1="430" x2="980" y2="350"/>
+    <line x1="840" y1="520" x2="980" y2="600"/>
+    <line x1="1280" y1="600" x2="1410" y2="475"/>
+  </g>
+</svg>
