@@ -1245,19 +1245,290 @@ Từ kết quả benchmark, `CP-SAT` được lựa chọn làm solver mặc đ�
 
 Ngoài ba lý do trên, benchmark còn cho thấy `CP-SAT` giữ được độ ổn định kết quả qua nhiều lần chạy và vẫn hoàn tất ở scenario `large` trong thời gian dưới 1 giây trung bình. Điều này khiến `CP-SAT` trở thành lựa chọn hợp lý nhất cho API scheduling chính, trong khi hai solver còn lại vẫn được giữ lại để benchmark, so sánh và trình bày chiều sâu kỹ thuật của đề tài.
 
-## 4.8 Hướng phát triển bài toán AT_RISK
+## 4.8 Dự báo học viên có nguy cơ học tập kém theo hướng Python Machine Learning
 
-Ngoài scheduling, đề tài còn chuẩn bị nền dữ liệu cho một hướng phát triển có ý nghĩa thực tiễn là phân loại học viên có nguy cơ học kém theo nhãn `AT_RISK`. Các dữ liệu có thể sử dụng cho hướng này bao gồm:
+Ngoài nhánh `scheduling`, đề tài triển khai thêm một hướng nghiên cứu có giá trị thực tiễn cao là dự báo sớm học viên có nguy cơ học tập kém theo nhãn `AT_RISK`. Khác với phiên bản ý tưởng ban đầu chỉ dừng ở mức rule-based hoặc train trực tiếp trong runtime Go, phiên bản hoàn chỉnh của đồ án đã chuyển nhánh này sang một project Python riêng đặt ngay trong cùng repository tại `ml/at_risk_prediction`. Kiến trúc này giúp tách riêng hai pha:
 
-- dữ liệu chuyên cần từ `Attendance`,
-- dữ liệu tổng kết buổi học từ `LessonSummary`,
-- dữ liệu kết quả học tập từ `AcademicRecord`,
-- dữ liệu leave request đã được duyệt,
-- trạng thái hoạt động của học viên.
+- pha ngoại tuyến (`offline`) để trích xuất dữ liệu, huấn luyện mô hình và sinh artifact;
+- pha trực tuyến (`online`) để backend Go đọc artifact đã được sinh ra và cung cấp API cho giao diện quản trị và cổng học viên.
 
-Trong giai đoạn hiện tại, nhánh này mới dừng ở mức chuẩn hóa dữ liệu và định nghĩa bài toán. Tuy nhiên, đây là điểm mở rộng tốt để tăng chiều sâu nghiên cứu cho đề tài và thể hiện khả năng phát triển hệ thống theo hướng data-driven.
+Việc tách như vậy có ba lợi ích. Thứ nhất, Python phù hợp hơn với tác vụ khoa học dữ liệu và machine learning nhờ hệ sinh thái thư viện như `pandas`, `scikit-learn`, `joblib`, `matplotlib`. Thứ hai, backend Go của hệ thống vẫn giữ nguyên vai trò phục vụ API và không phải gánh chi phí huấn luyện mô hình trong runtime. Thứ ba, toàn bộ thực nghiệm có thể tái lập được, phù hợp với yêu cầu của một báo cáo đồ án có yếu tố nghiên cứu.
 
-**[Chèn Hình 4.4: Luồng dữ liệu phục vụ bài toán dự báo AT_RISK]**
+### 4.8.1 Mục tiêu bài toán và đơn vị dự báo
+
+Mục tiêu của bài toán là đưa ra cảnh báo sớm cho từng học viên trong từng lớp cụ thể, thay vì chỉ đánh giá chung ở mức toàn học viên. Vì vậy đơn vị quan sát của nghiên cứu là:
+
+```text
+student_class_snapshot
+```
+
+Mỗi snapshot biểu diễn:
+
+- một học viên,
+- trong một lớp cụ thể,
+- tại một thời điểm snapshot,
+- với các feature được tổng hợp trong cửa sổ quan sát trước đó.
+
+Đầu ra của hệ thống gồm hai lớp:
+
+1. Đầu ra của mô hình:
+   - `risk_label ∈ {AT_RISK, NOT_AT_RISK}`
+   - `risk_score ∈ [0,1]`
+   - `primary_reason`
+   - `top_features`
+   - `model_version`
+
+2. Đầu ra phục vụ tích hợp hệ thống:
+   - `model_metadata.json`
+   - `metrics.json`
+   - `latest_predictions.json`
+   - `classification_report.md`
+   - các hình phân tích như confusion matrix và feature importance
+
+### 4.8.2 Kiến trúc pipeline dự báo
+
+Pipeline predictive của đồ án được tổ chức theo hướng `DB/CSV -> Python ML -> artifact -> Go API -> UI`. Nguồn dữ liệu có thể đến trực tiếp từ PostgreSQL của hệ thống hoặc từ file CSV đã export để phục vụ thực nghiệm. Sau đó project Python thực hiện các bước chuẩn hóa dữ liệu, sinh feature, chia tập train/test, huấn luyện nhiều mô hình, đánh giá, rồi xuất artifact để backend Go sử dụng.
+
+![Hình 4.4 - Luồng dữ liệu phục vụ bài toán dự báo AT_RISK](assets/benchmark/figure_4_9_at_risk_data_flow.svg)
+
+**Hình 4.4.** Luồng dữ liệu cho bài toán dự báo `AT_RISK` theo kiến trúc Python ML kết hợp backend Go.
+
+Trong kiến trúc này:
+
+- Python chịu trách nhiệm về dữ liệu, mô hình, metric và artifact;
+- Go backend chỉ đọc artifact đã sinh ra và cung cấp API:
+  - `GET /api/v1/predictive/at-risk/students`
+  - `GET /api/v1/predictive/at-risk/model-metadata`
+  - `GET /api/v1/student/at-risk`
+- Frontend admin và student dùng lại contract cũ, nhưng dữ liệu dự báo nay đến từ artifact Python thay vì huấn luyện trong runtime.
+
+### 4.8.3 Dữ liệu đầu vào và cửa sổ quan sát
+
+Project Python lấy dữ liệu từ các bảng nghiệp vụ đã được chuẩn hóa sau khi có `lesson`:
+
+- `students`
+- `enrollments`
+- `lessons`
+- `attendance`
+- `lesson_summaries`
+- `academic_records`
+- `leave_requests`
+
+Để tránh rò rỉ dữ liệu tương lai (`data leakage`), nghiên cứu dùng hai cửa sổ thời gian:
+
+- **Observation window:** `28 ngày` trước thời điểm snapshot để tạo feature
+- **Prediction horizon:** `28 ngày` sau thời điểm snapshot để gán nhãn
+
+Một snapshot chỉ được đưa vào tập huấn luyện nếu có đủ dữ liệu tương lai để xác định nhãn, ví dụ có đủ bản ghi attendance hoặc academic record trong cửa sổ dự báo. Điều này giúp giảm nguy cơ sinh nhãn nhiễu.
+
+### 4.8.4 Feature engineering và mô hình toán học
+
+Các feature hiện tại được chốt theo hướng đơn giản, dễ diễn giải, nhưng vẫn đủ phản ánh hành vi học tập. Bảng 4.7 trình bày các feature chính.
+
+**Bảng 4.7.** Tập feature sử dụng cho bài toán dự báo `AT_RISK`
+
+| Nhóm feature | Tên feature | Ý nghĩa |
+| --- | --- | --- |
+| Chuyên cần | `attendance_rate_28d` | Tỷ lệ có mặt trong 28 ngày gần nhất |
+| Chuyên cần | `absence_count_28d` | Số buổi vắng trong 28 ngày gần nhất |
+| Học tập | `average_total_score_28d` | Điểm tổng hợp trung bình trong cửa sổ quan sát |
+| Học tập | `homework_completion_rate_28d` | Tỷ lệ hoàn thành bài tập |
+| Tải học | `active_enrollment_count_28d` | Số lớp đang theo học |
+| Tải học | `weekly_lesson_load_28d` | Mật độ buổi học trung bình mỗi tuần |
+| Vận hành | `approved_leave_count_28d` | Số đơn xin phép đã được duyệt |
+| Thời gian | `days_since_last_lesson` | Số ngày từ buổi học gần nhất đến thời điểm snapshot |
+
+Về mặt toán học, bài toán được mô hình hóa như một bài toán phân lớp nhị phân. Với mỗi mẫu thứ `i`, gọi:
+
+- `x_i ∈ R^d` là vector đặc trưng;
+- `y_i ∈ {0,1}` là nhãn đích, trong đó:
+  - `y_i = 1` tương ứng `AT_RISK`
+  - `y_i = 0` tương ứng `NOT_AT_RISK`
+
+Hệ thống cần tìm một hàm:
+
+```text
+f(x_i) -> p_i
+```
+
+trong đó `p_i` là xác suất học viên thuộc lớp `AT_RISK`. Từ xác suất đó, hệ thống dùng ngưỡng quyết định `τ = 0.5` để phân lớp:
+
+```text
+AT_RISK      nếu p_i >= 0.5
+NOT_AT_RISK  nếu p_i <  0.5
+```
+
+Label `AT_RISK` được gán khi trong 28 ngày tương lai học viên có ít nhất một dấu hiệu học tập đáng lo ngại, ví dụ:
+
+- tỷ lệ chuyên cần tương lai nhỏ hơn `0.80`,
+- điểm tổng hợp trung bình tương lai nhỏ hơn `5.00`,
+- tỷ lệ hoàn thành bài tập tương lai nhỏ hơn `0.60`.
+
+### 4.8.5 Các mô hình được thử nghiệm
+
+Để giữ sự cân bằng giữa tính học thuật và khả năng triển khai trên máy cá nhân, đề tài thử nghiệm ba mô hình:
+
+1. `rule_based baseline`
+2. `Logistic Regression`
+3. `Random Forest`
+
+#### a. Rule-based baseline
+
+Đây là mô hình nền dựa trên tri thức nghiệp vụ, không học trọng số từ dữ liệu mà sử dụng các luật được xác định trước. Ví dụ một học viên sẽ bị cảnh báo nếu vừa có tỷ lệ chuyên cần thấp, vừa có điểm trung bình thấp, hoặc tỷ lệ hoàn thành bài tập không đạt ngưỡng.
+
+Ưu điểm của baseline này là:
+
+- rất dễ giải thích,
+- phù hợp để so sánh với mô hình học máy,
+- giúp kiểm tra xem mô hình ML có thực sự học được điều gì tốt hơn luật thủ công hay không.
+
+#### b. Logistic Regression
+
+`Logistic Regression` là mô hình phân lớp nhị phân kinh điển, phù hợp với dữ liệu bảng có số lượng feature không quá lớn. Mô hình tính:
+
+```text
+z = w^T x + b
+```
+
+Sau đó dùng hàm sigmoid:
+
+```text
+sigma(z) = 1 / (1 + e^(-z))
+```
+
+để biến đổi đầu ra thành xác suất `p(y = 1 | x)`.
+
+Ưu điểm của Logistic Regression trong đồ án này là:
+
+- nhẹ khi huấn luyện trên CPU,
+- dễ diễn giải hệ số,
+- dễ trình bày trong báo cáo nghiên cứu,
+- dễ chuyển thành lý do cảnh báo cho frontend.
+
+#### c. Random Forest
+
+`Random Forest` là mô hình tổ hợp nhiều cây quyết định (`ensemble learning`). Mỗi cây học trên một mẫu dữ liệu bootstrap khác nhau và trên một tập feature con ngẫu nhiên, sau đó toàn bộ rừng quyết định bằng bỏ phiếu hoặc trung bình xác suất.
+
+Ưu điểm của Random Forest là:
+
+- biểu diễn tốt hơn mối quan hệ phi tuyến,
+- thường ổn định hơn một cây quyết định đơn,
+- có thể cung cấp độ quan trọng của feature.
+
+Tuy nhiên, Random Forest khó giải thích chi tiết hơn Logistic Regression và thường nặng hơn ở bước huấn luyện/suy luận.
+
+### 4.8.6 Thiết lập thực nghiệm
+
+Tại thời điểm chốt báo cáo, dữ liệu PostgreSQL thật của hệ thống vẫn chưa sinh đủ `student_class_snapshot` vì môi trường vận hành chưa có lượng `lesson` và lịch sử học vụ đủ dày. Do đó, để bảo đảm khả năng tái lập, nhánh nghiên cứu hiện được benchmark chính thức trên bộ dữ liệu CSV demo chuẩn hóa.
+
+Thông số thực nghiệm:
+
+- nguồn dữ liệu: `csv: at_risk_dataset_demo.csv`
+- số dòng dữ liệu: `20`
+- số học viên: `20`
+- số lớp: `2`
+- phân phối nhãn:
+  - `AT_RISK = 10`
+  - `NOT_AT_RISK = 10`
+- train/test split:
+  - train = `16`
+  - test = `4`
+- random seed = `42`
+
+Với quy mô dataset hiện tại, mục tiêu chính của thực nghiệm là:
+
+- chứng minh pipeline có thể vận hành đầy đủ từ dữ liệu đến artifact,
+- so sánh ba mô hình theo cùng một protocol,
+- chọn mô hình chính cho tích hợp hệ thống,
+- tạo nền để thay bộ CSV demo bằng dữ liệu thật khi hệ thống tích lũy đủ lịch sử học vụ.
+
+### 4.8.7 Kết quả thực nghiệm
+
+Để trình bày kết quả rõ ràng hơn, Bảng 4.8 tổng hợp metric của cả ba mô hình trên cùng tập kiểm thử.
+
+**Bảng 4.8.** Kết quả benchmark ba mô hình dự báo `AT_RISK`
+
+| Mô hình | Accuracy | Precision | Recall | F1-score | TN | FP | FN | TP | Ghi chú |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Rule-based | 1.000 | 1.000 | 1.000 | 1.000 | 2 | 0 | 0 | 2 | Baseline nghiệp vụ |
+| Logistic Regression | 1.000 | 1.000 | 1.000 | 1.000 | 2 | 0 | 0 | 2 | Mô hình ML tuyến tính |
+| Random Forest | 1.000 | 1.000 | 1.000 | 1.000 | 2 | 0 | 0 | 2 | Mô hình ensemble |
+
+Có thể thấy trên tập kiểm thử hiện tại, cả ba mô hình đều đạt kết quả tuyệt đối. Điều này không có nghĩa rằng ba mô hình tương đương tuyệt đối trong mọi bối cảnh, mà phản ánh hai yếu tố:
+
+- tập dữ liệu demo hiện còn nhỏ và khá sạch,
+- các mẫu `AT_RISK` và `NOT_AT_RISK` đang có mức phân tách tốt theo feature đã chọn.
+
+Để hỗ trợ phân tích trực quan, Hình 4.5 trình bày ma trận nhầm lẫn của mô hình được chọn để trình bày chi tiết, còn Hình 4.6 minh họa mức độ quan trọng tương đối của các feature.
+
+![Hình 4.5 - Confusion matrix của mô hình dự báo AT_RISK](../ml/at_risk_prediction/artifacts/figures/confusion_matrix.png)
+
+**Hình 4.5.** Ma trận nhầm lẫn trên tập kiểm thử của mô hình được chọn để trực quan hóa.
+
+![Hình 4.6 - Feature importance của mô hình dự báo AT_RISK](../ml/at_risk_prediction/artifacts/figures/feature_importance.png)
+
+**Hình 4.6.** Mức độ ảnh hưởng tương đối của các feature trong quá trình dự báo.
+
+Ngoài các metric chuẩn, thống kê xác suất dự báo cho thấy:
+
+- `rule_based`: điểm rủi ro trung bình `0.4125`
+- `logistic_regression`: điểm rủi ro trung bình `0.514292`
+- `random_forest`: điểm rủi ro trung bình `0.507793`
+
+Như vậy, tuy các metric phân lớp giống nhau, cách lượng hóa `risk_score` của các mô hình vẫn khác nhau. Đây là cơ sở quan trọng khi cần hiển thị mức cảnh báo và diễn giải lý do cảnh báo trên giao diện.
+
+### 4.8.8 Lý do lựa chọn mô hình chính
+
+Do cả ba mô hình hiện đang cho metric bằng nhau trên tập kiểm thử, đề tài cần một quy tắc chọn mô hình chính ngoài accuracy đơn thuần. Quy tắc chọn được chốt theo thứ tự ưu tiên:
+
+1. `Recall`
+2. `F1-score`
+3. `Precision`
+4. `Accuracy`
+5. `Explainability`
+6. `Lightweight`
+
+Theo quy tắc này, `Logistic Regression` được chọn làm mô hình chính của hệ thống vì:
+
+- vẫn là mô hình học máy chính thức, không chỉ là luật thủ công;
+- nhẹ hơn `Random Forest` về chi phí huấn luyện và suy luận;
+- dễ giải thích hơn `Random Forest`;
+- phù hợp hơn với mục tiêu báo cáo đồ án khi cần trình bày rõ mối quan hệ giữa feature và nhãn dự báo;
+- dễ mở rộng khi bộ dữ liệu thật tăng lên trong tương lai.
+
+Nói cách khác, `rule_based` được giữ lại như baseline nghiệp vụ, `Random Forest` được giữ lại như mô hình đối chứng phi tuyến, còn `Logistic Regression` là điểm cân bằng tốt nhất giữa độ chính xác, tính giải thích và chi phí triển khai.
+
+### 4.8.9 Tích hợp vào hệ thống vận hành
+
+Sau khi project Python sinh artifact, backend Go đọc trực tiếp:
+
+- `model_metadata.json`
+- `metrics.json`
+- `latest_predictions.json`
+
+Từ đó hệ thống cung cấp:
+
+- dashboard cảnh báo cho admin,
+- thông tin `AT_RISK` cho học viên trong student portal,
+- metadata mô hình để phục vụ quan sát và giải thích.
+
+Ưu điểm của cách tích hợp này là backend Go không cần chạy mô hình học máy ngay trong runtime, nhưng hệ thống vẫn có thể hiển thị cảnh báo thật với `risk_score`, `risk_band`, `primary_reason`, `top_features` và `feature_summary`.
+
+### 4.8.10 Hạn chế hiện tại và hướng mở rộng
+
+Nhánh predictive hiện đã hoàn chỉnh về mặt kiến trúc và pipeline nghiên cứu, tuy nhiên vẫn còn ba hạn chế chính:
+
+1. Dữ liệu PostgreSQL thật chưa sinh đủ snapshot để thay hoàn toàn bộ CSV demo trong benchmark chính thức.
+2. Kích thước dataset hiện còn nhỏ, nên kết quả metric tuyệt đối chưa phản ánh đầy đủ độ khó của môi trường thực tế.
+3. Mô hình hiện mới dừng ở ba lựa chọn nhẹ, chưa mở rộng sang các thuật toán mạnh hơn như `XGBoost` hoặc `LightGBM`.
+
+Trong giai đoạn tiếp theo, hệ thống có thể được cải tiến theo các hướng:
+
+- commit lesson đều đặn để làm dày dữ liệu attendance, summary và academic record;
+- mở rộng dataset thật từ PostgreSQL;
+- tinh chỉnh ngưỡng cảnh báo để tối ưu `Recall`;
+- bổ sung explainability sâu hơn như `SHAP`;
+- xây dựng dashboard theo dõi sự thay đổi `risk_score` theo thời gian.
 
 ---
 
@@ -1272,7 +1543,7 @@ Trong giai đoạn hiện tại, nhánh này mới dừng ở mức chuẩn hóa
 - Chuẩn hóa dữ liệu thời gian bằng `Shift`.
 - Xây dựng thành công luồng preview scheduling và commit lesson.
 - Cài đặt và benchmark ba solver khác nhau cho bài toán scheduling.
-- Chuẩn bị dữ liệu cho nhánh phân tích học tập theo hướng `AT_RISK`.
+- Xây dựng project Python machine learning cho nhánh `AT_RISK`, huấn luyện được mô hình và tích hợp artifact vào backend Go.
 
 ## 5.2 Hạn chế hiện tại
 
@@ -1282,6 +1553,7 @@ Bên cạnh những kết quả đạt được, hệ thống vẫn còn một s
 - Lifecycle của một số thực thể như `Enrollment`, `Program`, `Attendance` chưa được chuẩn hóa hoàn toàn.
 - Một số điểm phân quyền còn cần siết chặt để phù hợp với kỳ vọng nghiệp vụ.
 - Phần hình ảnh minh họa, bảng biểu trực quan và một số sơ đồ sequence vẫn cần được chèn hoàn thiện trong báo cáo cuối.
+- Dữ liệu production-like cho nhánh `AT_RISK` hiện chưa đủ dày để thay hoàn toàn bộ dữ liệu demo trong benchmark chính thức.
 
 ## 5.3 Hướng phát triển
 
@@ -1289,7 +1561,7 @@ Trong giai đoạn tiếp theo, hệ thống có thể được mở rộng theo
 
 - Hoàn thiện đầy đủ teacher portal và student portal theo actor-based flow.
 - Chuẩn hóa domain và lifecycle của các thực thể còn khoảng trống.
-- Bổ sung dashboard học tập, cảnh báo và giải thích cho nhánh `AT_RISK`.
+- Mở rộng dataset thật và nâng chất lượng explainability cho nhánh `AT_RISK`.
 - Mở rộng benchmark với dữ liệu gần thực tế hơn.
 - Tăng mức độ hoàn thiện của tài liệu, sơ đồ và hình ảnh minh họa để phục vụ bảo vệ tốt hơn.
 

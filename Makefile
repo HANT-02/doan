@@ -1,4 +1,10 @@
-.PHONY: wire generate run build test clean dev install-tools http-wire migration-wire migrate benchmark-scheduling predictive-train
+.PHONY: wire generate run build test clean dev install-tools http-wire migration-wire migrate benchmark-scheduling predictive-train ml-install ml-export-dataset ml-train-db ml-train-csv ml-predict-db ml-predict-csv ml-demo
+
+PYTHON ?= python3
+ML_DIR := /Users/hant/golang/doan/ml/at_risk_prediction
+ML_DEMO_DATASET := $(ML_DIR)/data/raw/at_risk_dataset_demo.csv
+ML_MPLCONFIGDIR := /tmp/matplotlib
+ML_XDG_CACHE_HOME := /tmp
 
 # Install required tools
 install-tools:
@@ -63,6 +69,40 @@ benchmark-scheduling:
 predictive-train:
 	@echo "Running minimal AT_RISK training..."
 	go run ./cmd/cli/predictive_train
+
+# Install Python dependencies for AT_RISK ML project
+ml-install:
+	@echo "Installing Python dependencies for AT_RISK ML project..."
+	$(PYTHON) -m pip install -r $(ML_DIR)/requirements.txt
+
+# Export normalized dataset from DB for ML pipeline
+ml-export-dataset:
+	@echo "Exporting AT_RISK dataset from PostgreSQL..."
+	cd $(ML_DIR) && MPLCONFIGDIR=$(ML_MPLCONFIGDIR) XDG_CACHE_HOME=$(ML_XDG_CACHE_HOME) $(PYTHON) scripts/export_dataset.py --dataset-name at_risk_dataset
+
+# Train/evaluate ML models directly from DB
+ml-train-db:
+	@echo "Training AT_RISK ML models from PostgreSQL..."
+	cd $(ML_DIR) && MPLCONFIGDIR=$(ML_MPLCONFIGDIR) XDG_CACHE_HOME=$(ML_XDG_CACHE_HOME) $(PYTHON) scripts/train_from_db.py --dataset-name at_risk_dataset_db
+
+# Train/evaluate ML models from demo CSV
+ml-train-csv:
+	@echo "Training AT_RISK ML models from demo CSV..."
+	cd $(ML_DIR) && MPLCONFIGDIR=$(ML_MPLCONFIGDIR) XDG_CACHE_HOME=$(ML_XDG_CACHE_HOME) $(PYTHON) scripts/train_from_csv.py --input $(ML_DEMO_DATASET) --dataset-name at_risk_dataset_demo
+
+# Generate latest prediction artifact from DB
+ml-predict-db:
+	@echo "Generating AT_RISK predictions from PostgreSQL..."
+	cd $(ML_DIR) && MPLCONFIGDIR=$(ML_MPLCONFIGDIR) XDG_CACHE_HOME=$(ML_XDG_CACHE_HOME) $(PYTHON) scripts/predict_from_db.py
+
+# Generate latest prediction artifact from demo CSV
+ml-predict-csv:
+	@echo "Generating AT_RISK predictions from demo CSV..."
+	cd $(ML_DIR) && MPLCONFIGDIR=$(ML_MPLCONFIGDIR) XDG_CACHE_HOME=$(ML_XDG_CACHE_HOME) $(PYTHON) scripts/predict_from_csv.py --input $(ML_DEMO_DATASET)
+
+# Full offline demo flow for ML artifacts
+ml-demo: ml-train-csv ml-predict-csv
+	@echo "AT_RISK demo artifacts generated successfully."
 
 # Run migration down
 migrate-down: migration-wire
@@ -164,6 +204,15 @@ help:
 	@echo "  make fmt            - Format code"
 	@echo "  make dev            - Development mode (auto-generate and run)"
 	@echo "  make start          - Quick start (deps + generate + dev)"
+	@echo ""
+	@echo "ML commands:"
+	@echo "  make ml-install      - Install Python dependencies for ML project"
+	@echo "  make ml-export-dataset - Export normalized AT_RISK dataset from PostgreSQL"
+	@echo "  make ml-train-db     - Train/evaluate ML models from PostgreSQL"
+	@echo "  make ml-train-csv    - Train/evaluate ML models from demo CSV"
+	@echo "  make ml-predict-db   - Generate prediction artifact from PostgreSQL"
+	@echo "  make ml-predict-csv  - Generate prediction artifact from demo CSV"
+	@echo "  make ml-demo         - Run offline demo flow (train + predict from CSV)"
 	@echo ""
 	@echo "Migration commands:"
 	@echo "  make migrate        - Run database migrations"

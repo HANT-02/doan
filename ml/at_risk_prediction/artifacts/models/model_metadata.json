@@ -1,0 +1,118 @@
+{
+  "generated_at": "2026-04-25T02:24:04.201829Z",
+  "dataset_name": "at_risk_dataset_demo",
+  "source": "csv:at_risk_dataset_demo.csv",
+  "seed": 42,
+  "test_size": 0.2,
+  "feature_columns": [
+    "attendance_rate_28d",
+    "absence_count_28d",
+    "average_total_score_28d",
+    "homework_completion_rate_28d",
+    "active_enrollment_count_28d",
+    "weekly_lesson_load_28d",
+    "approved_leave_count_28d",
+    "days_since_last_lesson"
+  ],
+  "label_mapping": {
+    "positive_label": "AT_RISK",
+    "negative_label": "NOT_AT_RISK"
+  },
+  "models": {
+    "rule_based": {
+      "artifact": "/Users/hant/golang/doan/ml/at_risk_prediction/artifacts/models/rule_based.json",
+      "type": "rule_based"
+    },
+    "logistic_regression": {
+      "artifact": "/Users/hant/golang/doan/ml/at_risk_prediction/artifacts/models/logistic_regression.joblib",
+      "type": "sklearn_pipeline"
+    },
+    "random_forest": {
+      "artifact": "/Users/hant/golang/doan/ml/at_risk_prediction/artifacts/models/random_forest.joblib",
+      "type": "sklearn_classifier"
+    }
+  },
+  "evaluation": {
+    "selected_for_confusion_matrix": "rule_based",
+    "best_by_f1": "rule_based",
+    "best_by_recall": "rule_based"
+  },
+  "selection": {
+    "selected_model": "logistic_regression",
+    "selected_metrics": {
+      "model_type": "logistic_regression",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 4,
+      "confusion_matrix": {
+        "labels": [
+          "NOT_AT_RISK",
+          "AT_RISK"
+        ],
+        "matrix": [
+          [
+            2,
+            0
+          ],
+          [
+            0,
+            2
+          ]
+        ],
+        "tn": 2,
+        "fp": 0,
+        "fn": 0,
+        "tp": 2
+      },
+      "prediction_score_summary": {
+        "min": 0.015038,
+        "max": 0.994554,
+        "avg": 0.514292
+      },
+      "classification_report": {
+        "NOT_AT_RISK": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 2.0
+        },
+        "AT_RISK": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 2.0
+        },
+        "accuracy": 1.0,
+        "macro avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        },
+        "weighted avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        }
+      }
+    },
+    "tied_models": [
+      "rule_based",
+      "logistic_regression",
+      "random_forest"
+    ],
+    "selection_criteria": [
+      "recall",
+      "f1",
+      "precision",
+      "accuracy",
+      "explainability",
+      "lightweight"
+    ],
+    "rationale": "Các mô hình có metric tương đương trên tập kiểm thử hiện tại; ưu tiên Logistic Regression vì vẫn là mô hình học máy chính thức, nhẹ khi huấn luyện/suy luận và có khả năng giải thích tốt hơn Random Forest.",
+    "selected_at": "2026-04-25T02:28:41.856825Z"
+  }
+}

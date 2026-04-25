@@ -8,8 +8,6 @@
 
 **Kiến trúc:** Clean Architecture + Wire DI + Gin + GORM
 
-**Tuân thủ:** Thông tư 29/2024/TT-BGDĐT
-
 ---
 
 ## 1. Mục tiêu dự án đã chốt
@@ -306,6 +304,10 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 ### Giai đoạn F - Predictive analytics
 
+> **Ghi chú điều chỉnh 2026-04-23:** Pipeline predictive analytics từng được dựng tối giản bằng Go để kiểm chứng nhanh.
+> Hướng chính thức mới của đồ án là chuyển phần huấn luyện/đánh giá mô hình `AT_RISK` sang Python để tận dụng hệ sinh thái `pandas`, `scikit-learn`, `joblib`, metric/visualization và trình bày nghiên cứu tốt hơn.
+> Backend Go vẫn giữ vai trò API hệ thống, portal và tích hợp kết quả dự báo.
+
 #### Task F1. Chốt dữ liệu đầu vào cho `AT_RISK classification`
 - [x] Chốt nguồn dữ liệu:
   - [x] student
@@ -347,6 +349,322 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 **Mục tiêu đóng task:**
 - Có UI demo được giá trị của predictive analytics.
+
+---
+
+### Giai đoạn K - Chuyển Predictive Analytics sang Python ML Project
+
+> **Mục tiêu giai đoạn:** Tách phần huấn luyện, đánh giá và giải thích mô hình dự báo học viên có nguy cơ học tập kém (`AT_RISK`) sang một project Python nằm trong repo đồ án.  
+> Go backend chỉ giữ vai trò tích hợp API, đọc kết quả/artifact/model metadata và hiển thị lên UI.
+>
+> **Trạng thái kế hoạch:** Đã được user accept ngày 2026-04-23. Bắt đầu triển khai từ `Task K0` sau khi xác nhận chuyển đổi chính thức.
+
+#### Task K0. Dọn hướng predictive Go cũ và khóa phạm vi chuyển đổi
+
+- [x] Rà soát toàn bộ file code Go liên quan tới pipeline predictive hiện tại:
+  - [x] `internal/services/predictive/definition.go`
+  - [x] `internal/services/predictive/db_loader.go`
+  - [x] `internal/services/predictive/minimal_pipeline.go`
+  - [x] `internal/services/predictive/runtime.go`
+  - [x] `internal/usecases/predictive/*`
+  - [x] `cmd/cli/predictive_train/*`
+  - [x] `cmd/http/controllers/predictive/*`
+  - [x] các test tương ứng trong `internal/services/predictive` và `cmd/http/controllers/predictive`
+- [x] Phân loại file cần xóa, file cần giữ, file cần refactor:
+  - [x] Đánh dấu pipeline train/evaluate viết bằng Go sẽ xóa sau khi Python project hoạt động.
+  - [x] Đánh dấu các phần `studentportal` cần giữ contract UI nhưng refactor dependency.
+  - [x] Chốt `GET /api/v1/student/at-risk` và admin predictive API sẽ đọc artifact Python thay vì gọi Go training runtime.
+- [x] Rà soát tài liệu cũ:
+  - [x] `docs/AT_RISK_MINIMAL_APPROACH.md` (đã loại bỏ ở `K8`)
+  - [x] `docs/AT_RISK_DATASET_DEFINITION.md`
+  - [x] hình `docs/assets/benchmark/figure_4_9_at_risk_data_flow.svg`
+- [x] Đánh dấu tài liệu nào sẽ xóa, tài liệu nào sẽ viết lại theo Python.
+
+**Kết quả triển khai:**
+- [x] Tạo audit note tại [docs/PREDICTIVE_GO_TO_PY_MIGRATION_AUDIT_2026-04-25.md](/Users/hant/golang/doan/docs/PREDICTIVE_GO_TO_PY_MIGRATION_AUDIT_2026-04-25.md)
+- [x] Phân loại rõ nhóm `xóa / giữ / refactor / viết lại`
+- [x] Xác định các điểm tích hợp phải giữ contract:
+  - [x] admin predictive routes
+  - [x] student `/api/v1/student/at-risk`
+  - [x] frontend admin/student hiện có
+- [x] Khóa kiến trúc đích `Python artifact -> Go API -> FE`
+
+**Mục tiêu đóng task:**
+- Có danh sách rõ ràng các file predictive Go cần loại bỏ/chuyển đổi, tránh để báo cáo và code bị mâu thuẫn.
+
+#### Task K1. Tạo Python ML project trong repo đồ án
+
+- [x] Tạo thư mục project Python trong repo:
+  - [x] `ml/at_risk_prediction/`
+- [x] Tạo cấu trúc tối thiểu:
+  - [x] `README.md`
+  - [x] `requirements.txt`
+  - [x] `.env.example`
+  - [x] `src/`
+  - [x] `scripts/`
+  - [x] `data/raw/`
+  - [x] `data/processed/`
+  - [x] `artifacts/models/`
+  - [x] `artifacts/reports/`
+  - [x] `artifacts/figures/`
+  - [x] `docs/`
+- [x] Chuẩn hóa công nghệ sử dụng:
+  - [x] Python 3.11+
+  - [x] pandas
+  - [x] numpy
+  - [x] scikit-learn
+  - [x] sqlalchemy hoặc psycopg
+  - [x] python-dotenv
+  - [x] joblib
+  - [x] matplotlib/seaborn
+
+**Kết quả triển khai:**
+- [x] Tạo skeleton project tại `ml/at_risk_prediction`
+- [x] Khởi tạo `README.md`, `requirements.txt`, `.env.example`
+- [x] Khởi tạo package `src/` với `config.py`
+- [x] Khởi tạo thư mục `scripts`, `data`, `artifacts`, `docs`
+- [x] Thêm placeholder file để giữ cấu trúc thư mục trong repo
+
+**Mục tiêu đóng task:**
+- Có project Python độc lập trong repo, đủ để người đọc và người chấm chạy lại pipeline ML.
+
+#### Task K2. README vận hành project Python
+
+- [x] Viết `ml/at_risk_prediction/README.md` bằng tiếng Việt, gồm:
+  - [x] Mục tiêu bài toán `AT_RISK classification`
+  - [x] Công nghệ sử dụng
+  - [x] Cấu trúc thư mục
+  - [x] Cách tạo virtual environment
+  - [x] Cách cài dependencies
+  - [x] Cách cấu hình kết nối PostgreSQL
+  - [x] Cách export dataset từ DB sang CSV
+  - [x] Cách train model từ DB
+  - [x] Cách train model từ CSV
+  - [x] Cách xem metric và artifact đầu ra
+  - [x] Cách để Go backend đọc kết quả dự báo/model metadata
+
+**Kết quả triển khai:**
+- [x] Viết lại `ml/at_risk_prediction/README.md` thành tài liệu vận hành đầy đủ
+- [x] Khóa workflow chuẩn `DB/CSV -> Python ML -> artifact -> Go API -> FE`
+- [x] Mô tả rõ stack công nghệ, cấu trúc thư mục, cấu hình `.env`
+- [x] Chốt command matrix dự kiến cho `export_dataset.py`, `train_from_db.py`, `train_from_csv.py`, `predict_from_db.py`, `predict_from_csv.py`
+- [x] Chỉ rõ các artifact đầu ra mà Go backend sẽ đọc
+- [x] Ghi rõ phần nào đã có, phần nào sẽ được triển khai tiếp ở `K3 -> K8`
+
+**Mục tiêu đóng task:**
+- Người khác clone repo có thể hiểu và chạy được pipeline Python theo hướng dẫn.
+
+#### Task K3. Data pipeline lấy dữ liệu từ DB và CSV
+
+- [x] Thiết kế `dataset builder` cho hai nguồn:
+  - [x] PostgreSQL trực tiếp
+  - [x] CSV offline
+- [x] Nguồn bảng DB được khóa cho pipeline:
+  - [x] `students`
+  - [x] `enrollments`
+  - [x] `classes`
+  - [x] `lessons`
+  - [x] `attendance`
+  - [x] `lesson_summaries`
+  - [x] `academic_records`
+  - [x] `leave_requests`
+- [x] Tạo script xuất dữ liệu:
+  - [x] `scripts/export_dataset.py`
+- [x] Tạo script train-ready từ CSV:
+  - [x] `scripts/train_from_csv.py`
+- [x] Tạo script train-ready từ DB:
+  - [x] `scripts/train_from_db.py`
+- [x] Chuẩn hóa schema dataset đầu ra:
+  - [x] mỗi dòng là một snapshot học viên-lớp
+  - [x] có feature chuyên cần
+  - [x] có feature kết quả học tập
+  - [x] có feature bài tập/thái độ/tham gia
+  - [x] có feature đơn xin phép
+  - [x] có label `AT_RISK`
+
+**Kết quả triển khai:**
+- [x] Tạo `src/dataset_schema.py` để khóa schema chuẩn của dataset `student_class_snapshot`
+- [x] Tạo `src/database.py` để nạp cấu hình DB và mở SQLAlchemy engine
+- [x] Tạo `src/data_pipeline.py` với các chức năng:
+  - [x] load bảng nguồn từ PostgreSQL
+  - [x] build dataset từ DB
+  - [x] load dataset chuẩn từ CSV
+  - [x] split train/test
+  - [x] sinh dataset summary JSON
+  - [x] ghi dataset `full/train/test` vào `data/processed`
+- [x] Tạo `scripts/export_dataset.py`
+- [x] Tạo `scripts/train_from_db.py`
+- [x] Tạo `scripts/train_from_csv.py`
+- [x] Kiểm tra compile cú pháp Python thành công với `PYTHONPYCACHEPREFIX=/tmp/pycache python3 -m compileall`
+
+**Mục tiêu đóng task:**
+- Có thể lấy dữ liệu từ DB thật hoặc CSV để phục vụ huấn luyện/tái lập thực nghiệm.
+
+#### Task K4. Đặc tả nghiên cứu cho hệ thống Python ML
+
+- [x] Tạo tài liệu:
+  - [x] `ml/at_risk_prediction/docs/AT_RISK_RESEARCH_SPEC.md`
+- [x] Nội dung bắt buộc:
+  - [x] Mô tả bài toán đầu vào -> đầu ra
+  - [x] Định nghĩa đối tượng dự báo
+  - [x] Định nghĩa nhãn `AT_RISK`
+  - [x] Định nghĩa cửa sổ quan sát và cửa sổ dự báo
+  - [x] Danh sách feature và ý nghĩa nghiệp vụ
+  - [x] Mô hình toán học:
+    - [x] vector đặc trưng `x_i`
+    - [x] nhãn `y_i ∈ {0,1}`
+    - [x] hàm dự báo `f(x_i) -> p_i`
+    - [x] ngưỡng quyết định `p_i >= τ`
+  - [x] Mô tả Logistic Regression:
+    - [x] công thức sigmoid
+    - [x] xác suất `P(y=1|x)`
+    - [x] loss cross-entropy
+  - [x] Mô tả Random Forest:
+    - [x] nhiều cây quyết định
+    - [x] bootstrap sampling
+    - [x] voting/average probability
+  - [x] Mô tả baseline rule-based:
+    - [x] luật chuyên cần
+    - [x] luật điểm số
+    - [x] luật bài tập
+  - [x] Metric đánh giá:
+    - [x] Accuracy
+    - [x] Precision
+    - [x] Recall
+    - [x] F1-score
+    - [x] Confusion matrix
+  - [x] Lý do ưu tiên `Recall` và `F1-score` trong bài toán cảnh báo sớm
+  - [x] Quy trình thực nghiệm và tái lập kết quả
+  - [x] Hạn chế và hướng phát triển
+
+**Kết quả đã hoàn thành:**
+- [x] Viết tài liệu đặc tả nghiên cứu chính thức tại `ml/at_risk_prediction/docs/AT_RISK_RESEARCH_SPEC.md`
+- [x] Chuẩn hóa mô tả hệ thống Python theo luồng `DB/CSV -> dataset snapshot -> train/evaluate -> artifact -> Go backend`
+- [x] Khóa hướng nghiên cứu chính thức với `rule-based baseline`, `Logistic Regression`, `Random Forest`
+- [x] Bổ sung mô hình toán học, metric đánh giá, khả năng tái lập và hạn chế nghiên cứu để dùng trực tiếp trong báo cáo đồ án
+
+**Mục tiêu đóng task:**
+- Có tài liệu nghiên cứu đủ chi tiết để đưa vào báo cáo, tương đương vai trò “ăn điểm” cùng phần xếp lịch.
+
+#### Task K5. Huấn luyện và đánh giá mô hình Python
+
+- [x] Implement pipeline feature engineering.
+- [x] Implement train/test split.
+- [x] Implement baseline `Rule-based`.
+- [x] Implement `Logistic Regression`.
+- [x] Implement `Random Forest`.
+- [x] Tính và lưu metric:
+  - [x] `accuracy`
+  - [x] `precision`
+  - [x] `recall`
+  - [x] `f1`
+  - [x] confusion matrix
+- [x] Sinh báo cáo artifact:
+  - [x] `artifacts/reports/metrics.json`
+  - [x] `artifacts/reports/classification_report.md`
+  - [x] `artifacts/figures/confusion_matrix.png`
+  - [x] `artifacts/figures/feature_importance.png`
+- [x] Lưu model:
+  - [x] `artifacts/models/rule_based.json`
+  - [x] `artifacts/models/logistic_regression.joblib`
+  - [x] `artifacts/models/random_forest.joblib`
+  - [x] `artifacts/models/model_metadata.json`
+
+**Kết quả đã hoàn thành:**
+- [x] Tạo module `ml/at_risk_prediction/src/model_training.py` để train/evaluate thống nhất cho 3 mô hình
+- [x] Refactor `scripts/train_from_db.py` và `scripts/train_from_csv.py` sang luồng huấn luyện đầy đủ
+- [x] Bổ sung bootstrap `sys.path` để các script chạy trực tiếp đúng như README
+- [x] Thêm dataset demo tại `ml/at_risk_prediction/data/raw/at_risk_dataset_demo.csv` để chạy offline và tái lập thực nghiệm
+- [x] Chạy train/evaluate thành công trên CSV demo, sinh đủ artifact model/report/figure
+- [x] Xác nhận pipeline DB hiện kết nối được nhưng chưa sinh được `student_class_snapshot` từ dữ liệu thật, cần bổ sung dữ liệu học vụ ở bước sau
+
+**Mục tiêu đóng task:**
+- Có số liệu thực nghiệm rõ ràng để so sánh và chọn mô hình chính.
+
+#### Task K6. Chọn mô hình chính và xuất prediction artifact cho Go backend
+
+- [x] Thiết kế file prediction output để Go đọc được, ví dụ:
+  - [x] `artifacts/reports/latest_predictions.json`
+- [x] Mỗi prediction gồm:
+  - [x] `student_id`
+  - [x] `class_id`
+  - [x] `risk_label`
+  - [x] `risk_score`
+  - [x] `risk_band`
+  - [x] `primary_reason`
+  - [x] `top_features`
+  - [x] `model_version`
+  - [x] `predicted_at`
+- [x] Tạo script:
+  - [x] `scripts/predict_from_db.py`
+  - [x] `scripts/predict_from_csv.py`
+- [x] Chốt mô hình chính dựa trên:
+  - [x] Recall
+  - [x] F1-score
+  - [x] khả năng giải thích
+  - [x] độ nhẹ khi chạy trên máy cá nhân
+- [x] Viết kết luận chọn model trong `classification_report.md`.
+
+**Kết quả đã hoàn thành:**
+- [x] Tạo module `ml/at_risk_prediction/src/prediction_inference.py` để chọn model chính và sinh prediction artifact
+- [x] Chốt `logistic_regression` là mô hình chính khi metric bằng nhau, ưu tiên khả năng giải thích và độ nhẹ
+- [x] Cập nhật `artifacts/models/model_metadata.json` với phần `selection`
+- [x] Cập nhật `artifacts/reports/classification_report.md` với kết luận chọn mô hình
+- [x] Sinh `artifacts/reports/latest_predictions.json` từ CSV demo với 20 prediction hoàn chỉnh
+- [x] Kiểm tra nhánh DB: nếu chưa tạo được `student_class_snapshot` thì script vẫn sinh artifact rỗng và warning rõ ràng
+
+**Mục tiêu đóng task:**
+- Python sinh được prediction artifact ổn định để Go backend tích hợp.
+
+#### Task K7. Refactor Go backend để tích hợp kết quả từ Python artifact
+
+- [x] Xóa hoặc ngừng sử dụng Go training runtime cũ.
+- [x] Tạo service Go đọc `latest_predictions.json` và `model_metadata.json`.
+- [x] Refactor endpoint:
+  - [x] admin predictive API
+  - [x] `GET /api/v1/student/at-risk`
+- [x] Giữ response contract hiện tại để frontend ít phải sửa:
+  - [x] `risk_label`
+  - [x] `risk_score`
+  - [x] `risk_band`
+  - [x] `primary_reason`
+  - [x] `top_features`
+  - [x] `feature_summary`
+- [x] Nếu chưa có artifact thì API trả thông báo rõ ràng, không panic.
+
+**Kết quả đã hoàn thành:**
+- [x] Thay `internal/services/predictive/runtime.go` sang implementation đọc artifact Python thay vì train trong Go
+- [x] Giữ nguyên interface `AtRiskService` để không làm vỡ controller/usecase/frontend
+- [x] Map `model_metadata.json`, `metrics.json`, `latest_predictions.json` sang response contract Go hiện tại
+- [x] Chuẩn hóa `risk_band` từ Python (`LOW/MEDIUM/HIGH`) sang contract FE (`THAP/TRUNG_BINH/CAO`)
+- [x] Giữ admin predictive API và student `/api/v1/student/at-risk` hoạt động trên cùng nguồn artifact
+- [x] Thêm test `internal/services/predictive/runtime_test.go` cho cả nhánh artifact hợp lệ và thiếu artifact
+- [x] Xác nhận compile/test qua `go test ./internal/services/predictive ./internal/usecases/... ./cmd/http/...`
+
+**Mục tiêu đóng task:**
+- Hệ thống Go vẫn phục vụ UI như cũ, nhưng nguồn dự báo đến từ pipeline Python.
+
+#### Task K8. Cập nhật báo cáo đồ án phần dự báo học tập kém
+
+- [x] Viết lại chương/mục predictive analytics theo hướng Python ML.
+- [x] Bổ sung sơ đồ pipeline:
+  - [x] DB/CSV -> feature engineering -> train/evaluate -> model artifact -> Go API -> UI
+- [x] Bổ sung bảng feature.
+- [x] Bổ sung mô hình toán học.
+- [x] Bổ sung bảng so sánh model.
+- [x] Bổ sung hình confusion matrix và feature importance.
+- [x] Bổ sung lý do chọn mô hình chính.
+- [x] Xóa/loại khỏi báo cáo các mô tả lỗi thời về “train bằng Go”.
+
+**Kết quả đã hoàn thành:**
+- [x] Viết lại mục `4.8` trong [docs/BAO_CAO_DATN_EDUCENTER_FULL_V2_2026-04-20.md](/Users/hant/golang/doan/docs/BAO_CAO_DATN_EDUCENTER_FULL_V2_2026-04-20.md) theo hướng Python ML
+- [x] Bổ sung đủ các phần: pipeline, feature table, mô hình toán học, mô tả model, bảng benchmark và tiêu chí chọn mô hình chính
+- [x] Chèn hình `AT_RISK data flow`, `confusion matrix`, `feature importance` vào báo cáo markdown
+- [x] Cập nhật lại `Hình 4.4` ở [docs/assets/benchmark/figure_4_9_at_risk_data_flow.svg](/Users/hant/golang/doan/docs/assets/benchmark/figure_4_9_at_risk_data_flow.svg) theo kiến trúc Python artifact
+- [x] Gỡ tài liệu lỗi thời mô tả hướng `Go-only` bằng cách xóa `docs/AT_RISK_MINIMAL_APPROACH.md`
+
+**Mục tiêu đóng task:**
+- Báo cáo thể hiện predictive analytics như một phần nghiên cứu độc lập, có thuật toán, số liệu và khả năng tái lập.
 
 ---
 
@@ -906,11 +1224,12 @@ Thứ tự thực hiện từ bây giờ:
 3. `Task C1 -> C3`
 4. `Task D1 -> D3`
 5. `Task E1 -> E3`
-6. `Task F1 -> F4`
+6. `Task F1 -> F4` _(prototype predictive Go đã có, không còn là hướng cuối)_
 7. `Task G1 -> G7`
 8. **`Task I1 -> I10`** _(Portal Giáo viên - thực hiện song song với G sau khi G4-G6 khởi động)_
 9. **`Task J1 -> J10`** _(Portal Sinh viên - thực hiện sau I hoặc song song từ J1)_
-10. `Task H1 -> H4`
+10. **`Task K0 -> K8`** _(chuyển predictive analytics sang Python ML project và refactor Go API đọc artifact)_
+11. `Task H1 -> H4` _(hoàn thiện kiểm thử/báo cáo sau khi K ổn định)_
 
 Nguyên tắc:
 
@@ -919,7 +1238,8 @@ Nguyên tắc:
 - Không mở rộng thêm module ngoài scope khi backlog chính chưa xong.
 - Mỗi task lớn chỉ triển khai sau khi task trước đã được review/chấp nhận.
 - Task I (Teacher Portal) phụ thuộc vào dữ liệu `lesson` từ commit scheduling (G4).
-- Task J5 (AT_RISK cho sinh viên) phụ thuộc vào pipeline ML từ Task F3.
+- Task J5 (AT_RISK cho sinh viên) hiện tạm phụ thuộc pipeline ML từ Task F3, nhưng hướng cuối cần chuyển sang artifact Python ở Task K7.
+- Task K thay thế hướng predictive Go cũ cho phần huấn luyện/đánh giá mô hình, không thay thế các portal học sinh/giáo viên đã có.
 
 ---
 

@@ -1,0 +1,27 @@
+{
+  "dataset_name": "student_at_risk_classification",
+  "prediction_unit": "student_class_snapshot",
+  "source": "csv:at_risk_dataset_demo.csv",
+  "observation_window_days": 28,
+  "prediction_horizon_days": 28,
+  "row_count": 20,
+  "student_count": 20,
+  "class_count": 2,
+  "feature_columns": [
+    "attendance_rate_28d",
+    "absence_count_28d",
+    "average_total_score_28d",
+    "homework_completion_rate_28d",
+    "active_enrollment_count_28d",
+    "weekly_lesson_load_28d",
+    "approved_leave_count_28d",
+    "days_since_last_lesson"
+  ],
+  "label_distribution": {
+    "AT_RISK": 10,
+    "NOT_AT_RISK": 10
+  },
+  "generated_at": "2026-04-25T02:24:03.914638Z",
+  "train_size": 16,
+  "test_size": 4
+}

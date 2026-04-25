@@ -1,0 +1,15 @@
+{
+  "name": "rule_based",
+  "thresholds": {
+    "attendance_rate_28d": 0.8,
+    "average_total_score_28d": 5.0,
+    "homework_completion_rate_28d": 0.6
+  },
+  "decision_threshold": 0.5,
+  "weights": {
+    "attendance": 0.4,
+    "score": 0.35,
+    "homework": 0.25
+  },
+  "generated_at": "2026-04-25T02:24:03.918629Z"
+}

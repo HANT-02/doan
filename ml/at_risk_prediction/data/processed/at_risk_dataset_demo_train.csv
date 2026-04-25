@@ -1,0 +1,17 @@
+snapshot_id,student_id,student_code,student_name,class_id,class_code,class_name,snapshot_at,attendance_rate_28d,absence_count_28d,average_total_score_28d,homework_completion_rate_28d,active_enrollment_count_28d,weekly_lesson_load_28d,approved_leave_count_28d,days_since_last_lesson,label
+snap_001,stu_001,HV001,Nguyen An,class_a,CLS-A,Toan nang cao A,2026-04-01T08:00:00Z,0.96,0,8.4,0.92,1,2.0,0,2,NOT_AT_RISK
+snap_002,stu_002,HV002,Tran Binh,class_a,CLS-A,Toan nang cao A,2026-04-01T08:00:00Z,0.94,0,8.0,0.88,1,2.0,0,1,NOT_AT_RISK
+snap_004,stu_004,HV004,Pham Dung,class_a,CLS-A,Toan nang cao A,2026-04-01T08:00:00Z,0.89,1,7.4,0.82,1,2.0,0,2,NOT_AT_RISK
+snap_005,stu_005,HV005,Hoang Giang,class_a,CLS-A,Toan nang cao A,2026-04-01T08:00:00Z,0.93,0,8.1,0.87,2,2.5,0,1,NOT_AT_RISK
+snap_006,stu_006,HV006,Vu Ha,class_a,CLS-A,Toan nang cao A,2026-04-01T08:00:00Z,0.88,1,7.2,0.81,2,2.5,1,4,NOT_AT_RISK
+snap_008,stu_008,HV008,Dang Lan,class_b,CLS-B,Anh van giao tiep B,2026-04-02T18:00:00Z,0.92,0,7.9,0.86,1,3.0,0,1,NOT_AT_RISK
+snap_009,stu_009,HV009,Bui Minh,class_b,CLS-B,Anh van giao tiep B,2026-04-02T18:00:00Z,0.9,1,7.5,0.84,1,3.0,0,3,NOT_AT_RISK
+snap_010,stu_010,HV010,Nguyen Nam,class_b,CLS-B,Anh van giao tiep B,2026-04-02T18:00:00Z,0.87,1,7.1,0.8,2,3.5,1,4,NOT_AT_RISK
+snap_011,stu_011,HV011,Tran Oanh,class_a,CLS-A,Toan nang cao A,2026-04-08T08:00:00Z,0.62,4,4.8,0.45,1,2.0,1,8,AT_RISK
+snap_012,stu_012,HV012,Le Phuc,class_a,CLS-A,Toan nang cao A,2026-04-08T08:00:00Z,0.58,5,4.5,0.4,1,2.0,0,10,AT_RISK
+snap_013,stu_013,HV013,Pham Quyen,class_a,CLS-A,Toan nang cao A,2026-04-08T08:00:00Z,0.74,3,4.9,0.55,2,2.5,2,7,AT_RISK
+snap_015,stu_015,HV015,Vu Trang,class_a,CLS-A,Toan nang cao A,2026-04-08T08:00:00Z,0.77,3,4.7,0.52,1,2.0,1,6,AT_RISK
+snap_016,stu_016,HV016,Doan Uyen,class_b,CLS-B,Anh van giao tiep B,2026-04-09T18:00:00Z,0.65,4,4.6,0.43,1,3.0,0,8,AT_RISK
+snap_018,stu_018,HV018,Bui Yen,class_b,CLS-B,Anh van giao tiep B,2026-04-09T18:00:00Z,0.72,3,4.9,0.5,2,3.5,2,6,AT_RISK
+snap_019,stu_019,HV019,Nguyen Anh Thu,class_b,CLS-B,Anh van giao tiep B,2026-04-09T18:00:00Z,0.68,4,5.1,0.47,2,3.5,1,9,AT_RISK
+snap_020,stu_020,HV020,Tran Bao,class_b,CLS-B,Anh van giao tiep B,2026-04-09T18:00:00Z,0.75,3,4.8,0.58,1,3.0,1,7,AT_RISK
