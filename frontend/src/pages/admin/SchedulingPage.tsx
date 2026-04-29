@@ -85,6 +85,8 @@ const getConflictSeverity = (type: string): 'error' | 'warning' | 'info' => {
         case 'INVALID_COURSE_DURATION':
         case 'CLASS_SCHEDULE_NO_SLOT':
         case 'CLASS_SCHEDULE_ROOM_UNAVAILABLE':
+        case 'MISSING_CLASS_SCHEDULE':
+        case 'INSUFFICIENT_SCHEDULE_SLOTS':
             return 'warning';
         default:
             return 'info';
@@ -117,6 +119,10 @@ const getConflictActionHint = (type: string) => {
             return 'Gợi ý: kiểm tra lịch mẫu của lớp, `shift_id` đã gán và bảo đảm ca học đủ chứa thời lượng buổi học từ khóa học.';
         case 'CLASS_SCHEDULE_ROOM_UNAVAILABLE':
             return 'Gợi ý: kiểm tra `room_id` trong lịch mẫu của lớp hoặc nới lại bộ lọc phòng để giữ đúng phòng cố định theo lịch mẫu.';
+        case 'MISSING_CLASS_SCHEDULE':
+            return 'Gợi ý: vào Quản lý lớp học, mở tab lịch tuần và cấu hình ngày học cùng ca học cho lớp trước khi chạy preview.';
+        case 'INSUFFICIENT_SCHEDULE_SLOTS':
+            return 'Gợi ý: tăng khoảng ngày preview hoặc bổ sung thêm ngày/ca trong lịch tuần lớp để đủ số slot hợp lệ.';
         case 'NO_ACTIVE_SHIFT':
             return 'Gợi ý: vào Quản lý ca học để tạo hoặc kích hoạt ít nhất một `Shift` rồi chạy lại preview.';
         case 'NO_VALID_DATE_RANGE':
@@ -718,6 +724,7 @@ export const SchedulingPage = () => {
                                 rows={filteredAssignments}
                                 columns={columns}
                                 autoHeight
+                                getRowHeight={() => 'auto'}
                                 disableRowSelectionOnClick
                                 getRowId={(row) => row.variable_id}
                                 pageSizeOptions={[5, 10, 25]}
@@ -734,6 +741,15 @@ export const SchedulingPage = () => {
                                     border: 'none',
                                     '& .MuiDataGrid-columnHeaders': {
                                         backgroundColor: '#f8fafc',
+                                    },
+                                    '& .MuiDataGrid-cell': {
+                                        py: 1.25,
+                                        alignItems: 'flex-start',
+                                        whiteSpace: 'normal',
+                                    },
+                                    '& .MuiDataGrid-cellContent': {
+                                        whiteSpace: 'normal',
+                                        lineHeight: 1.4,
                                     },
                                 }}
                             />

@@ -35,6 +35,23 @@ func TestBenchmarkUseCase_ExecuteRunsAllSolvers(t *testing.T) {
 						SessionCount:           1,
 						SessionDurationMinutes: 120,
 					},
+					ClassSchedules: []entities.ClassSchedule{
+						{
+							ID:        "schedule-1",
+							ClassID:   "class-1",
+							DayOfWeek: "TUESDAY",
+							ShiftID:   "shift-1",
+							Shift: entities.Shift{
+								ID:          "shift-1",
+								Code:        "S1",
+								Name:        "Ca sang",
+								StartTime:   "08:00",
+								EndTime:     "10:00",
+								SessionType: "MORNING",
+								IsActive:    true,
+							},
+						},
+					},
 				},
 				{
 					ID:          "class-2",
@@ -53,6 +70,23 @@ func TestBenchmarkUseCase_ExecuteRunsAllSolvers(t *testing.T) {
 						ID:                     "course-2",
 						SessionCount:           1,
 						SessionDurationMinutes: 120,
+					},
+					ClassSchedules: []entities.ClassSchedule{
+						{
+							ID:        "schedule-2",
+							ClassID:   "class-2",
+							DayOfWeek: "TUESDAY",
+							ShiftID:   "shift-2",
+							Shift: entities.Shift{
+								ID:          "shift-2",
+								Code:        "S2",
+								Name:        "Ca chieu",
+								StartTime:   "13:30",
+								EndTime:     "15:30",
+								SessionType: "AFTERNOON",
+								IsActive:    true,
+							},
+						},
 					},
 				},
 			},

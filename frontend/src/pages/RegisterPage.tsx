@@ -50,13 +50,13 @@ export const RegisterPage = () => {
     const onSubmit = async (data: RegisterFormValues) => {
         setErrorMsg(null);
         try {
-            await registerUser({
+            const result = await registerUser({
                 email: data.email,
                 full_name: data.full_name,
                 password_enc: data.password
             }).unwrap();
-            toast.success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
-            navigate('/login');
+            toast.success('Đăng ký thành công. Vui lòng nhập OTP đã gửi qua email để kích hoạt tài khoản.');
+            navigate(`/verify-otp?userId=${encodeURIComponent(result.data.user_id)}&email=${encodeURIComponent(data.email)}`);
         } catch (error: any) {
             console.error(error);
             setErrorMsg(error?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại sau.');

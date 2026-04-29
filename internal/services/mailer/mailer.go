@@ -168,16 +168,18 @@ func (m *queueMailer) Send(ctx context.Context, mail Mail) error {
 }
 
 func (m *queueMailer) SendOTPEmail(ctx context.Context, toEmail string, otp string) error {
-	subject := "Your OTP Verification Code"
+	subject := "Mã OTP xác thực tài khoản EduCenter"
 
 	htmlBody := fmt.Sprintf(`
 		<html>
 		<body style="font-family: Arial, sans-serif;">
-			<h3>Email Verification</h3>
-			<p>Your OTP code is:</p>
+			<h3>Xác thực tài khoản</h3>
+			<p>Xin chào,</p>
+			<p>Bạn vừa tạo tài khoản mới trên hệ thống EduCenter.</p>
+			<p>Mã OTP xác thực của bạn là:</p>
 			<p style="font-size: 20px; font-weight: bold;">%s</p>
-			<p>This code will expire in <strong>5 minutes</strong>.</p>
-			<p>If you did not request this, please ignore this email.</p>
+			<p>Mã có hiệu lực trong <strong>5 phút</strong>.</p>
+			<p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
 		</body>
 		</html>
 	`, otp)

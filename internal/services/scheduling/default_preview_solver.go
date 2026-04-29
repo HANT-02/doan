@@ -144,10 +144,50 @@ func buildDomains(
 ) (map[string][]DomainValue, map[string]PreviewConflict) {
 	domains := make(map[string][]DomainValue, len(variables))
 	noDomainConflicts := make(map[string]PreviewConflict, len(variables))
+	classUniqueSlotCapacity := make(map[string]int, len(classSchedulesByClass))
 
 	for _, variable := range variables {
 		classSchedules := classSchedulesByClass[variable.ClassID]
+		if len(classSchedules) == 0 {
+			domains[variable.ID] = []DomainValue{}
+			noDomainConflicts[variable.ID] = PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "MISSING_CLASS_SCHEDULE",
+				Message:      fmt.Sprintf("Lớp chưa có lịch tuần (`class_schedule`), nên chưa thể sinh buổi %d/%d cho preview. Hãy cấu hình ít nhất một ngày học và ca học cho lớp.", variable.SessionIndex, variable.SessionTotal),
+			}
+			continue
+		}
+
 		slots := generateTimeSlotsForVariable(input.DateFrom, input.DateTo, variable.DurationMinutes, classSchedules, defaultShifts)
+		if _, ok := classUniqueSlotCapacity[variable.ClassID]; !ok {
+			classUniqueSlotCapacity[variable.ClassID] = countUniqueTimeSlots(slots)
+		}
+		if classUniqueSlotCapacity[variable.ClassID] > 0 && variable.SessionIndex > classUniqueSlotCapacity[variable.ClassID] {
+			domains[variable.ID] = []DomainValue{}
+			noDomainConflicts[variable.ID] = PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "INSUFFICIENT_SCHEDULE_SLOTS",
+				Message: fmt.Sprintf(
+					"Trong khoảng ngày đã chọn chỉ tạo được %d slot hợp lệ theo lịch tuần của lớp (%s), nên chưa đủ để xếp buổi %d/%d. Hãy nới khoảng ngày preview hoặc bổ sung thêm ngày/ca trong lịch tuần lớp.",
+					classUniqueSlotCapacity[variable.ClassID],
+					describeScheduleDays(classSchedules),
+					variable.SessionIndex,
+					variable.SessionTotal,
+				),
+			}
+			continue
+		}
+
 		values := make([]DomainValue, 0)
 		for _, room := range rooms {
 			if variable.PreferredRoomID != "" && variable.PreferredRoomID != room.ID {
@@ -303,6 +343,43 @@ func matchesScheduleDay(day time.Time, scheduleDay string) bool {
 	default:
 		return false
 	}
+}
+
+func countUniqueTimeSlots(slots []TimeSlot) int {
+	if len(slots) == 0 {
+		return 0
+	}
+	unique := make(map[string]struct{}, len(slots))
+	for _, slot := range slots {
+		key := fmt.Sprintf("%s|%s|%s", slot.Start.Format(time.RFC3339), slot.End.Format(time.RFC3339), slot.ShiftID)
+		unique[key] = struct{}{}
+	}
+	return len(unique)
+}
+
+func describeScheduleDays(classSchedules []entities.ClassSchedule) string {
+	if len(classSchedules) == 0 {
+		return "chưa cấu hình ngày học"
+	}
+	labels := make([]string, 0, len(classSchedules))
+	seen := make(map[string]struct{}, len(classSchedules))
+	for _, schedule := range classSchedules {
+		label := strings.TrimSpace(schedule.DayOfWeek)
+		if label == "" {
+			continue
+		}
+		normalized := strings.ToUpper(label)
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		labels = append(labels, normalized)
+	}
+	if len(labels) == 0 {
+		return "chưa cấu hình ngày học"
+	}
+	sort.Strings(labels)
+	return strings.Join(labels, ", ")
 }
 
 func parseClockValue(raw string) (hour int, minute int, ok bool) {

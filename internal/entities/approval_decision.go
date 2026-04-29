@@ -1,6 +1,9 @@
 package entities
 
-import "time"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type ApprovalDecision struct {
 	ID                  string    `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
@@ -15,4 +18,5 @@ type ApprovalDecision struct {
 	DecidedAt           time.Time `gorm:"default:now()" json:"decided_at"`
 	CreatedAt           time.Time `gorm:"default:now()" json:"created_at"`
 	UpdatedAt           time.Time `json:"updated_at"`
+	DeletedAt           gorm.DeletedAt
 }

@@ -52,6 +52,13 @@ export const authApi = baseApi.injectEndpoints({
                 body,
             }),
         }),
+        verifyOtp: builder.mutation({
+            query: (body) => ({
+                url: '/v1/auth/verify-otp',
+                method: 'POST',
+                body,
+            }),
+        }),
         forgotPassword: builder.mutation({
             query: (email) => ({
                 url: '/v1/auth/forgot-password',
@@ -73,6 +80,13 @@ export const authApi = baseApi.injectEndpoints({
                 body,
             }),
         }),
+        confirmChangePasswordOtp: builder.mutation({
+            query: (body) => ({
+                url: '/v1/auth/change-password/confirm-otp',
+                method: 'POST',
+                body,
+            }),
+        }),
         getMe: builder.query({
             query: () => '/v1/auth/me',
             providesTags: ['User']
@@ -85,9 +99,11 @@ export const {
     useLogoutAccountMutation,
     useRefreshTokenMutation,
     useRegisterMutation,
+    useVerifyOtpMutation,
     useForgotPasswordMutation,
     useResetPasswordMutation,
     useChangePasswordMutation,
+    useConfirmChangePasswordOtpMutation,
     useGetMeQuery,
     useLazyGetMeQuery
 } = authApi;

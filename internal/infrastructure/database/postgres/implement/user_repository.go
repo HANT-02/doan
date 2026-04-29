@@ -9,6 +9,7 @@ import (
 	"doan/pkg/base_struct"
 	"doan/pkg/config"
 	"doan/pkg/logger"
+	"doan/pkg/utils"
 	"gorm.io/gorm"
 	"time"
 )
@@ -51,21 +52,25 @@ func (u *userRepository) CreateTx(ctx context.Context, tx *gorm.DB, user *entiti
 	return tx.WithContext(ctx).Create(user).Error
 }
 
-func (u *userRepository) CreateOTPTx(ctx context.Context, tx *gorm.DB, userID string, otpHash string, expiredAt time.Time) error {
+func (u *userRepository) CreateOTPTx(ctx context.Context, tx *gorm.DB, userID string, purpose string, otpHash string, expiredAt time.Time, pendingPasswordHash *string) error {
 	userOTP := &entities.UserOTP{
-		UserID:    userID,
-		OTPHash:   otpHash,
-		ExpiredAt: expiredAt,
-		CreatedAt: time.Now(),
+		ID:                  utils.GenerateUUID(),
+		UserID:              userID,
+		Purpose:             purpose,
+		OTPHash:             otpHash,
+		PendingPasswordHash: pendingPasswordHash,
+		ExpiredAt:           expiredAt,
+		CreatedAt:           time.Now(),
 	}
 	return tx.WithContext(ctx).Create(userOTP).Error
 }
 
-func (u *userRepository) GetActiveOTPByUserIDTx(ctx context.Context, tx *gorm.DB, userID string) (*entities.UserOTP, error) {
+func (u *userRepository) GetActiveOTPByUserIDAndPurposeTx(ctx context.Context, tx *gorm.DB, userID string, purpose string) (*entities.UserOTP, error) {
 	var otp entities.UserOTP
 
 	err := tx.WithContext(ctx).
 		Where("user_id = ?", userID).
+		Where("purpose = ?", purpose).
 		Where("used_at IS NULL").
 		Where("expired_at > ?", time.Now()).
 		Order("created_at DESC").
@@ -87,4 +92,10 @@ func (u *userRepository) ActivateUserTx(ctx context.Context, tx *gorm.DB, userID
 	return tx.WithContext(ctx).Model(&entities.User{}).
 		Where("id = ?", userID).
 		Update("is_active", true).Error
+}
+
+func (u *userRepository) UpdatePasswordTx(ctx context.Context, tx *gorm.DB, userID string, passwordHash string) error {
+	return tx.WithContext(ctx).Model(&entities.User{}).
+		Where("id = ?", userID).
+		Update("password", passwordHash).Error
 }

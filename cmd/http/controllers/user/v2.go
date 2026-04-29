@@ -183,6 +183,11 @@ func (c *ControllerV2) ChangePassword(ctx *gin.Context) {
 	panic("implement me")
 }
 
+func (c *ControllerV2) ConfirmChangePasswordOTP(ctx *gin.Context) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *ControllerV2) VerifyOTP(ctx *gin.Context) {
 	//TODO implement me
 	panic("implement me")

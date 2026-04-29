@@ -101,7 +101,7 @@ func (a *App) registerRoute() {
 	// Swagger route under /api
 	api.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api/swagger/doc.json")))
 
-	user.RegisterRoutesV1(api, a.userControllerV1)
+	user.RegisterRoutesV1(api, a.userControllerV1, config.GetManager())
 	user.RegisterRoutesV2(api, a.userControllerV2)
 	account.RegisterRoutesV1(api, a.accountControllerV1, config.GetManager())
 	academic.RegisterRoutesV1(api, a.academicControllerV1, config.GetManager())

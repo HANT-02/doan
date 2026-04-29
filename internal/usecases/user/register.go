@@ -8,6 +8,7 @@ import (
 	"doan/internal/services/security"
 	"doan/pkg/random"
 	"errors"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"time"
 )
@@ -67,6 +68,9 @@ func (u *registerUseCase) Execute(ctx context.Context, in RegisterInput) (*Regis
 	if err != nil {
 		return nil, errors.New("invalid password payload")
 	}
+	if len(passwordPlain) < 6 {
+		return nil, errors.New("password must be at least 6 characters")
+	}
 
 	// 3. hash password
 	passwordHash, err := u.hasher.Hash(passwordPlain)
@@ -85,11 +89,15 @@ func (u *registerUseCase) Execute(ctx context.Context, in RegisterInput) (*Regis
 		return nil, err
 	}
 
-	var newUserID string
+	newUserID, uuidErr := uuid.NewV7()
+	if uuidErr != nil {
+		return nil, uuidErr
+	}
 
 	// 5. transaction
 	err = u.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		user := &entities.User{
+			ID:       newUserID.String(),
 			Email:    in.Email,
 			Password: passwordHash,
 			FullName: in.FullName,
@@ -103,12 +111,10 @@ func (u *registerUseCase) Execute(ctx context.Context, in RegisterInput) (*Regis
 		expiredAt := time.Now().Add(5 * time.Minute)
 
 		if err := u.userRepo.CreateOTPTx(
-			ctx, tx, user.ID, otpHash, expiredAt,
+			ctx, tx, user.ID, OTPPurposeRegister, otpHash, expiredAt, nil,
 		); err != nil {
 			return err
 		}
-
-		newUserID = user.ID
 		return nil
 	})
 
@@ -122,6 +128,6 @@ func (u *registerUseCase) Execute(ctx context.Context, in RegisterInput) (*Regis
 	}(in.Email, otp)
 
 	return &RegisterOutput{
-		UserID: newUserID,
+		UserID: newUserID.String(),
 	}, nil
 }

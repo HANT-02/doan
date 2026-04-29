@@ -5,6 +5,7 @@ import (
 	"doan/internal/entities"
 	repositoryinterface "doan/internal/repositories/interface"
 	"doan/pkg/logger"
+	"doan/pkg/utils"
 	"errors"
 	"time"
 
@@ -24,6 +25,9 @@ func NewPasswordResetRepository(db *gorm.DB, log logger.Logger) repositoryinterf
 }
 
 func (r *passwordResetRepository) CreateTx(ctx context.Context, tx *gorm.DB, reset *entities.PasswordReset) error {
+	if reset.ID == "" {
+		reset.ID = utils.GenerateUUID()
+	}
 	return tx.WithContext(ctx).Create(reset).Error
 }
 

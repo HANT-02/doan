@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-04-25T02:24:04.201829Z",
-  "dataset_name": "at_risk_dataset_demo",
-  "source": "csv:at_risk_dataset_demo.csv",
+  "generated_at": "2026-04-28T07:58:24.664995Z",
+  "dataset_name": "at_risk_dataset_db",
+  "source": "database",
   "seed": 42,
   "test_size": 0.2,
   "feature_columns": [
@@ -33,19 +33,19 @@
     }
   },
   "evaluation": {
-    "selected_for_confusion_matrix": "rule_based",
-    "best_by_f1": "rule_based",
-    "best_by_recall": "rule_based"
+    "selected_for_confusion_matrix": "logistic_regression",
+    "best_by_f1": "logistic_regression",
+    "best_by_recall": "logistic_regression"
   },
   "selection": {
     "selected_model": "logistic_regression",
     "selected_metrics": {
       "model_type": "logistic_regression",
-      "accuracy": 1.0,
+      "accuracy": 0.75,
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "support": 4,
+      "recall": 0.6,
+      "f1": 0.75,
+      "support": 8,
       "confusion_matrix": {
         "labels": [
           "NOT_AT_RISK",
@@ -53,54 +53,53 @@
         ],
         "matrix": [
           [
-            2,
+            3,
             0
           ],
           [
-            0,
-            2
+            2,
+            3
           ]
         ],
-        "tn": 2,
+        "tn": 3,
         "fp": 0,
-        "fn": 0,
-        "tp": 2
+        "fn": 2,
+        "tp": 3
       },
       "prediction_score_summary": {
-        "min": 0.015038,
-        "max": 0.994554,
-        "avg": 0.514292
+        "min": 0.039086,
+        "max": 0.982485,
+        "avg": 0.416093
       },
       "classification_report": {
         "NOT_AT_RISK": {
-          "precision": 1.0,
+          "precision": 0.6,
           "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "f1-score": 0.75,
+          "support": 3.0
         },
         "AT_RISK": {
           "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "recall": 0.6,
+          "f1-score": 0.75,
+          "support": 5.0
         },
-        "accuracy": 1.0,
+        "accuracy": 0.75,
         "macro avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.8,
+          "recall": 0.8,
+          "f1-score": 0.75,
+          "support": 8.0
         },
         "weighted avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.85,
+          "recall": 0.75,
+          "f1-score": 0.75,
+          "support": 8.0
         }
       }
     },
     "tied_models": [
-      "rule_based",
       "logistic_regression",
       "random_forest"
     ],
@@ -113,6 +112,6 @@
       "lightweight"
     ],
     "rationale": "Các mô hình có metric tương đương trên tập kiểm thử hiện tại; ưu tiên Logistic Regression vì vẫn là mô hình học máy chính thức, nhẹ khi huấn luyện/suy luận và có khả năng giải thích tốt hơn Random Forest.",
-    "selected_at": "2026-04-25T04:57:47.377425Z"
+    "selected_at": "2026-04-28T07:58:34.051710Z"
   }
 }

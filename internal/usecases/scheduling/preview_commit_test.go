@@ -131,7 +131,50 @@ func TestCommitPreviewUseCase_ReturnsConflictWhenExistingLessonOverlaps(t *testi
 	}
 }
 
+func TestPreviewUseCase_ReturnsSpecificConflictWhenDateRangeHasTooFewScheduleSlots(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositoriesWithSessionCount(8)
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 10, 9, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 10, 16, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if result.Status != "PARTIAL" {
+		t.Fatalf("expected PARTIAL preview status, got %s", result.Status)
+	}
+	if result.Summary.ScheduledLessons != 2 {
+		t.Fatalf("expected exactly 2 scheduled lessons in the selected range, got %d", result.Summary.ScheduledLessons)
+	}
+	if result.Summary.UnscheduledLessons != 6 {
+		t.Fatalf("expected 6 unscheduled lessons, got %d", result.Summary.UnscheduledLessons)
+	}
+
+	for _, conflict := range result.Conflicts {
+		if conflict.Type != "INSUFFICIENT_SCHEDULE_SLOTS" {
+			t.Fatalf("expected INSUFFICIENT_SCHEDULE_SLOTS conflict, got %s", conflict.Type)
+		}
+	}
+}
+
 func previewFixtureRepositories() (repositoryinterface.ClassRepository, repositoryinterface.RoomRepository, repositoryinterface.ShiftRepository) {
+	return previewFixtureRepositoriesWithSessionCount(2)
+}
+
+func previewFixtureRepositoriesWithSessionCount(sessionCount int) (repositoryinterface.ClassRepository, repositoryinterface.RoomRepository, repositoryinterface.ShiftRepository) {
 	teacherID := "teacher-1"
 	courseID := "course-1"
 	roomID := "room-1"
@@ -173,7 +216,7 @@ func previewFixtureRepositories() (repositoryinterface.ClassRepository, reposito
 					ID:                     courseID,
 					Code:                   "KH-001",
 					Name:                   "Khoa hoc Toan",
-					SessionCount:           2,
+					SessionCount:           sessionCount,
 					SessionDurationMinutes: 120,
 				},
 				RoomID: &roomID,

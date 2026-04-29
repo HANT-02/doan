@@ -21,11 +21,13 @@ type User struct {
 
 // UserOTP stores one-time passwords for verification flows (register/forgot/change)
 type UserOTP struct {
-	ID        string         `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID    string         `gorm:"type:uuid;not null;index" json:"user_id"`
-	OTPHash   string         `gorm:"type:text;not null" json:"-"`
-	ExpiredAt time.Time      `gorm:"not null" json:"expired_at"`
-	UsedAt    *time.Time     `json:"used_at"`
-	CreatedAt time.Time      `gorm:"default:now()" json:"created_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	ID                  string         `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	UserID              string         `gorm:"type:uuid;not null;index" json:"user_id"`
+	Purpose             string         `gorm:"type:varchar(50);not null;default:'REGISTER';index" json:"purpose"`
+	OTPHash             string         `gorm:"type:text;not null" json:"-"`
+	PendingPasswordHash *string        `gorm:"type:text" json:"-"`
+	ExpiredAt           time.Time      `gorm:"not null" json:"expired_at"`
+	UsedAt              *time.Time     `json:"used_at"`
+	CreatedAt           time.Time      `gorm:"default:now()" json:"created_at"`
+	DeletedAt           gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 }

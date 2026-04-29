@@ -9,9 +9,10 @@ import { store } from '@/store';
 
 // Public Pages
 import { LoginPage } from '@/pages/LoginPage';
-// import { RegisterPage } from '@/pages/RegisterPage';
-// import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-// import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { VerifyOTPPage } from '@/pages/VerifyOTPPage';
 
 // Protected Pages
 import { ProfilePage } from '@/pages/ProfilePage';
@@ -99,10 +100,10 @@ const AppRoutes = () => {
       {/* Public Routes wrapped in AuthLayout */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
-        {/* Disabled for Demo */}
-        {/* <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} /> */}
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-otp" element={<VerifyOTPPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       {/* Protected Dashboard Routes */}

@@ -13,15 +13,16 @@ import (
 var _ Controller = (*ControllerV1)(nil)
 
 type ControllerV1 struct {
-	loginUseCase          user.LoginUseCase
-	logoutUseCase         user.LogoutUseCase
-	refreshTokenUseCase   user.RefreshTokenUseCase
-	registerUseCase       user.RegisterUseCase
-	forgotPasswordUseCase user.ForgotPasswordUseCase
-	resetPasswordUseCase  user.ResetPasswordUseCase
-	changePasswordUseCase user.ChangePasswordUseCase
-	verifyOTPUseCase      user.VerifyOTPUseCase
-	getUserByIdUseCase    user.GetUserByIdUseCase
+	loginUseCase                    user.LoginUseCase
+	logoutUseCase                   user.LogoutUseCase
+	refreshTokenUseCase             user.RefreshTokenUseCase
+	registerUseCase                 user.RegisterUseCase
+	forgotPasswordUseCase           user.ForgotPasswordUseCase
+	resetPasswordUseCase            user.ResetPasswordUseCase
+	changePasswordUseCase           user.ChangePasswordUseCase
+	confirmChangePasswordOTPUseCase user.ConfirmChangePasswordOTPUseCase
+	verifyOTPUseCase                user.VerifyOTPUseCase
+	getUserByIdUseCase              user.GetUserByIdUseCase
 }
 
 func NewUserControllerV1(
@@ -32,19 +33,21 @@ func NewUserControllerV1(
 	forgotPasswordUseCase user.ForgotPasswordUseCase,
 	resetPasswordUseCase user.ResetPasswordUseCase,
 	changePasswordUseCase user.ChangePasswordUseCase,
+	confirmChangePasswordOTPUseCase user.ConfirmChangePasswordOTPUseCase,
 	verifyOTPUseCase user.VerifyOTPUseCase,
 	getUserByIdUseCase user.GetUserByIdUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
-		loginUseCase:          loginUseCase,
-		logoutUseCase:         logoutUseCase,
-		refreshTokenUseCase:   refreshTokenUseCase,
-		registerUseCase:       registerUseCase,
-		forgotPasswordUseCase: forgotPasswordUseCase,
-		resetPasswordUseCase:  resetPasswordUseCase,
-		changePasswordUseCase: changePasswordUseCase,
-		verifyOTPUseCase:      verifyOTPUseCase,
-		getUserByIdUseCase:    getUserByIdUseCase,
+		loginUseCase:                    loginUseCase,
+		logoutUseCase:                   logoutUseCase,
+		refreshTokenUseCase:             refreshTokenUseCase,
+		registerUseCase:                 registerUseCase,
+		forgotPasswordUseCase:           forgotPasswordUseCase,
+		resetPasswordUseCase:            resetPasswordUseCase,
+		changePasswordUseCase:           changePasswordUseCase,
+		confirmChangePasswordOTPUseCase: confirmChangePasswordOTPUseCase,
+		verifyOTPUseCase:                verifyOTPUseCase,
+		getUserByIdUseCase:              getUserByIdUseCase,
 	}
 }
 
@@ -283,8 +286,8 @@ func (c *ControllerV1) ResetPassword(ctx *gin.Context) {
 }
 
 // ChangePassword godoc
-// @Summary Change password
-// @Description Change current user's password
+// @Summary Request change password OTP
+// @Description Validate old password and send OTP to email before applying password change
 // @Tags Authentication
 // @Accept json
 // @Produce json
@@ -319,6 +322,48 @@ func (c *ControllerV1) ChangePassword(ctx *gin.Context) {
 	}); err != nil {
 		ctxLogger.Errorf("Failed to change password: %v", err)
 		rest.ResponseError(ctx, http.StatusBadRequest, "Failed to change password", err)
+		return
+	}
+
+	rest.ResponseSuccess(ctx, http.StatusOK, "OTP sent to email successfully", MessageResponse{Message: "OTP sent to email successfully"})
+}
+
+// ConfirmChangePasswordOTP godoc
+// @Summary Confirm change password with OTP
+// @Description Confirm password change after OTP verification
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param payload body ConfirmChangePasswordOTPRequest true "Confirm change password OTP request"
+// @Success 200 {object} rest.BaseResponse{data=MessageResponse}
+// @Failure 400 {object} rest.BaseResponse
+// @Failure 401 {object} rest.BaseResponse
+// @Failure 500 {object} rest.BaseResponse
+// @Router /v1/auth/change-password/confirm-otp [post]
+func (c *ControllerV1) ConfirmChangePasswordOTP(ctx *gin.Context) {
+	ctxLogger := logger.NewLogger(ctx)
+
+	userIDVal, exists := ctx.Get("user_id")
+	if !exists {
+		rest.ResponseError(ctx, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userID, _ := userIDVal.(string)
+
+	var req ConfirmChangePasswordOTPRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctxLogger.Errorf("Failed to bind request: %v", err)
+		rest.ResponseError(ctx, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if err := c.confirmChangePasswordOTPUseCase.Execute(ctx, user.ConfirmChangePasswordOTPInput{
+		UserID: userID,
+		OTP:    req.OTP,
+	}); err != nil {
+		ctxLogger.Errorf("Failed to confirm password change with OTP: %v", err)
+		rest.ResponseError(ctx, http.StatusBadRequest, "Failed to confirm password change", err)
 		return
 	}
 

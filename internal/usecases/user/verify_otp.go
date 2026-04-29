@@ -42,7 +42,7 @@ func (u *verifyOTPUseCase) Execute(ctx context.Context, in VerifyOTPInput) error
 	}
 
 	return u.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		otpEntity, err := u.userRepo.GetActiveOTPByUserIDTx(ctx, tx, in.UserID)
+		otpEntity, err := u.userRepo.GetActiveOTPByUserIDAndPurposeTx(ctx, tx, in.UserID, OTPPurposeRegister)
 		if err != nil {
 			return errors.New("otp not found or expired")
 		}

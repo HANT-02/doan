@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-04-25T02:24:04.202091Z",
+  "generated_at": "2026-04-28T07:58:24.665452Z",
   "dataset_summary": {
     "dataset_name": "student_at_risk_classification",
     "prediction_unit": "student_class_snapshot",
-    "source": "csv:at_risk_dataset_demo.csv",
+    "source": "database",
     "observation_window_days": 28,
     "prediction_horizon_days": 28,
-    "row_count": 20,
-    "student_count": 20,
-    "class_count": 2,
+    "row_count": 36,
+    "student_count": 6,
+    "class_count": 1,
     "feature_columns": [
       "attendance_rate_28d",
       "absence_count_28d",
@@ -20,29 +20,29 @@
       "days_since_last_lesson"
     ],
     "label_distribution": {
-      "AT_RISK": 10,
-      "NOT_AT_RISK": 10
+      "AT_RISK": 21,
+      "NOT_AT_RISK": 15
     },
-    "generated_at": "2026-04-25T02:24:03.914638Z",
-    "train_size": 16,
-    "test_size": 4
+    "generated_at": "2026-04-28T07:58:24.390964Z",
+    "train_size": 28,
+    "test_size": 8
   },
   "training_config": {
-    "dataset_name": "at_risk_dataset_demo",
-    "source": "csv:at_risk_dataset_demo.csv",
+    "dataset_name": "at_risk_dataset_db",
+    "source": "database",
     "test_size": 0.2,
     "seed": 42,
-    "train_size": 16,
-    "test_size_rows": 4
+    "train_size": 28,
+    "test_size_rows": 8
   },
   "models": {
     "rule_based": {
       "model_type": "rule_based",
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "support": 4,
+      "accuracy": 0.375,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 8,
       "confusion_matrix": {
         "labels": [
           "NOT_AT_RISK",
@@ -50,59 +50,59 @@
         ],
         "matrix": [
           [
-            2,
+            3,
             0
           ],
           [
-            0,
-            2
+            5,
+            0
           ]
         ],
-        "tn": 2,
+        "tn": 3,
         "fp": 0,
-        "fn": 0,
-        "tp": 2
+        "fn": 5,
+        "tp": 0
       },
       "prediction_score_summary": {
         "min": 0.0,
-        "max": 1.0,
-        "avg": 0.4125
+        "max": 0.4,
+        "avg": 0.05
       },
       "classification_report": {
         "NOT_AT_RISK": {
-          "precision": 1.0,
+          "precision": 0.375,
           "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "f1-score": 0.5454545454545454,
+          "support": 3.0
         },
         "AT_RISK": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 5.0
         },
-        "accuracy": 1.0,
+        "accuracy": 0.375,
         "macro avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.1875,
+          "recall": 0.5,
+          "f1-score": 0.2727272727272727,
+          "support": 8.0
         },
         "weighted avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.140625,
+          "recall": 0.375,
+          "f1-score": 0.20454545454545453,
+          "support": 8.0
         }
       }
     },
     "logistic_regression": {
       "model_type": "logistic_regression",
-      "accuracy": 1.0,
+      "accuracy": 0.75,
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "support": 4,
+      "recall": 0.6,
+      "f1": 0.75,
+      "support": 8,
       "confusion_matrix": {
         "labels": [
           "NOT_AT_RISK",
@@ -110,59 +110,59 @@
         ],
         "matrix": [
           [
-            2,
+            3,
             0
           ],
           [
-            0,
-            2
+            2,
+            3
           ]
         ],
-        "tn": 2,
+        "tn": 3,
         "fp": 0,
-        "fn": 0,
-        "tp": 2
+        "fn": 2,
+        "tp": 3
       },
       "prediction_score_summary": {
-        "min": 0.015038,
-        "max": 0.994554,
-        "avg": 0.514292
+        "min": 0.039086,
+        "max": 0.982485,
+        "avg": 0.416093
       },
       "classification_report": {
         "NOT_AT_RISK": {
-          "precision": 1.0,
+          "precision": 0.6,
           "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "f1-score": 0.75,
+          "support": 3.0
         },
         "AT_RISK": {
           "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "recall": 0.6,
+          "f1-score": 0.75,
+          "support": 5.0
         },
-        "accuracy": 1.0,
+        "accuracy": 0.75,
         "macro avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.8,
+          "recall": 0.8,
+          "f1-score": 0.75,
+          "support": 8.0
         },
         "weighted avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.85,
+          "recall": 0.75,
+          "f1-score": 0.75,
+          "support": 8.0
         }
       }
     },
     "random_forest": {
       "model_type": "random_forest",
-      "accuracy": 1.0,
+      "accuracy": 0.75,
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "support": 4,
+      "recall": 0.6,
+      "f1": 0.75,
+      "support": 8,
       "confusion_matrix": {
         "labels": [
           "NOT_AT_RISK",
@@ -170,49 +170,49 @@
         ],
         "matrix": [
           [
-            2,
+            3,
             0
           ],
           [
-            0,
-            2
+            2,
+            3
           ]
         ],
-        "tn": 2,
+        "tn": 3,
         "fp": 0,
-        "fn": 0,
-        "tp": 2
+        "fn": 2,
+        "tp": 3
       },
       "prediction_score_summary": {
-        "min": 0.009435,
-        "max": 0.994571,
-        "avg": 0.507793
+        "min": 0.209549,
+        "max": 0.906293,
+        "avg": 0.454597
       },
       "classification_report": {
         "NOT_AT_RISK": {
-          "precision": 1.0,
+          "precision": 0.6,
           "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "f1-score": 0.75,
+          "support": 3.0
         },
         "AT_RISK": {
           "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "recall": 0.6,
+          "f1-score": 0.75,
+          "support": 5.0
         },
-        "accuracy": 1.0,
+        "accuracy": 0.75,
         "macro avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.8,
+          "recall": 0.8,
+          "f1-score": 0.75,
+          "support": 8.0
         },
         "weighted avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.85,
+          "recall": 0.75,
+          "f1-score": 0.75,
+          "support": 8.0
         }
       }
     }

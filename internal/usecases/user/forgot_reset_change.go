@@ -83,12 +83,11 @@ func (u *forgotPasswordUseCase) Execute(ctx context.Context, in ForgotPasswordIn
 		return nil
 	}
 
-	// Generate cryptographically secure random token
-	plainToken := random.GenerateSixDigitOtp() // 32 chars long for good randomness
-	tokenHash, err := u.hasher.Hash(plainToken)
+	plainToken, err := generateSecureResetToken()
 	if err != nil {
-		return fmt.Errorf("failed to hash reset token: %w", err)
+		return err
 	}
+	tokenHash := hashResetToken(plainToken)
 
 	// Get TTL from config, default to 15 minutes
 	resetTokenTTLMinutes := getInt(u.cfg, "auth.reset_token_ttl_minutes", 15)
@@ -217,13 +216,10 @@ func (u *resetPasswordUseCase) Execute(ctx context.Context, in ResetPasswordInpu
 		return errors.New("invalid payload")
 	}
 
-	// Hash the input token to compare with stored hash
-	inputTokenHash, err := u.hasher.Hash(in.Token)
-	if err != nil {
-		return errors.New("invalid reset token")
-	}
+	inputTokenHash := hashResetToken(in.Token)
 
 	var foundReset *entities.PasswordReset
+	var err error
 
 	// Validate and mark token as used in a transaction
 	err = u.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -278,8 +274,6 @@ func (u *resetPasswordUseCase) Execute(ctx context.Context, in ResetPasswordInpu
 	return nil
 }
 
-// ChangePassword (no changes needed)
-
 type ChangePasswordInput struct {
 	UserID         string
 	OldPasswordEnc string
@@ -291,13 +285,21 @@ type ChangePasswordUseCase interface {
 }
 
 type changePasswordUseCase struct {
+	db       *gorm.DB
 	userRepo repositoryinterface.UserRepository
 	hasher   security.PasswordHasher
 	cipher   security.PasswordCipher
+	mailer   mailer.Mailer
 }
 
-func NewChangePasswordUseCase(repo repositoryinterface.UserRepository, hasher security.PasswordHasher, cipher security.PasswordCipher) ChangePasswordUseCase {
-	return &changePasswordUseCase{userRepo: repo, hasher: hasher, cipher: cipher}
+func NewChangePasswordUseCase(db *gorm.DB, repo repositoryinterface.UserRepository, hasher security.PasswordHasher, cipher security.PasswordCipher, mailer mailer.Mailer) ChangePasswordUseCase {
+	return &changePasswordUseCase{
+		db:       db,
+		userRepo: repo,
+		hasher:   hasher,
+		cipher:   cipher,
+		mailer:   mailer,
+	}
 }
 
 func (u *changePasswordUseCase) Execute(ctx context.Context, in ChangePasswordInput) error {
@@ -319,12 +321,51 @@ func (u *changePasswordUseCase) Execute(ctx context.Context, in ChangePasswordIn
 	if err != nil {
 		return err
 	}
+	if len(newPlain) < 8 {
+		return errors.New("new password is too short")
+	}
 	hash, err := u.hasher.Hash(newPlain)
 	if err != nil {
 		return err
 	}
-	update := map[string]interface{}{"password": hash}
-	return u.userRepo.Update(ctx, in.UserID, update)
+
+	otp := random.GenerateSixDigitOtp()
+	otpHash, err := u.hasher.Hash(otp)
+	if err != nil {
+		return err
+	}
+
+	expiredAt := time.Now().Add(5 * time.Minute)
+	if err := u.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return u.userRepo.CreateOTPTx(ctx, tx, in.UserID, OTPPurposeChangePassword, otpHash, expiredAt, &hash)
+	}); err != nil {
+		return err
+	}
+
+	go func(email, fullName, otpCode string) {
+		subject := "Mã OTP xác nhận đổi mật khẩu"
+		htmlBody := fmt.Sprintf(`
+			<html>
+			<body style="font-family: Arial, sans-serif;">
+				<h3>Xác nhận đổi mật khẩu</h3>
+				<p>Xin chào %s,</p>
+				<p>Bạn vừa yêu cầu đổi mật khẩu cho tài khoản EduCenter.</p>
+				<p>Mã OTP xác nhận của bạn là:</p>
+				<p style="font-size: 20px; font-weight: bold;">%s</p>
+				<p>Mã có hiệu lực trong <strong>5 phút</strong>.</p>
+				<p>Nếu bạn không thực hiện yêu cầu này, vui lòng đổi mật khẩu ngay sau khi đăng nhập lại.</p>
+			</body>
+			</html>
+		`, fullName, otpCode)
+
+		_ = u.mailer.Send(ctx, mailer.Mail{
+			To:      email,
+			Subject: subject,
+			HTML:    htmlBody,
+		})
+	}(user.Email, user.FullName, otp)
+
+	return nil
 }
 
 // helpers to read config safely

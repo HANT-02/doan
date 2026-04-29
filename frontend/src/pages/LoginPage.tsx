@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useLoginMutation } from '@/api/authApi';
 import {
     Container,
@@ -133,8 +133,17 @@ export const LoginPage = () => {
                             {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
                         </Button>
 
-                        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
-                            {/* Disabled OTP/Email flows for Demo */}
+                        <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
+                            <Link to="/register" style={{ textDecoration: 'none' }}>
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                                    Đăng ký tài khoản
+                                </Typography>
+                            </Link>
+                            <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                                    Quên mật khẩu?
+                                </Typography>
+                            </Link>
                         </Stack>
                     </Box>
                 </FormCard>
