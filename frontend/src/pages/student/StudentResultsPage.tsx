@@ -259,7 +259,7 @@ export default function StudentResultsPage() {
                                         {record.homework_completed ? `${record.homework_score.toFixed(1)}/10` : 'Chưa hoàn thành'}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        {record.lesson.summary.homework || 'Không có homework'}
+                                        {record.lesson.summary.homework || 'Không có bài tập về nhà'}
                                     </Typography>
                                 </TableCell>
                                 <TableCell>{record.attitude_rating}/5</TableCell>

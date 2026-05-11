@@ -19,17 +19,22 @@ func TestPreviewAndCommitUseCase_CommitAssignmentsWithDefaultSolver(t *testing.T
 	store := schedulingservice.NewPreviewStore[PreviewResult]()
 	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
 	lessonRepo := &previewLessonRepoStub{}
+	classScheduleRepo := &previewClassScheduleRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
 	uow := &previewUnitOfWorkStub{}
 
 	previewUseCase := NewPreviewUseCase(
 		classRepo,
 		roomRepo,
 		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
 	commitUseCase := NewCommitPreviewUseCase(
 		lessonRepo,
+		classScheduleRepo,
 		uow,
 		logger.NewZapLogger(logger.Config{Level: "error", Format: "json", Output: "stdout", ServiceName: "test", Environment: "test"}),
 		store,
@@ -75,17 +80,22 @@ func TestCommitPreviewUseCase_ReturnsConflictWhenExistingLessonOverlaps(t *testi
 	store := schedulingservice.NewPreviewStore[PreviewResult]()
 	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
 	lessonRepo := &previewLessonRepoStub{}
+	classScheduleRepo := &previewClassScheduleRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
 	uow := &previewUnitOfWorkStub{}
 
 	previewUseCase := NewPreviewUseCase(
 		classRepo,
 		roomRepo,
 		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
 	commitUseCase := NewCommitPreviewUseCase(
 		lessonRepo,
+		classScheduleRepo,
 		uow,
 		logger.NewZapLogger(logger.Config{Level: "error", Format: "json", Output: "stdout", ServiceName: "test", Environment: "test"}),
 		store,
@@ -126,8 +136,95 @@ func TestCommitPreviewUseCase_ReturnsConflictWhenExistingLessonOverlaps(t *testi
 	if len(lessonRepo.createdLessons) != 0 {
 		t.Fatalf("expected no new lessons to be created when conflict occurs")
 	}
+	storedPreview, ok := store.Get(result.RunID)
+	if !ok {
+		t.Fatalf("expected preview to remain available in store after conflict")
+	}
+	if storedPreview.Status != "PARTIAL" {
+		t.Fatalf("expected stored preview status to become PARTIAL after conflict, got %s", storedPreview.Status)
+	}
+	if len(storedPreview.ExistingLessons) == 0 {
+		t.Fatalf("expected stored preview to include existing lessons after conflict")
+	}
+	hasSystemConflict := false
+	for _, conflict := range storedPreview.Conflicts {
+		if conflict.Type == "SYSTEM_LESSON_CONFLICT" {
+			hasSystemConflict = true
+			break
+		}
+	}
+	if !hasSystemConflict {
+		t.Fatalf("expected stored preview to include SYSTEM_LESSON_CONFLICT after commit failure")
+	}
 	if !uow.beginCalled || uow.commitCalled || !uow.rollbackCalled {
 		t.Fatalf("unexpected transaction lifecycle: begin=%t commit=%t rollback=%t", uow.beginCalled, uow.commitCalled, uow.rollbackCalled)
+	}
+}
+
+func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	firstPreview, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+	if len(firstPreview.Assignments) == 0 {
+		t.Fatalf("expected assignments to create a conflict fixture")
+	}
+
+	firstAssignment := firstPreview.Assignments[0]
+	lessonRepo.existingLessons = []entities.Lesson{
+		{
+			ID:        "lesson-existing-preview",
+			ClassID:   firstAssignment.ClassID,
+			TeacherID: &firstAssignment.TeacherID,
+			RoomID:    &firstAssignment.RoomID,
+			DateStart: firstAssignment.StartTime,
+			DateEnd:   firstAssignment.EndTime,
+		},
+	}
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if result.Status != "PARTIAL" {
+		t.Fatalf("expected preview status PARTIAL with existing lesson conflict, got %s", result.Status)
+	}
+	if len(result.ExistingLessons) == 0 {
+		t.Fatalf("expected preview to include existing lesson cards")
+	}
+	hasSystemConflict := false
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == "SYSTEM_LESSON_CONFLICT" {
+			hasSystemConflict = true
+			break
+		}
+	}
+	if !hasSystemConflict {
+		t.Fatalf("expected preview to include SYSTEM_LESSON_CONFLICT before commit")
 	}
 }
 
@@ -136,11 +233,15 @@ func TestPreviewUseCase_ReturnsSpecificConflictWhenDateRangeHasTooFewScheduleSlo
 
 	store := schedulingservice.NewPreviewStore[PreviewResult]()
 	classRepo, roomRepo, shiftRepo := previewFixtureRepositoriesWithSessionCount(8)
+	lessonRepo := &previewLessonRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
 
 	previewUseCase := NewPreviewUseCase(
 		classRepo,
 		roomRepo,
 		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -297,6 +398,16 @@ func (s *previewLessonRepoStub) GetByID(_ context.Context, _ interface{}) (*enti
 	return nil, nil
 }
 
+func (s *previewLessonRepoStub) ListInRange(_ context.Context, from time.Time, to time.Time) ([]entities.Lesson, error) {
+	filtered := make([]entities.Lesson, 0, len(s.existingLessons))
+	for _, lesson := range s.existingLessons {
+		if lesson.DateStart.Before(to) && lesson.DateEnd.After(from) {
+			filtered = append(filtered, lesson)
+		}
+	}
+	return filtered, nil
+}
+
 func (s *previewLessonRepoStub) FindOverlappingLessons(
 	_ context.Context,
 	_ time.Time,
@@ -310,6 +421,69 @@ func (s *previewLessonRepoStub) FindOverlappingLessons(
 
 func (s *previewLessonRepoStub) GetLessonWithRelations(_ context.Context, _ string) (*entities.Lesson, error) {
 	return nil, nil
+}
+
+var _ repositoryinterface.ClassScheduleRepository = (*previewClassScheduleRepoStub)(nil)
+
+type previewClassScheduleRepoStub struct {
+	created []entities.ClassSchedule
+}
+
+func (s *previewClassScheduleRepoStub) GetTable() string { return "class_schedules" }
+func (s *previewClassScheduleRepoStub) GetByCondition(_ context.Context, _ *repositories.CommonCondition) (*repositories.Pagination[entities.ClassSchedule], error) {
+	return &repositories.Pagination[entities.ClassSchedule]{}, nil
+}
+func (s *previewClassScheduleRepoStub) GetTotal(_ context.Context, _ *repositories.CommonCondition) (uint64, error) {
+	return uint64(len(s.created)), nil
+}
+func (s *previewClassScheduleRepoStub) Create(_ context.Context, entity *entities.ClassSchedule) (*entities.ClassSchedule, error) {
+	s.created = append(s.created, *entity)
+	return entity, nil
+}
+func (s *previewClassScheduleRepoStub) Update(_ context.Context, _ interface{}, _ map[string]interface{}) error {
+	return nil
+}
+func (s *previewClassScheduleRepoStub) UpdateWithIDs(_ context.Context, _ []string, _ map[string]interface{}) error {
+	return nil
+}
+func (s *previewClassScheduleRepoStub) SoftDelete(_ context.Context, _ interface{}) error { return nil }
+func (s *previewClassScheduleRepoStub) HardDelete(_ context.Context, _ interface{}) error { return nil }
+func (s *previewClassScheduleRepoStub) GetByID(_ context.Context, _ interface{}) (*entities.ClassSchedule, error) {
+	return nil, nil
+}
+func (s *previewClassScheduleRepoStub) GetSchedulesByClassID(_ context.Context, _ string) ([]entities.ClassSchedule, error) {
+	return append([]entities.ClassSchedule(nil), s.created...), nil
+}
+
+var _ repositoryinterface.EnrollmentRepository = (*previewEnrollmentRepoStub)(nil)
+
+type previewEnrollmentRepoStub struct {
+	byClass map[string][]entities.Enrollment
+}
+
+func (s *previewEnrollmentRepoStub) GetTable() string { return "enrollments" }
+func (s *previewEnrollmentRepoStub) GetByCondition(_ context.Context, _ *repositories.CommonCondition) (*repositories.Pagination[entities.Enrollment], error) {
+	return &repositories.Pagination[entities.Enrollment]{}, nil
+}
+func (s *previewEnrollmentRepoStub) GetTotal(_ context.Context, _ *repositories.CommonCondition) (uint64, error) {
+	return 0, nil
+}
+func (s *previewEnrollmentRepoStub) Create(_ context.Context, entity *entities.Enrollment) (*entities.Enrollment, error) {
+	return entity, nil
+}
+func (s *previewEnrollmentRepoStub) Update(_ context.Context, _ interface{}, _ map[string]interface{}) error {
+	return nil
+}
+func (s *previewEnrollmentRepoStub) UpdateWithIDs(_ context.Context, _ []string, _ map[string]interface{}) error {
+	return nil
+}
+func (s *previewEnrollmentRepoStub) SoftDelete(_ context.Context, _ interface{}) error { return nil }
+func (s *previewEnrollmentRepoStub) HardDelete(_ context.Context, _ interface{}) error { return nil }
+func (s *previewEnrollmentRepoStub) GetByID(_ context.Context, _ interface{}) (*entities.Enrollment, error) {
+	return nil, nil
+}
+func (s *previewEnrollmentRepoStub) ListByClassID(_ context.Context, classID string) ([]entities.Enrollment, error) {
+	return append([]entities.Enrollment(nil), s.byClass[classID]...), nil
 }
 
 type previewUnitOfWorkStub struct {

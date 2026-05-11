@@ -9,5 +9,11 @@ type PreviewScheduleRequest struct {
 }
 
 type CommitScheduleRequest struct {
-	RunID string `json:"run_id" binding:"required"`
+	RunID             string                   `json:"run_id" binding:"required"`
+	ManualAssignments []CommitAssignmentChoice `json:"manual_assignments"`
+}
+
+type CommitAssignmentChoice struct {
+	VariableID string `json:"variable_id" binding:"required"`
+	OptionKey  string `json:"option_key" binding:"required"`
 }

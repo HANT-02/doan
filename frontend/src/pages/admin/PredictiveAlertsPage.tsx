@@ -82,7 +82,7 @@ export const PredictiveAlertsPage = () => {
             width: 135,
             renderCell: (params: GridRenderCellParams) => (
                 <Chip
-                    label={params.value === 'AT_RISK' ? 'AT_RISK' : 'Ổn định'}
+                    label={params.value === 'AT_RISK' ? 'Không ổn định' : 'Ổn định'}
                     color={params.value === 'AT_RISK' ? 'error' : 'success'}
                     size="small"
                     sx={{ fontWeight: 700 }}
@@ -91,7 +91,7 @@ export const PredictiveAlertsPage = () => {
         },
         {
             field: 'risk_score',
-            headerName: 'Risk Score',
+            headerName: 'Điểm rủi ro',
             width: 125,
             renderCell: (params: GridRenderCellParams) => (
                 <Stack spacing={0.25} sx={{ py: 1 }}>
@@ -106,7 +106,7 @@ export const PredictiveAlertsPage = () => {
         },
         {
             field: 'primary_reason',
-            headerName: 'Insight chính',
+            headerName: 'Dựa vào',
             minWidth: 320,
             flex: 1.7,
             renderCell: (params: GridRenderCellParams) => (
@@ -136,7 +136,7 @@ export const PredictiveAlertsPage = () => {
         <Box>
             <PageHeader
                 title="Cảnh báo học sinh nguy cơ học kém"
-                subtitle="Danh sách AT_RISK được suy luận từ chuyên cần, điểm số và tín hiệu vận hành 28 ngày gần nhất."
+                subtitle="Danh sách sinh viên có rủi ro được suy luận từ chuyên cần, điểm số và tín hiệu vận hành 28 ngày gần nhất."
                 actions={(
                     <Button
                         variant="contained"
@@ -164,7 +164,7 @@ export const PredictiveAlertsPage = () => {
                 <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, border: '1px solid #fee2e2', flex: 1 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
                         <WarningAmberRounded color="error" />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Số học sinh AT_RISK</Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Số học sinh CÓ RỦI RO</Typography>
                     </Stack>
                     <Typography variant="h4" sx={{ fontWeight: 800 }}>
                         {summary?.at_risk_count ?? 0}
@@ -223,7 +223,7 @@ export const PredictiveAlertsPage = () => {
                                 setOnlyAtRisk(checked);
                             }}
                         />
-                        <Typography variant="body2">Chỉ hiện AT_RISK</Typography>
+                        <Typography variant="body2">Chỉ hiện CÓ RỦI RO</Typography>
                     </Stack>
                     <Chip
                         label={`Train lúc: ${modelMetadata?.trained_at ? formatDateTime(modelMetadata.trained_at) : 'N/A'}`}

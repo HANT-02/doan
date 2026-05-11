@@ -40,6 +40,34 @@ export interface SchedulingConflict {
     message: string;
 }
 
+export interface SchedulingCandidateOption {
+    key: string;
+    room_id: string;
+    room_name: string;
+    room_capacity: number;
+    shift_id?: string;
+    shift_code?: string;
+    shift_name?: string;
+    shift_type?: string;
+    start_time: string;
+    end_time: string;
+}
+
+export interface SchedulingExistingLesson {
+    lesson_id: string;
+    class_id: string;
+    class_code: string;
+    class_name: string;
+    teacher_id?: string;
+    teacher_label?: string;
+    room_id?: string;
+    room_name?: string;
+    start_time: string;
+    end_time: string;
+    notes?: string;
+    student_ids?: string[];
+}
+
 export interface SchedulingPreview {
     run_id: string;
     status: 'FAILED' | 'PARTIAL' | 'COMPLETED';
@@ -55,6 +83,8 @@ export interface SchedulingPreview {
     };
     assignments: SchedulingAssignment[];
     conflicts: SchedulingConflict[];
+    existing_lessons: SchedulingExistingLesson[];
+    candidate_options: Record<string, SchedulingCandidateOption[]>;
 }
 
 export interface SchedulingPreviewResponse {
@@ -113,6 +143,8 @@ const normalizePreviewResponse = (response: RawSchedulingPreviewResponse): Sched
         },
         assignments: [],
         conflicts: [],
+        existing_lessons: [],
+        candidate_options: {},
     },
 });
 
@@ -137,7 +169,13 @@ export const schedulingApi = baseApi.injectEndpoints({
             transformResponse: normalizePreviewResponse,
             providesTags: [{ type: 'Scheduling', id: 'LATEST' }],
         }),
-        commitSchedulingPreview: builder.mutation<CommitSchedulingResponse, { run_id: string }>({
+        commitSchedulingPreview: builder.mutation<CommitSchedulingResponse, {
+            run_id: string;
+            manual_assignments?: Array<{
+                variable_id: string;
+                option_key: string;
+            }>;
+        }>({
             query: (body) => ({
                 url: '/v1/scheduling/commit',
                 method: 'POST',

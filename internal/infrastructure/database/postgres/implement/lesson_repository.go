@@ -86,6 +86,30 @@ func (r *lessonRepository) FindOverlappingLessons(
 	return lessons, nil
 }
 
+func (r *lessonRepository) ListInRange(
+	ctx context.Context,
+	from time.Time,
+	to time.Time,
+) ([]entities.Lesson, error) {
+	if to.Before(from) {
+		to = from
+	}
+
+	lessons := make([]entities.Lesson, 0)
+	err := postgres.GetDb(ctx, r.db).
+		Preload("Class").
+		Preload("Teacher").
+		Preload("Room").
+		Where("date_start < ? AND date_end > ?", to, from).
+		Order("date_start ASC").
+		Find(&lessons).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return lessons, nil
+}
+
 func (r *lessonRepository) GetLessonWithRelations(ctx context.Context, id string) (*entities.Lesson, error) {
 	var lesson entities.Lesson
 	err := r.db.WithContext(ctx).

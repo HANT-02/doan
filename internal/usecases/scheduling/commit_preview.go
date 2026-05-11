@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -15,7 +16,8 @@ import (
 )
 
 type CommitPreviewInput struct {
-	RunID string
+	RunID             string
+	ManualAssignments []ManualAssignmentOverride
 }
 
 type CommitPreviewOutput struct {
@@ -24,28 +26,40 @@ type CommitPreviewOutput struct {
 	Status           string `json:"status"`
 }
 
+type CommitPreviewConflictError struct {
+	Message string
+	Preview PreviewResult
+}
+
+func (err *CommitPreviewConflictError) Error() string {
+	return err.Message
+}
+
 type CommitPreviewUseCase interface {
 	Execute(ctx context.Context, input CommitPreviewInput) (*CommitPreviewOutput, error)
 }
 
 type commitPreviewUseCase struct {
-	lessonRepo repositoryinterface.LessonRepository
-	uow        repositories.UnitOfWork
-	log        logger.Logger
-	store      schedulingstore.PreviewStore[PreviewResult]
+	lessonRepo        repositoryinterface.LessonRepository
+	classScheduleRepo repositoryinterface.ClassScheduleRepository
+	uow               repositories.UnitOfWork
+	log               logger.Logger
+	store             schedulingstore.PreviewStore[PreviewResult]
 }
 
 func NewCommitPreviewUseCase(
 	lessonRepo repositoryinterface.LessonRepository,
+	classScheduleRepo repositoryinterface.ClassScheduleRepository,
 	uow repositories.UnitOfWork,
 	log logger.Logger,
 	store schedulingstore.PreviewStore[PreviewResult],
 ) CommitPreviewUseCase {
 	return &commitPreviewUseCase{
-		lessonRepo: lessonRepo,
-		uow:        uow,
-		log:        log,
-		store:      store,
+		lessonRepo:        lessonRepo,
+		classScheduleRepo: classScheduleRepo,
+		uow:               uow,
+		log:               log,
+		store:             store,
 	}
 }
 
@@ -61,6 +75,31 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 
 	if len(preview.Assignments) == 0 {
 		return nil, errors.New("preview does not contain any assignment to commit")
+	}
+
+	assignmentsByID := buildAssignmentMap(preview.Assignments)
+	manualAssignmentIDs := make(map[string]struct{}, len(input.ManualAssignments))
+	if len(input.ManualAssignments) > 0 {
+		variableIndex := buildVariableIndex(preview.Variables)
+		for _, override := range input.ManualAssignments {
+			variable, ok := variableIndex[override.VariableID]
+			if !ok {
+				return nil, fmt.Errorf("khong tim thay session %s trong preview hien tai", override.VariableID)
+			}
+
+			domainValue, ok := findDomainValueByOptionKey(preview.DomainOptions[override.VariableID], override.OptionKey)
+			if !ok {
+				return nil, fmt.Errorf("phuong an da chon cho session %s khong hop le hoac da het hieu luc", override.VariableID)
+			}
+
+			assignmentsByID[override.VariableID] = buildAssignmentFromDomain(variable, domainValue, "MANUAL_OVERRIDE")
+			manualAssignmentIDs[override.VariableID] = struct{}{}
+		}
+
+		preview = rebuildPreviewResult(preview, assignmentsByID)
+		uc.store.Save(preview.RunID, preview)
+	} else {
+		preview = rebuildPreviewResult(preview, assignmentsByID)
 	}
 
 	if preview.Status != "COMPLETED" {
@@ -87,8 +126,14 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 			return nil, err
 		}
 
+		preview = refreshPreviewWithExistingLessons(preview, existingLessons)
+		uc.store.Save(preview.RunID, preview)
+
 		if conflicts := detectCommitConflicts(preview.Assignments, existingLessons); len(conflicts) > 0 {
-			return nil, errors.New(formatCommitConflicts(conflicts))
+			return nil, &CommitPreviewConflictError{
+				Message: formatCommitConflicts(conflicts),
+				Preview: preview,
+			}
 		}
 
 		for _, assignment := range preview.Assignments {
@@ -112,6 +157,12 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 				return nil, err
 			}
 
+			if _, ok := manualAssignmentIDs[assignment.VariableID]; ok {
+				if err := uc.ensureManualScheduleTemplate(txCtx, assignment); err != nil {
+					return nil, err
+				}
+			}
+
 			committedLessons++
 		}
 
@@ -130,6 +181,70 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 		ScheduledLessons: committedLessons,
 		Status:           "COMMITTED",
 	}, nil
+}
+
+func (uc *commitPreviewUseCase) ensureManualScheduleTemplate(ctx context.Context, assignment PreviewAssignment) error {
+	if assignment.ClassID == "" || assignment.ShiftID == "" {
+		return nil
+	}
+
+	existingSchedules, err := uc.classScheduleRepo.GetSchedulesByClassID(ctx, assignment.ClassID)
+	if err != nil {
+		return err
+	}
+
+	dayOfWeek := weekdayToScheduleDay(assignment.StartTime.Weekday())
+	if dayOfWeek == "" {
+		return nil
+	}
+
+	for _, schedule := range existingSchedules {
+		sameRoom := false
+		switch {
+		case schedule.RoomID == nil && assignment.RoomID == "":
+			sameRoom = true
+		case schedule.RoomID != nil && *schedule.RoomID == assignment.RoomID:
+			sameRoom = true
+		}
+
+		if schedule.DayOfWeek == dayOfWeek && schedule.ShiftID == assignment.ShiftID && sameRoom {
+			return nil
+		}
+	}
+
+	var roomID *string
+	if assignment.RoomID != "" {
+		roomID = &assignment.RoomID
+	}
+
+	_, err = uc.classScheduleRepo.Create(ctx, &entities.ClassSchedule{
+		ClassID:   assignment.ClassID,
+		DayOfWeek: dayOfWeek,
+		ShiftID:   assignment.ShiftID,
+		RoomID:    roomID,
+	})
+	return err
+}
+
+func weekdayToScheduleDay(weekday time.Weekday) string {
+	switch weekday {
+	case time.Monday:
+		return "MONDAY"
+	case time.Tuesday:
+		return "TUESDAY"
+	case time.Wednesday:
+		return "WEDNESDAY"
+	case time.Thursday:
+		return "THURSDAY"
+	case time.Friday:
+		return "FRIDAY"
+	case time.Saturday:
+		return "SATURDAY"
+	case time.Sunday:
+		return "SUNDAY"
+	default:
+		return ""
+	}
 }
 
 type commitConflict struct {
@@ -234,6 +349,99 @@ func detectCommitConflicts(assignments []PreviewAssignment, lessons []entities.L
 	}
 
 	return conflicts
+}
+
+func refreshPreviewWithExistingLessons(preview PreviewResult, lessons []entities.Lesson) PreviewResult {
+	preview.ExistingLessons = mergeExistingLessons(
+		preview.ExistingLessons,
+		buildExistingLessonEventsForPreview(lessons, preview.ClassStudentIDs),
+	)
+	return rebuildPreviewResult(preview, buildAssignmentMap(preview.Assignments))
+}
+
+func buildExistingLessonEventsForPreview(
+	lessons []entities.Lesson,
+	classStudentIDs map[string]map[string]struct{},
+) []ExistingLesson {
+	if len(lessons) == 0 {
+		return []ExistingLesson{}
+	}
+
+	events := make([]ExistingLesson, 0, len(lessons))
+	for _, lesson := range lessons {
+		teacherLabel := ""
+		if lesson.TeacherID != nil {
+			teacherLabel = *lesson.TeacherID
+		}
+		if lesson.Teacher.FullName != "" {
+			teacherLabel = lesson.Teacher.FullName
+		} else if lesson.Teacher.Code != "" {
+			teacherLabel = lesson.Teacher.Code
+		}
+
+		roomID := ""
+		if lesson.RoomID != nil {
+			roomID = *lesson.RoomID
+		}
+
+		teacherID := ""
+		if lesson.TeacherID != nil {
+			teacherID = *lesson.TeacherID
+		}
+
+		events = append(events, ExistingLesson{
+			LessonID:     lesson.ID,
+			ClassID:      lesson.ClassID,
+			ClassCode:    lesson.Class.Code,
+			ClassName:    lesson.Class.Name,
+			TeacherID:    teacherID,
+			TeacherLabel: teacherLabel,
+			RoomID:       roomID,
+			RoomName:     lesson.Room.Name,
+			StartTime:    lesson.DateStart,
+			EndTime:      lesson.DateEnd,
+			Notes:        lesson.Notes,
+			StudentIDs:   sortedKeys(classStudentIDs[lesson.ClassID]),
+		})
+	}
+
+	return events
+}
+
+func mergeExistingLessons(current []ExistingLesson, incoming []ExistingLesson) []ExistingLesson {
+	if len(current) == 0 {
+		return append([]ExistingLesson(nil), incoming...)
+	}
+	if len(incoming) == 0 {
+		return append([]ExistingLesson(nil), current...)
+	}
+
+	merged := make(map[string]ExistingLesson, len(current)+len(incoming))
+	for _, lesson := range current {
+		if lesson.LessonID == "" {
+			continue
+		}
+		merged[lesson.LessonID] = lesson
+	}
+	for _, lesson := range incoming {
+		if lesson.LessonID == "" {
+			continue
+		}
+		merged[lesson.LessonID] = lesson
+	}
+
+	items := make([]ExistingLesson, 0, len(merged))
+	for _, lesson := range merged {
+		items = append(items, lesson)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].StartTime.Equal(items[j].StartTime) {
+			return items[i].LessonID < items[j].LessonID
+		}
+		return items[i].StartTime.Before(items[j].StartTime)
+	})
+
+	return items
 }
 
 func formatCommitConflicts(conflicts []commitConflict) string {

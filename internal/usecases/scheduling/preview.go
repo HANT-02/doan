@@ -23,26 +23,32 @@ type PreviewUseCase interface {
 }
 
 type previewUseCase struct {
-	classRepo repositoryinterface.ClassRepository
-	roomRepo  repositoryinterface.RoomRepository
-	shiftRepo repositoryinterface.ShiftRepository
-	store     schedulingservice.PreviewStore[PreviewResult]
-	solver    schedulingservice.SchedulingSolver
+	classRepo      repositoryinterface.ClassRepository
+	roomRepo       repositoryinterface.RoomRepository
+	shiftRepo      repositoryinterface.ShiftRepository
+	lessonRepo     repositoryinterface.LessonRepository
+	enrollmentRepo repositoryinterface.EnrollmentRepository
+	store          schedulingservice.PreviewStore[PreviewResult]
+	solver         schedulingservice.SchedulingSolver
 }
 
 func NewPreviewUseCase(
 	classRepo repositoryinterface.ClassRepository,
 	roomRepo repositoryinterface.RoomRepository,
 	shiftRepo repositoryinterface.ShiftRepository,
+	lessonRepo repositoryinterface.LessonRepository,
+	enrollmentRepo repositoryinterface.EnrollmentRepository,
 	store schedulingservice.PreviewStore[PreviewResult],
 	solver schedulingservice.SchedulingSolver,
 ) PreviewUseCase {
 	return &previewUseCase{
-		classRepo: classRepo,
-		roomRepo:  roomRepo,
-		shiftRepo: shiftRepo,
-		store:     store,
-		solver:    solver,
+		classRepo:      classRepo,
+		roomRepo:       roomRepo,
+		shiftRepo:      shiftRepo,
+		lessonRepo:     lessonRepo,
+		enrollmentRepo: enrollmentRepo,
+		store:          store,
+		solver:         solver,
 	}
 }
 
@@ -141,13 +147,47 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		return nil, err
 	}
 
+	previewContext := schedulingservice.BuildPreviewContext(schedulingservice.SolverInput{
+		DateFrom:   input.DateFrom,
+		DateTo:     input.DateTo,
+		ClassIDs:   input.ClassIDs,
+		TeacherIDs: input.TeacherIDs,
+		RoomIDs:    input.RoomIDs,
+		Classes:    classes,
+		Rooms:      rooms,
+		Shifts:     shifts,
+	})
+
 	result.Status = output.Status
 	result.Assignments = output.Assignments
 	result.Conflicts = append(result.Conflicts, output.Conflicts...)
 	result.Summary = output.Summary
+	result.CandidateOptions = previewContext.CandidateOptions
+	result.Variables = previewContext.Variables
+	result.PresetConflicts = previewContext.PresetConflicts
+	result.NoDomainConflicts = previewContext.NoDomainConflicts
+	result.DomainOptions = previewContext.Domains
 
 	if result.Summary.RequestedClasses == 0 {
 		result.Summary.RequestedClasses = len(classes)
+	}
+
+	existingLessons, classStudentIDs, existingConflicts, err := uc.collectExistingLessonConflicts(ctx, result)
+	if err != nil {
+		ctxLogger.Errorf("Failed to collect existing lesson conflicts for scheduling preview: %v", err)
+		return nil, err
+	}
+
+	result.ExistingLessons = existingLessons
+	result.ClassStudentIDs = classStudentIDs
+	result.Conflicts = append(result.Conflicts, existingConflicts...)
+	result.Summary.ConflictCount = len(result.Conflicts)
+	if len(result.Assignments) == 0 {
+		result.Status = "FAILED"
+	} else if len(result.Conflicts) > 0 || result.Summary.UnscheduledLessons > 0 {
+		result.Status = "PARTIAL"
+	} else {
+		result.Status = "COMPLETED"
 	}
 
 	uc.store.Save(runID, result)

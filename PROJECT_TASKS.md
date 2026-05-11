@@ -29,7 +29,7 @@ Mục tiêu của đồ án ở giai đoạn hiện tại được chốt lại 
    - chọn 1 solver tốt nhất để dùng cho API chính.
 
 3. Bổ sung một bài toán AI đúng nghĩa machine learning:
-   - `AT_RISK classification`,
+   - `CÓ RỦI RO classification`,
    - huấn luyện trong backend hiện tại,
    - có metric đánh giá,
    - có endpoint dự báo và màn hình cảnh báo.
@@ -127,7 +127,7 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 - `Quản lý lịch tuần lớp` chưa thành một module hoàn chỉnh theo sơ đồ nghiệp vụ.
 - `Lesson / Điểm danh / Tổng kết buổi học / Kết quả học tập / Đơn xin phép` mới có entity hoặc nền backend rời rạc, chưa thành luồng đầy đủ → **được tách ra thành Giai đoạn I (Teacher Portal) và Giai đoạn J (Student Portal)** với task chi tiết.
 - Portal Giáo viên (điểm danh, sổ đầu bài, vào điểm, duyệt đơn) chưa có usecase/controller/frontend page → **xem Task I1–I10**.
-- Portal Sinh viên (thời khóa biểu, theo dõi điểm danh, điểm số, xin nghỉ, cảnh báo AT_RISK) chưa có usecase/controller/frontend page → **xem Task J1–J10**.
+- Portal Sinh viên (thời khóa biểu, theo dõi điểm danh, điểm số, xin nghỉ, cảnh báo CÓ RỦI RO) chưa có usecase/controller/frontend page → **xem Task J1–J10**.
 - Cần một giai đoạn riêng để đối chiếu lại backlog với sơ đồ phân rã chức năng trước khi chuyển sang kiểm thử và báo cáo.
 
 ---
@@ -305,17 +305,17 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 ### Giai đoạn F - Predictive analytics
 
 > **Ghi chú điều chỉnh 2026-04-23:** Pipeline predictive analytics từng được dựng tối giản bằng Go để kiểm chứng nhanh.
-> Hướng chính thức mới của đồ án là chuyển phần huấn luyện/đánh giá mô hình `AT_RISK` sang Python để tận dụng hệ sinh thái `pandas`, `scikit-learn`, `joblib`, metric/visualization và trình bày nghiên cứu tốt hơn.
+> Hướng chính thức mới của đồ án là chuyển phần huấn luyện/đánh giá mô hình `CÓ RỦI RO` sang Python để tận dụng hệ sinh thái `pandas`, `scikit-learn`, `joblib`, metric/visualization và trình bày nghiên cứu tốt hơn.
 > Backend Go vẫn giữ vai trò API hệ thống, portal và tích hợp kết quả dự báo.
 
-#### Task F1. Chốt dữ liệu đầu vào cho `AT_RISK classification`
+#### Task F1. Chốt dữ liệu đầu vào cho `CÓ RỦI RO classification`
 - [x] Chốt nguồn dữ liệu:
   - [x] student
   - [x] attendance
   - [x] grade
   - [x] class/course enrollment
   - [x] tín hiệu vận hành cần thiết
-- [x] Chốt label `AT_RISK`
+- [x] Chốt label `CÓ RỦI RO`
 - [x] Chốt feature set ban đầu
 
 **Mục tiêu đóng task:**
@@ -334,7 +334,7 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 #### Task F3. Prediction API + model metadata
 - [x] Thiết kế lưu model metadata
-- [x] Tạo endpoint dự báo `AT_RISK`
+- [x] Tạo endpoint dự báo `CÓ RỦI RO`
 - [x] Tạo output explanation cơ bản
 - [x] Tạo cơ chế versioning tối thiểu cho model
 
@@ -342,7 +342,7 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 - Có API dự báo dùng được trong hệ thống.
 
 #### Task F4. Frontend cảnh báo sinh viên nguy cơ học kém
-- [x] Tạo màn hình danh sách sinh viên `AT_RISK`
+- [x] Tạo màn hình danh sách sinh viên `CÓ RỦI RO`
 - [x] Hiển thị score/label
 - [x] Hiển thị insight hoặc lý do chính
 - [x] Kiểm tra flow end-to-end
@@ -354,7 +354,7 @@ Các điểm dưới đây hiện vẫn chưa khớp hoàn toàn với sơ đồ
 
 ### Giai đoạn K - Chuyển Predictive Analytics sang Python ML Project
 
-> **Mục tiêu giai đoạn:** Tách phần huấn luyện, đánh giá và giải thích mô hình dự báo học viên có nguy cơ học tập kém (`AT_RISK`) sang một project Python nằm trong repo đồ án.  
+> **Mục tiêu giai đoạn:** Tách phần huấn luyện, đánh giá và giải thích mô hình dự báo học viên có nguy cơ học tập kém (`CÓ RỦI RO`) sang một project Python nằm trong repo đồ án.  
 > Go backend chỉ giữ vai trò tích hợp API, đọc kết quả/artifact/model metadata và hiển thị lên UI.
 >
 > **Trạng thái kế hoạch:** Đã được user accept ngày 2026-04-23. Bắt đầu triển khai từ `Task K0` sau khi xác nhận chuyển đổi chính thức.

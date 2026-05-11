@@ -102,7 +102,7 @@ export const StudentOverview: React.FC = () => {
                 <Card className={prediction.risk_label === 'AT_RISK' ? 'border-orange-300 bg-orange-50/40' : ''}>
                     <CardHeader className="flex flex-row items-start justify-between space-y-0">
                         <div className="space-y-1">
-                            <CardTitle className="text-lg">Cảnh báo học tập AT_RISK</CardTitle>
+                            <CardTitle className="text-lg">Cảnh báo học tập có rủi ro</CardTitle>
                             <p className="text-sm text-muted-foreground">
                                 Mô hình {prediction.model_name} • mức {prediction.risk_band.toLowerCase()} • xác suất {Math.round(prediction.risk_score * 100)}%
                             </p>
@@ -143,7 +143,7 @@ export const StudentOverview: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">
-                            Chưa có dữ liệu dự báo AT_RISK tại thời điểm này. Hệ thống sẽ cập nhật khi đủ dữ liệu học tập và chuyên cần.
+                            Chưa có dữ liệu dự báo có rủi ro tại thời điểm này. Hệ thống sẽ cập nhật khi đủ dữ liệu học tập và chuyên cần.
                         </p>
                     </CardContent>
                 </Card>

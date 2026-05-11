@@ -66,6 +66,34 @@ type PreviewAssignment struct {
 	ConstraintFit string    `json:"constraint_fit"`
 }
 
+type PreviewCandidateOption struct {
+	Key          string    `json:"key"`
+	RoomID       string    `json:"room_id"`
+	RoomName     string    `json:"room_name"`
+	RoomCapacity int       `json:"room_capacity"`
+	ShiftID      string    `json:"shift_id,omitempty"`
+	ShiftCode    string    `json:"shift_code,omitempty"`
+	ShiftName    string    `json:"shift_name,omitempty"`
+	ShiftType    string    `json:"shift_type,omitempty"`
+	StartTime    time.Time `json:"start_time"`
+	EndTime      time.Time `json:"end_time"`
+}
+
+type ExistingLesson struct {
+	LessonID     string    `json:"lesson_id"`
+	ClassID      string    `json:"class_id"`
+	ClassCode    string    `json:"class_code"`
+	ClassName    string    `json:"class_name"`
+	TeacherID    string    `json:"teacher_id,omitempty"`
+	TeacherLabel string    `json:"teacher_label,omitempty"`
+	RoomID       string    `json:"room_id,omitempty"`
+	RoomName     string    `json:"room_name,omitempty"`
+	StartTime    time.Time `json:"start_time"`
+	EndTime      time.Time `json:"end_time"`
+	Notes        string    `json:"notes,omitempty"`
+	StudentIDs   []string  `json:"student_ids,omitempty"`
+}
+
 type PreviewConflict struct {
 	VariableID   string `json:"variable_id"`
 	ClassID      string `json:"class_id"`

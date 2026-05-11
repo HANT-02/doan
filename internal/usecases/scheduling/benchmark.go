@@ -188,7 +188,7 @@ func calculateFeasibilityRate(summary schedulingservice.SolverSummary) float64 {
 
 func buildBenchmarkMessage(summary schedulingservice.SolverSummary, runtimeMs int64) string {
 	return fmt.Sprintf(
-		"Da xep %d/%d buoi, %d conflict, soft score %d, runtime %d ms.",
+		"Da xep %d/%d buoi, %d trung, diem so mem %d, runtime %d ms.",
 		summary.ScheduledLessons,
 		summary.RequestedSessions,
 		summary.ConflictCount,

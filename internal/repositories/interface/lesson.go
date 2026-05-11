@@ -10,6 +10,7 @@ import (
 
 type LessonRepository interface {
 	repositories.BaseRepository[entities.Lesson]
+	ListInRange(ctx context.Context, from time.Time, to time.Time) ([]entities.Lesson, error)
 	FindOverlappingLessons(
 		ctx context.Context,
 		from time.Time,

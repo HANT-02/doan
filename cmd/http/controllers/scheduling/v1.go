@@ -1,11 +1,13 @@
 package scheduling
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"doan/cmd/http/rest"
 	"doan/internal/usecases/scheduling"
+	"doan/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -141,14 +143,45 @@ func (ctrl *ControllerV1) Commit(c *gin.Context) {
 	}
 
 	output, err := ctrl.commitUseCase.Execute(c.Request.Context(), scheduling.CommitPreviewInput{
-		RunID: req.RunID,
+		RunID:             req.RunID,
+		ManualAssignments: mapManualAssignments(req.ManualAssignments),
 	})
 	if err != nil {
+		var conflictErr *scheduling.CommitPreviewConflictError
+		if errors.As(err, &conflictErr) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, &rest.BaseResponse{
+				Success:   false,
+				Message:   utils.NewStringPtr("Failed to commit scheduling preview"),
+				ErrorCode: utils.NewStringPtr(conflictErr.Error()),
+				Data:      conflictErr.Preview,
+			})
+			return
+		}
 		rest.ResponseError(c, http.StatusBadRequest, "Failed to commit scheduling preview", err)
 		return
 	}
 
 	rest.ResponseSuccess(c, http.StatusOK, "Scheduling preview committed successfully", output)
+}
+
+func mapManualAssignments(items []CommitAssignmentChoice) []scheduling.ManualAssignmentOverride {
+	if len(items) == 0 {
+		return nil
+	}
+
+	overrides := make([]scheduling.ManualAssignmentOverride, 0, len(items))
+	for _, item := range items {
+		if item.VariableID == "" || item.OptionKey == "" {
+			continue
+		}
+
+		overrides = append(overrides, scheduling.ManualAssignmentOverride{
+			VariableID: item.VariableID,
+			OptionKey:  item.OptionKey,
+		})
+	}
+
+	return overrides
 }
 
 func parsePreviewDate(raw string) (time.Time, error) {

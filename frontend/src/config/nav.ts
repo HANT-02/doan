@@ -109,7 +109,7 @@ export const NAV_ITEMS: NavItem[] = [
     },
     {
         key: 'admin-predictive',
-        labelVi: 'Cảnh báo AT_RISK',
+        labelVi: 'Cảnh báo có rủi ro',
         path: '/app/admin/predictive',
         icon: AssignmentTurnedIn,
         roles: ['ADMIN', 'SUPER_ADMIN'],

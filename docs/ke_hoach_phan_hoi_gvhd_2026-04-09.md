@@ -16,7 +16,7 @@ Các quyết định sau đã được khóa để làm căn cứ triển khai:
 5. Sau benchmark sẽ chọn **1 solver tốt nhất** để inject vào use case scheduling chính.
 6. Predictive analytics chọn bài toán **classification**:
    - dự báo sinh viên có nguy cơ học kém
-   - nhãn đầu ra: `AT_RISK` / `NOT_AT_RISK`
+   - nhãn đầu ra: `CÓ RỦI RO` / `KHÔNG CÓ RỦI RO`
 7. Predictive analytics sẽ được **huấn luyện bằng backend hiện tại**.
 8. `System prompt` **không** được dùng để thay thế mô hình dự báo; prompt chỉ dùng để giải thích kết quả hoặc sinh khuyến nghị.
 9. **Ưu tiên hoàn thiện scheduling trước**, predictive analytics làm sau.
@@ -62,7 +62,7 @@ Sau đợt nâng cấp này, hệ thống được tổ chức thành 3 khối c
 3. **Khối predictive analytics**
    - lấy dữ liệu sinh viên, điểm, điểm danh, vận hành học tập,
    - huấn luyện classifier trong backend hiện tại,
-   - trả nhãn `AT_RISK` và insight giải thích.
+   - trả nhãn `CÓ RỦI RO` và insight giải thích.
 
 ---
 
@@ -312,14 +312,14 @@ Sau benchmark:
 
 Bài toán được chọn là:
 
-**Dự báo sinh viên có nguy cơ học kém (`AT_RISK`)**
+**Dự báo sinh viên có nguy cơ học kém (`CÓ RỦI RO`)**
 
 Đây là bài toán **classification**.
 
 Đầu ra mong muốn:
 
-- `AT_RISK`
-- `NOT_AT_RISK`
+- `CÓ RỦI RO`
+- `KHÔNG CÓ RỦI RO`
 
 ## 7.2. Tập dữ liệu đầu vào nên dùng
 
@@ -368,7 +368,7 @@ Nếu dữ liệu ở dạng bảng là chủ yếu, mô hình chính nên là:
 
 và dùng thêm:
 
-- `SHAP` hoặc feature importance để giải thích vì sao sinh viên bị gắn nhãn `AT_RISK`.
+- `SHAP` hoặc feature importance để giải thích vì sao sinh viên bị gắn nhãn `CÓ RỦI RO`.
 
 ## 7.5. Thước đo đánh giá
 
@@ -382,7 +382,7 @@ Vì đây là classification, cần đánh giá bằng:
 
 Khuyến nghị:
 
-- ưu tiên `Recall` và `F1` cho lớp `AT_RISK`,
+- ưu tiên `Recall` và `F1` cho lớp `CÓ RỦI RO`,
 - vì bỏ sót sinh viên nguy cơ cao gây hại hơn so với cảnh báo dư.
 
 ## 7.6. Predictive analytics trong backend hiện tại
@@ -559,7 +559,7 @@ Việc làm:
 
 Deliverable:
 
-- mô hình `AT_RISK` classification,
+- mô hình `CÓ RỦI RO` classification,
 - bảng so sánh mô hình,
 - API dự báo,
 - UI cảnh báo mức demo.
@@ -588,7 +588,7 @@ Các quyết định lớn hiện đã khóa. Phần còn cần review là mức
 1. Benchmark admin API có cần lưu lịch sử kết quả benchmark vào DB hay chỉ trả response tức thời.
 2. `Shift` có cần hỗ trợ phân loại theo cơ sở/khu học hay chưa.
 3. Predictive analytics trong backend hiện tại sẽ lưu model theo file nội bộ hay lưu hoàn toàn metadata trong DB.
-4. Phần explanation cho `AT_RISK` sẽ dùng feature importance tĩnh hay sinh insight theo từng sinh viên.
+4. Phần explanation cho `CÓ RỦI RO` sẽ dùng feature importance tĩnh hay sinh insight theo từng sinh viên.
 
 ---
 
@@ -626,7 +626,7 @@ Hướng triển khai tối ưu cho đồ án ở thời điểm này là:
 2. chuyển `class_schedule` sang `shift_id`,
 3. benchmark `Graph Coloring + CP-SAT + Tabu Search`,
 4. chọn 1 solver tốt nhất để tích hợp,
-5. giữ predictive analytics ở phạm vi `AT_RISK classification`,
+5. giữ predictive analytics ở phạm vi `CÓ RỦI RO classification`,
 6. dùng mô hình ML thật trong backend hiện tại, còn prompt chỉ làm lớp giải thích.
 
 Đây là hướng vừa bám sát góp ý của GVHD, vừa đủ chiều sâu kỹ thuật, vừa giữ khối lượng triển khai ở mức hợp lý cho đồ án tốt nghiệp.
