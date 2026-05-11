@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -124,6 +124,14 @@ const formatDateTime = (value: string) =>
 
 const formatCompactDateTime = (value: string) =>
     format(parseISO(value), 'dd/MM HH:mm', { locale: vi });
+
+const formatWeekday = (value: string) => {
+    const date = parseISO(value);
+    return dayLabels[(date.getDay() + 6) % 7];
+};
+
+const formatOptionTitle = (option: SchedulingCandidateOption) =>
+    `${formatWeekday(option.start_time)}, ${format(parseISO(option.start_time), 'dd/MM/yyyy', { locale: vi })}`;
 
 const getConflictSeverity = (type: string): 'error' | 'warning' | 'info' => {
     switch (type) {
@@ -298,6 +306,56 @@ const overlaps = (left: SchedulingAssignment, right: SchedulingAssignment) =>
 const overlapsExistingLesson = (assignment: SchedulingAssignment, lesson: SchedulingExistingLesson) =>
     parseISO(assignment.start_time) < parseISO(lesson.end_time) &&
     parseISO(lesson.start_time) < parseISO(assignment.end_time);
+
+const getCandidateConflictMessages = (
+    session: SessionDraft,
+    option: SchedulingCandidateOption,
+    previewState: DerivedPreviewState,
+) => {
+    const assignment = buildAssignmentFromOption(session, option);
+    const messages: string[] = [];
+
+    previewState.calendarAssignments
+        .filter((item) => item.variable_id !== session.variableId)
+        .forEach((item) => {
+            if (!overlaps(assignment, item)) {
+                return;
+            }
+
+            if (assignment.class_id && assignment.class_id === item.class_id) {
+                messages.push(`trùng lớp với ${item.class_code} buổi ${item.session_index}/${item.session_total}`);
+            }
+            if (assignment.teacher_id && assignment.teacher_id === item.teacher_id) {
+                messages.push(`trùng giáo viên với ${item.class_code} buổi ${item.session_index}/${item.session_total}`);
+            }
+            if (assignment.room_id && assignment.room_id === item.room_id) {
+                messages.push(`phòng ${option.room_name} đã bận bởi ${item.class_code}`);
+            }
+        });
+
+    previewState.existingLessons.forEach((lesson) => {
+        if (!overlapsExistingLesson(assignment, lesson)) {
+            return;
+        }
+
+        if (assignment.class_id && assignment.class_id === lesson.class_id) {
+            messages.push(`trùng lớp với lesson đã lưu ${lesson.class_code}`);
+        }
+        if (assignment.teacher_id && lesson.teacher_id && assignment.teacher_id === lesson.teacher_id) {
+            messages.push(`trùng giáo viên với lesson đã lưu ${lesson.class_code}`);
+        }
+        if (assignment.room_id && lesson.room_id && assignment.room_id === lesson.room_id) {
+            messages.push(`phòng ${option.room_name} đã có lesson ${lesson.class_code}`);
+        }
+    });
+
+    return uniqueTags(messages);
+};
+
+const filterAvailableCandidateOptions = (
+    session: SessionDraft,
+    previewState: DerivedPreviewState,
+) => session.candidateOptions.filter((option) => getCandidateConflictMessages(session, option, previewState).length === 0);
 
 const scoreAssignments = (assignments: SchedulingAssignment[]) => {
     const items = [...assignments].sort((left, right) => left.start_time.localeCompare(right.start_time));
@@ -688,9 +746,27 @@ export const SchedulingPage = () => {
         () => derivedPreview?.sessions.find((session) => session.variableId === activeSessionId) || null,
         [activeSessionId, derivedPreview],
     );
+    const activeSessionAvailableOptions = useMemo(() => {
+        if (!activeSession || !derivedPreview) {
+            return [];
+        }
+        return filterAvailableCandidateOptions(activeSession, derivedPreview);
+    }, [activeSession, derivedPreview]);
+    useEffect(() => {
+        if (!activeSession) {
+            return;
+        }
+        if (activeSessionAvailableOptions.some((option) => option.key === pendingOptionKey)) {
+            return;
+        }
+        setPendingOptionKey(activeSessionAvailableOptions[0]?.key || '');
+    }, [activeSession, activeSessionAvailableOptions, pendingOptionKey]);
 
     const activeStep = preview ? 2 : 0;
     const canCommitPreview = !!derivedPreview && derivedPreview.status === 'COMPLETED';
+
+    const getAvailableOptionsForSession = (session: SessionDraft) =>
+        derivedPreview ? filterAvailableCandidateOptions(session, derivedPreview) : [];
 
     const resetManualSelections = () => {
         setManualSelections({});
@@ -740,13 +816,18 @@ export const SchedulingPage = () => {
 
     const openEditDialog = (variableId: string) => {
         const session = derivedPreview?.sessions.find((item) => item.variableId === variableId);
-        if (!session) {
+        if (!session || !derivedPreview) {
             return;
         }
 
+        const availableOptions = filterAvailableCandidateOptions(session, derivedPreview);
+        const selectedKey = manualSelections[variableId];
+        const currentKey = session.baseAssignment ? getOptionKeyFromAssignment(session.baseAssignment) : '';
         const initialKey =
-            manualSelections[variableId] ||
-            (session.baseAssignment ? getOptionKeyFromAssignment(session.baseAssignment) : session.candidateOptions[0]?.key || '');
+            (selectedKey && availableOptions.some((option) => option.key === selectedKey) ? selectedKey : '') ||
+            (currentKey && availableOptions.some((option) => option.key === currentKey) ? currentKey : '') ||
+            availableOptions[0]?.key ||
+            '';
         setActiveSessionId(variableId);
         setPendingOptionKey(initialKey);
     };
@@ -755,6 +836,10 @@ export const SchedulingPage = () => {
         if (!activeSessionId || !pendingOptionKey) {
             setActiveSessionId(null);
             setPendingOptionKey('');
+            return;
+        }
+        if (!activeSessionAvailableOptions.some((option) => option.key === pendingOptionKey)) {
+            toast.error('Phương án đã chọn không còn trống. Hãy chọn lại ngày, ca hoặc phòng khác.');
             return;
         }
 
@@ -1252,62 +1337,65 @@ export const SchedulingPage = () => {
                                     {filteredSessions.filter((session) => !session.resolvedAssignment || session.derivedConflictMessages.length > 0).length > 0 ? (
                                         filteredSessions
                                             .filter((session) => !session.resolvedAssignment || session.derivedConflictMessages.length > 0)
-                                            .map((session) => (
-                                                <Paper
-                                                    key={session.variableId}
-                                                    variant="outlined"
-                                                    sx={{ p: 1.5, borderRadius: 3, borderColor: 'warning.light' }}
-                                                >
-                                                    <Stack spacing={1}>
-                                                        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1}>
-                                                            <Box>
-                                                                <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                                                    {session.classCode} - {session.className}
-                                                                </Typography>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    Buổi {session.sessionIndex}/{session.sessionTotal}
-                                                                </Typography>
-                                                            </Box>
-                                                            <Stack direction="row" spacing={1} flexWrap="wrap">
-                                                                <Chip
-                                                                    size="small"
-                                                                    color={session.resolvedAssignment ? 'warning' : 'error'}
-                                                                    label={session.resolvedAssignment ? 'Đã xếp nhưng còn conflict' : 'Chưa xếp được'}
-                                                                />
-                                                                <Chip
-                                                                    size="small"
-                                                                    variant="outlined"
-                                                                    label={`${session.candidateOptions.length} lựa chọn`}
-                                                                />
+                                            .map((session) => {
+                                                const availableOptionCount = getAvailableOptionsForSession(session).length;
+                                                return (
+                                                    <Paper
+                                                        key={session.variableId}
+                                                        variant="outlined"
+                                                        sx={{ p: 1.5, borderRadius: 3, borderColor: 'warning.light' }}
+                                                    >
+                                                        <Stack spacing={1}>
+                                                            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1}>
+                                                                <Box>
+                                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                                        {session.classCode} - {session.className}
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        Buổi {session.sessionIndex}/{session.sessionTotal}
+                                                                    </Typography>
+                                                                </Box>
+                                                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                                    <Chip
+                                                                        size="small"
+                                                                        color={session.resolvedAssignment ? 'warning' : 'error'}
+                                                                        label={session.resolvedAssignment ? 'Đã xếp nhưng còn conflict' : 'Chưa xếp được'}
+                                                                    />
+                                                                    <Chip
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        label={`${availableOptionCount} phương án trống`}
+                                                                    />
+                                                                </Stack>
                                                             </Stack>
+                                                            {renderConflictChips(session.conflictTags)}
+                                                            {session.resolvedAssignment ? (
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    Hiện tại: {formatCompactDateTime(session.resolvedAssignment.start_time)} • {session.resolvedAssignment.room_name} • {session.resolvedAssignment.shift_name || 'Ca tự do'}
+                                                                </Typography>
+                                                            ) : null}
+                                                            {session.baseConflicts.map((conflict) => (
+                                                                <Alert key={`${conflict.variable_id}-${conflict.type}`} severity={getConflictSeverity(conflict.type)}>
+                                                                    {conflict.message}
+                                                                </Alert>
+                                                            ))}
+                                                            {session.derivedConflictMessages.map((message) => (
+                                                                <Alert key={`${session.variableId}-${message}`} severity="warning">
+                                                                    {message}
+                                                                </Alert>
+                                                            ))}
+                                                            <Button
+                                                                variant="outlined"
+                                                                startIcon={<EditCalendarRounded />}
+                                                                onClick={() => openEditDialog(session.variableId)}
+                                                                disabled={availableOptionCount === 0}
+                                                            >
+                                                                {availableOptionCount > 0 ? 'Chọn ngày/ca/phòng trống' : 'Không còn phương án trống'}
+                                                            </Button>
                                                         </Stack>
-                                                        {renderConflictChips(session.conflictTags)}
-                                                        {session.resolvedAssignment ? (
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                Hiện tại: {formatCompactDateTime(session.resolvedAssignment.start_time)} • {session.resolvedAssignment.room_name} • {session.resolvedAssignment.shift_name || 'Ca tự do'}
-                                                            </Typography>
-                                                        ) : null}
-                                                        {session.baseConflicts.map((conflict) => (
-                                                            <Alert key={`${conflict.variable_id}-${conflict.type}`} severity={getConflictSeverity(conflict.type)}>
-                                                                {conflict.message}
-                                                            </Alert>
-                                                        ))}
-                                                        {session.derivedConflictMessages.map((message) => (
-                                                            <Alert key={`${session.variableId}-${message}`} severity="warning">
-                                                                {message}
-                                                            </Alert>
-                                                        ))}
-                                                        <Button
-                                                            variant="outlined"
-                                                            startIcon={<EditCalendarRounded />}
-                                                            onClick={() => openEditDialog(session.variableId)}
-                                                            disabled={session.candidateOptions.length === 0}
-                                                        >
-                                                            {session.candidateOptions.length > 0 ? 'Chọn slot/phòng khác' : 'Không có slot khả dụng'}
-                                                        </Button>
-                                                    </Stack>
-                                                </Paper>
-                                            ))
+                                                    </Paper>
+                                                );
+                                            })
                                     ) : (
                                         <Alert severity="success">
                                             Không còn ca học nào cần xử lý trong bộ lọc hiện tại.
@@ -1370,24 +1458,24 @@ export const SchedulingPage = () => {
 
                             <TextField
                                 select
-                                label="Chọn phương án slot/phòng"
+                                label="Chọn ngày, ca và phòng trống"
                                 value={pendingOptionKey}
                                 onChange={(event) => setPendingOptionKey(event.target.value)}
                                 fullWidth
                                 helperText={
-                                    activeSession.candidateOptions.length > 0
-                                        ? 'Nếu chọn ca/ngày mới rồi lưu, hệ thống sẽ bổ sung mẫu này vào lịch tuần lớp cho các lần preview sau.'
-                                        : 'Ca học này hiện chưa có vị trí hợp lệ để đổi tay.'
+                                    activeSessionAvailableOptions.length > 0
+                                        ? 'Danh sách chỉ hiển thị các phương án chưa trùng lớp, giáo viên hoặc phòng trong thời điểm đó.'
+                                        : 'Tất cả phương án hiện đang trùng lịch. Hãy nới khoảng ngày hoặc bổ sung ca/phòng khác.'
                                 }
                             >
-                                {activeSession.candidateOptions.map((option) => (
+                                {activeSessionAvailableOptions.map((option) => (
                                     <MenuItem key={option.key} value={option.key}>
                                         <Box>
                                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                {formatDateTime(option.start_time)} - {format(parseISO(option.end_time), 'HH:mm', { locale: vi })}
+                                                {formatOptionTitle(option)}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {option.room_name} • {option.shift_name || 'Ca tự do'} • Sức chứa {option.room_capacity}
+                                                {option.shift_name || option.shift_code || 'Ca tự do'} • {format(parseISO(option.start_time), 'HH:mm', { locale: vi })} - {format(parseISO(option.end_time), 'HH:mm', { locale: vi })} • {option.room_name} trống • Sức chứa {option.room_capacity}
                                             </Typography>
                                         </Box>
                                     </MenuItem>
@@ -1404,7 +1492,7 @@ export const SchedulingPage = () => {
                     <Button
                         variant="contained"
                         onClick={handleSaveManualSelection}
-                        disabled={!activeSession || !pendingOptionKey || activeSession.candidateOptions.length === 0}
+                        disabled={!activeSession || !pendingOptionKey || activeSessionAvailableOptions.length === 0}
                     >
                         Áp dụng
                     </Button>

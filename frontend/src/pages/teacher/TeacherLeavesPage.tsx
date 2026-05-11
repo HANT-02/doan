@@ -257,7 +257,7 @@ export default function TeacherLeavesPage() {
                                     ) : null}
                                 </TableCell>
                                 <TableCell>
-                                    {request.documents.length ? (
+                                    {request.documents?.length ? (
                                         <Stack spacing={0.5}>
                                             {request.documents.map((documentUrl) => (
                                                 <Typography
