@@ -132,7 +132,7 @@ export default function TeacherSchedulePage() {
                     >
                         <Box>
                             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                                Calendar tuần giảng dạy
+                                Lich tuần giảng dạy
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 Mỗi card là một buổi học. Bấm vào card hoặc nút chi tiết để mở lesson tương ứng.

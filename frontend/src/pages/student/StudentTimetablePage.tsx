@@ -309,7 +309,7 @@ export default function StudentTimetablePage() {
                     >
                         <Box>
                             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                                Calendar tuần học
+                                Lịch tuần
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 Theo dõi các buổi học theo ngày, kèm trạng thái điểm danh và đơn xin phép nếu có.
