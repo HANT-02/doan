@@ -83,6 +83,29 @@ export interface ModelMetadataResponse {
     };
 }
 
+export interface TrainAtRiskFromDBStep {
+    name: string;
+    command: string;
+    status: 'running' | 'success' | 'failed' | 'warning';
+    duration_ms: number;
+    output_tail?: string;
+}
+
+export interface TrainAtRiskFromDBResponse {
+    success: boolean;
+    message: string;
+    data: {
+        message: string;
+        dataset_name: string;
+        started_at: string;
+        finished_at: string;
+        duration_ms: number;
+        ml_dir: string;
+        model_metadata: PredictiveModelMetadata;
+        steps: TrainAtRiskFromDBStep[];
+    };
+}
+
 export const predictiveApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getAtRiskPredictions: builder.query<
@@ -118,10 +141,21 @@ export const predictiveApi = baseApi.injectEndpoints({
             },
             providesTags: [{ type: 'Predictive', id: 'MODEL_METADATA' }],
         }),
+        trainAtRiskFromDB: builder.mutation<TrainAtRiskFromDBResponse, void>({
+            query: () => ({
+                url: '/v1/predictive/at-risk/train-from-db',
+                method: 'POST',
+            }),
+            invalidatesTags: [
+                { type: 'Predictive', id: 'AT_RISK_LIST' },
+                { type: 'Predictive', id: 'MODEL_METADATA' },
+            ],
+        }),
     }),
 });
 
 export const {
     useGetAtRiskPredictionsQuery,
     useGetPredictiveModelMetadataQuery,
+    useTrainAtRiskFromDBMutation,
 } = predictiveApi;

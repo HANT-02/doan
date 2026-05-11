@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data_pipeline import build_dataset_from_db
+from src.data_pipeline import build_inference_dataset_from_db
 from src.database import create_db_engine
 from src.dataset_schema import DEFAULT_DATASET_DEFINITION
 from src.prediction_inference import (
@@ -46,7 +46,7 @@ def main() -> None:
 
     try:
         engine = create_db_engine()
-        dataset = build_dataset_from_db(engine, DEFAULT_DATASET_DEFINITION)
+        dataset = build_inference_dataset_from_db(engine, DEFAULT_DATASET_DEFINITION)
     except ValueError as exc:
         result = predict_dataset(
             dataset=pd.DataFrame(columns=[]),

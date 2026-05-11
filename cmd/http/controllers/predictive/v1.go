@@ -15,15 +15,18 @@ var _ Controller = (*ControllerV1)(nil)
 type ControllerV1 struct {
 	listPredictionsUseCase  predictiveuc.ListStudentPredictionsUseCase
 	getModelMetadataUseCase predictiveuc.GetModelMetadataUseCase
+	trainFromDBUseCase      predictiveuc.TrainAtRiskFromDBUseCase
 }
 
 func NewPredictiveControllerV1(
 	listPredictionsUseCase predictiveuc.ListStudentPredictionsUseCase,
 	getModelMetadataUseCase predictiveuc.GetModelMetadataUseCase,
+	trainFromDBUseCase predictiveuc.TrainAtRiskFromDBUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
 		listPredictionsUseCase:  listPredictionsUseCase,
 		getModelMetadataUseCase: getModelMetadataUseCase,
+		trainFromDBUseCase:      trainFromDBUseCase,
 	}
 }
 
@@ -57,4 +60,14 @@ func (ctrl *ControllerV1) GetModelMetadata(c *gin.Context) {
 	}
 
 	rest.ResponseSuccess(c, http.StatusOK, "Predictive model metadata retrieved successfully", output)
+}
+
+func (ctrl *ControllerV1) TrainAtRiskFromDB(c *gin.Context) {
+	output, err := ctrl.trainFromDBUseCase.Execute(c.Request.Context())
+	if err != nil {
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to train predictive model from DB", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, "Predictive model trained from DB successfully", output)
 }

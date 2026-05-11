@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-04-25T02:28:41.910331Z",
-  "source": "csv:at_risk_dataset_demo.csv",
+  "generated_at": "2026-05-11T11:15:33.762258Z",
+  "source": "database",
   "model_version": "logistic_regression",
   "selection": {
     "selected_model": "logistic_regression",
     "selected_metrics": {
       "model_type": "logistic_regression",
-      "accuracy": 1.0,
+      "accuracy": 0.75,
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "support": 4,
+      "recall": 0.6,
+      "f1": 0.75,
+      "support": 8,
       "confusion_matrix": {
         "labels": [
           "NOT_AT_RISK",
@@ -18,54 +18,53 @@
         ],
         "matrix": [
           [
-            2,
+            3,
             0
           ],
           [
-            0,
-            2
+            2,
+            3
           ]
         ],
-        "tn": 2,
+        "tn": 3,
         "fp": 0,
-        "fn": 0,
-        "tp": 2
+        "fn": 2,
+        "tp": 3
       },
       "prediction_score_summary": {
-        "min": 0.015038,
-        "max": 0.994554,
-        "avg": 0.514292
+        "min": 0.039086,
+        "max": 0.982485,
+        "avg": 0.416093
       },
       "classification_report": {
         "NOT_AT_RISK": {
-          "precision": 1.0,
+          "precision": 0.6,
           "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "f1-score": 0.75,
+          "support": 3.0
         },
         "AT_RISK": {
           "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 2.0
+          "recall": 0.6,
+          "f1-score": 0.75,
+          "support": 5.0
         },
-        "accuracy": 1.0,
+        "accuracy": 0.75,
         "macro avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.8,
+          "recall": 0.8,
+          "f1-score": 0.75,
+          "support": 8.0
         },
         "weighted avg": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1-score": 1.0,
-          "support": 4.0
+          "precision": 0.85,
+          "recall": 0.75,
+          "f1-score": 0.75,
+          "support": 8.0
         }
       }
     },
     "tied_models": [
-      "rule_based",
       "logistic_regression",
       "random_forest"
     ],
@@ -78,7 +77,7 @@
       "lightweight"
     ],
     "rationale": "Các mô hình có metric tương đương trên tập kiểm thử hiện tại; ưu tiên Logistic Regression vì vẫn là mô hình học máy chính thức, nhẹ khi huấn luyện/suy luận và có khả năng giải thích tốt hơn Random Forest.",
-    "selected_at": "2026-04-25T02:28:41.856825Z"
+    "selected_at": "2026-05-11T11:15:33.607185Z"
   },
   "feature_columns": [
     "attendance_rate_28d",
@@ -90,180 +89,99 @@
     "approved_leave_count_28d",
     "days_since_last_lesson"
   ],
-  "prediction_count": 20,
+  "prediction_count": 6,
   "note": null,
   "predictions": [
     {
-      "snapshot_id": "snap_001",
-      "student_id": "stu_001",
-      "student_code": "HV001",
-      "student_name": "Nguyen An",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-01T08:00:00Z",
+      "snapshot_id": "77777777-7777-7777-7777-000000000701:66666666-6666-6666-6666-000000000601:20260511",
+      "student_id": "77777777-7777-7777-7777-000000000701",
+      "student_code": "STD-DEMO-01",
+      "student_name": "Tran Thi Hoc Vien Demo 01",
+      "class_id": "66666666-6666-6666-6666-000000000601",
+      "class_code": "CLASS-MATH10-DEMO-A",
+      "class_name": "Lớp Toán 10 Demo A",
+      "snapshot_at": "2026-05-11T11:00:00",
       "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.013224,
+      "risk_score": 0.427974,
       "risk_band": "LOW",
-      "primary_reason": "Chưa ghi nhận tín hiệu rủi ro nổi bật trong cửa sổ quan sát.",
-      "top_features": [],
-      "feature_summary": {
-        "attendance_rate_28d": 0.96,
-        "absence_count_28d": 0.0,
-        "average_total_score_28d": 8.4,
-        "homework_completion_rate_28d": 0.92,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 2.0,
-        "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 2.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909321Z"
-    },
-    {
-      "snapshot_id": "snap_002",
-      "student_id": "stu_002",
-      "student_code": "HV002",
-      "student_name": "Tran Binh",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-01T08:00:00Z",
-      "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.016964,
-      "risk_band": "LOW",
-      "primary_reason": "Chưa ghi nhận tín hiệu rủi ro nổi bật trong cửa sổ quan sát.",
-      "top_features": [],
-      "feature_summary": {
-        "attendance_rate_28d": 0.94,
-        "absence_count_28d": 0.0,
-        "average_total_score_28d": 8.0,
-        "homework_completion_rate_28d": 0.88,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 2.0,
-        "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 1.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909384Z"
-    },
-    {
-      "snapshot_id": "snap_003",
-      "student_id": "stu_003",
-      "student_code": "HV003",
-      "student_name": "Le Chi",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-01T08:00:00Z",
-      "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.090307,
-      "risk_band": "LOW",
-      "primary_reason": "Tần suất xin phép tăng",
+      "primary_reason": "Gián đoạn học tập",
       "top_features": [
         {
-          "feature": "approved_leave_count_28d",
-          "value": 1.0,
-          "severity": 0.5,
-          "label": "Tần suất xin phép tăng",
-          "detail": "Số đơn xin phép được duyệt trong 28 ngày gần đây tăng cao."
+          "feature": "days_since_last_lesson",
+          "value": 29.0,
+          "severity": 1.0,
+          "label": "Gián đoạn học tập",
+          "detail": "Khoảng cách từ buổi học gần nhất đến snapshot đang kéo dài."
         }
       ],
       "feature_summary": {
-        "attendance_rate_28d": 0.91,
-        "absence_count_28d": 1.0,
-        "average_total_score_28d": 7.6,
-        "homework_completion_rate_28d": 0.85,
+        "attendance_rate_28d": 1.0,
+        "absence_count_28d": 0.0,
+        "average_total_score_28d": 7.0,
+        "homework_completion_rate_28d": 1.0,
         "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 2.0,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 3.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909439Z"
-    },
-    {
-      "snapshot_id": "snap_004",
-      "student_id": "stu_004",
-      "student_code": "HV004",
-      "student_name": "Pham Dung",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-01T08:00:00Z",
-      "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.05971,
-      "risk_band": "LOW",
-      "primary_reason": "Chưa ghi nhận tín hiệu rủi ro nổi bật trong cửa sổ quan sát.",
-      "top_features": [],
-      "feature_summary": {
-        "attendance_rate_28d": 0.89,
-        "absence_count_28d": 1.0,
-        "average_total_score_28d": 7.4,
-        "homework_completion_rate_28d": 0.82,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 2.0,
+        "weekly_lesson_load_28d": 0.0,
         "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 2.0
+        "days_since_last_lesson": 29.0
       },
       "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909490Z"
+      "predicted_at": "2026-05-11T11:15:33.761983Z"
     },
     {
-      "snapshot_id": "snap_005",
-      "student_id": "stu_005",
-      "student_code": "HV005",
-      "student_name": "Hoang Giang",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-01T08:00:00Z",
+      "snapshot_id": "77777777-7777-7777-7777-000000000702:66666666-6666-6666-6666-000000000601:20260511",
+      "student_id": "77777777-7777-7777-7777-000000000702",
+      "student_code": "STD-DEMO-02",
+      "student_name": "Le Minh Hoc Vien 02",
+      "class_id": "66666666-6666-6666-6666-000000000601",
+      "class_code": "CLASS-MATH10-DEMO-A",
+      "class_name": "Lớp Toán 10 Demo A",
+      "snapshot_at": "2026-05-11T11:00:00",
       "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.01217,
+      "risk_score": 0.427974,
       "risk_band": "LOW",
-      "primary_reason": "Tải học phân tán",
+      "primary_reason": "Gián đoạn học tập",
       "top_features": [
         {
-          "feature": "active_enrollment_count_28d",
-          "value": 2.0,
-          "severity": 0.5,
-          "label": "Tải học phân tán",
-          "detail": "Học viên theo học nhiều lớp cùng lúc, có thể ảnh hưởng khả năng theo bài."
+          "feature": "days_since_last_lesson",
+          "value": 29.0,
+          "severity": 1.0,
+          "label": "Gián đoạn học tập",
+          "detail": "Khoảng cách từ buổi học gần nhất đến snapshot đang kéo dài."
         }
       ],
       "feature_summary": {
-        "attendance_rate_28d": 0.93,
+        "attendance_rate_28d": 1.0,
         "absence_count_28d": 0.0,
-        "average_total_score_28d": 8.1,
-        "homework_completion_rate_28d": 0.87,
-        "active_enrollment_count_28d": 2.0,
-        "weekly_lesson_load_28d": 2.5,
+        "average_total_score_28d": 7.0,
+        "homework_completion_rate_28d": 1.0,
+        "active_enrollment_count_28d": 1.0,
+        "weekly_lesson_load_28d": 0.0,
         "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 1.0
+        "days_since_last_lesson": 29.0
       },
       "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909541Z"
+      "predicted_at": "2026-05-11T11:15:33.762046Z"
     },
     {
-      "snapshot_id": "snap_006",
-      "student_id": "stu_006",
-      "student_code": "HV006",
-      "student_name": "Vu Ha",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-01T08:00:00Z",
-      "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.117965,
-      "risk_band": "LOW",
-      "primary_reason": "Tải học phân tán",
+      "snapshot_id": "77777777-7777-7777-7777-000000000703:66666666-6666-6666-6666-000000000601:20260511",
+      "student_id": "77777777-7777-7777-7777-000000000703",
+      "student_code": "STD-DEMO-03",
+      "student_name": "Pham Gia Hoc Vien 03",
+      "class_id": "66666666-6666-6666-6666-000000000601",
+      "class_code": "CLASS-MATH10-DEMO-A",
+      "class_name": "Lớp Toán 10 Demo A",
+      "snapshot_at": "2026-05-11T11:00:00",
+      "risk_label": "AT_RISK",
+      "risk_score": 0.95528,
+      "risk_band": "HIGH",
+      "primary_reason": "Gián đoạn học tập",
       "top_features": [
         {
-          "feature": "active_enrollment_count_28d",
-          "value": 2.0,
-          "severity": 0.5,
-          "label": "Tải học phân tán",
-          "detail": "Học viên theo học nhiều lớp cùng lúc, có thể ảnh hưởng khả năng theo bài."
+          "feature": "days_since_last_lesson",
+          "value": 29.0,
+          "severity": 1.0,
+          "label": "Gián đoạn học tập",
+          "detail": "Khoảng cách từ buổi học gần nhất đến snapshot đang kéo dài."
         },
         {
           "feature": "approved_leave_count_28d",
@@ -274,637 +192,122 @@
         }
       ],
       "feature_summary": {
-        "attendance_rate_28d": 0.88,
-        "absence_count_28d": 1.0,
-        "average_total_score_28d": 7.2,
-        "homework_completion_rate_28d": 0.81,
-        "active_enrollment_count_28d": 2.0,
-        "weekly_lesson_load_28d": 2.5,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 4.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909593Z"
-    },
-    {
-      "snapshot_id": "snap_007",
-      "student_id": "stu_007",
-      "student_code": "HV007",
-      "student_name": "Doan Khoa",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-02T18:00:00Z",
-      "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.015038,
-      "risk_band": "LOW",
-      "primary_reason": "Chưa ghi nhận tín hiệu rủi ro nổi bật trong cửa sổ quan sát.",
-      "top_features": [],
-      "feature_summary": {
-        "attendance_rate_28d": 0.95,
+        "attendance_rate_28d": 1.0,
         "absence_count_28d": 0.0,
-        "average_total_score_28d": 8.3,
-        "homework_completion_rate_28d": 0.9,
+        "average_total_score_28d": 7.0,
+        "homework_completion_rate_28d": 1.0,
         "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 3.0,
-        "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 2.0
+        "weekly_lesson_load_28d": 0.0,
+        "approved_leave_count_28d": 1.0,
+        "days_since_last_lesson": 29.0
       },
       "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909644Z"
+      "predicted_at": "2026-05-11T11:15:33.762100Z"
     },
     {
-      "snapshot_id": "snap_008",
-      "student_id": "stu_008",
-      "student_code": "HV008",
-      "student_name": "Dang Lan",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-02T18:00:00Z",
+      "snapshot_id": "77777777-7777-7777-7777-000000000704:66666666-6666-6666-6666-000000000601:20260511",
+      "student_id": "77777777-7777-7777-7777-000000000704",
+      "student_code": "STD-DEMO-04",
+      "student_name": "Hoang Nam Hoc Vien 04",
+      "class_id": "66666666-6666-6666-6666-000000000601",
+      "class_code": "CLASS-MATH10-DEMO-A",
+      "class_name": "Lớp Toán 10 Demo A",
+      "snapshot_at": "2026-05-11T11:00:00",
       "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.020202,
+      "risk_score": 0.427974,
       "risk_band": "LOW",
-      "primary_reason": "Chưa ghi nhận tín hiệu rủi ro nổi bật trong cửa sổ quan sát.",
-      "top_features": [],
+      "primary_reason": "Gián đoạn học tập",
+      "top_features": [
+        {
+          "feature": "days_since_last_lesson",
+          "value": 29.0,
+          "severity": 1.0,
+          "label": "Gián đoạn học tập",
+          "detail": "Khoảng cách từ buổi học gần nhất đến snapshot đang kéo dài."
+        }
+      ],
       "feature_summary": {
-        "attendance_rate_28d": 0.92,
+        "attendance_rate_28d": 1.0,
         "absence_count_28d": 0.0,
-        "average_total_score_28d": 7.9,
-        "homework_completion_rate_28d": 0.86,
+        "average_total_score_28d": 7.0,
+        "homework_completion_rate_28d": 1.0,
         "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 3.0,
+        "weekly_lesson_load_28d": 0.0,
         "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 1.0
+        "days_since_last_lesson": 29.0
       },
       "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909694Z"
+      "predicted_at": "2026-05-11T11:15:33.762152Z"
     },
     {
-      "snapshot_id": "snap_009",
-      "student_id": "stu_009",
-      "student_code": "HV009",
-      "student_name": "Bui Minh",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-02T18:00:00Z",
+      "snapshot_id": "77777777-7777-7777-7777-000000000705:66666666-6666-6666-6666-000000000601:20260511",
+      "student_id": "77777777-7777-7777-7777-000000000705",
+      "student_code": "STD-DEMO-05",
+      "student_name": "Vo Anh Hoc Vien 05",
+      "class_id": "66666666-6666-6666-6666-000000000601",
+      "class_code": "CLASS-MATH10-DEMO-A",
+      "class_name": "Lớp Toán 10 Demo A",
+      "snapshot_at": "2026-05-11T11:00:00",
       "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.058326,
+      "risk_score": 0.427974,
       "risk_band": "LOW",
-      "primary_reason": "Chưa ghi nhận tín hiệu rủi ro nổi bật trong cửa sổ quan sát.",
-      "top_features": [],
+      "primary_reason": "Gián đoạn học tập",
+      "top_features": [
+        {
+          "feature": "days_since_last_lesson",
+          "value": 29.0,
+          "severity": 1.0,
+          "label": "Gián đoạn học tập",
+          "detail": "Khoảng cách từ buổi học gần nhất đến snapshot đang kéo dài."
+        }
+      ],
       "feature_summary": {
-        "attendance_rate_28d": 0.9,
-        "absence_count_28d": 1.0,
-        "average_total_score_28d": 7.5,
-        "homework_completion_rate_28d": 0.84,
+        "attendance_rate_28d": 1.0,
+        "absence_count_28d": 0.0,
+        "average_total_score_28d": 7.0,
+        "homework_completion_rate_28d": 1.0,
         "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 3.0,
+        "weekly_lesson_load_28d": 0.0,
         "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 3.0
+        "days_since_last_lesson": 29.0
       },
       "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909745Z"
+      "predicted_at": "2026-05-11T11:15:33.762202Z"
     },
     {
-      "snapshot_id": "snap_010",
-      "student_id": "stu_010",
-      "student_code": "HV010",
-      "student_name": "Nguyen Nam",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-02T18:00:00Z",
+      "snapshot_id": "77777777-7777-7777-7777-000000000706:66666666-6666-6666-6666-000000000601:20260511",
+      "student_id": "77777777-7777-7777-7777-000000000706",
+      "student_code": "STD-DEMO-06",
+      "student_name": "Dang Khoa Hoc Vien 06",
+      "class_id": "66666666-6666-6666-6666-000000000601",
+      "class_code": "CLASS-MATH10-DEMO-A",
+      "class_name": "Lớp Toán 10 Demo A",
+      "snapshot_at": "2026-05-11T11:00:00",
       "risk_label": "NOT_AT_RISK",
-      "risk_score": 0.128041,
+      "risk_score": 0.427974,
       "risk_band": "LOW",
-      "primary_reason": "Tải học phân tán",
+      "primary_reason": "Gián đoạn học tập",
       "top_features": [
         {
-          "feature": "active_enrollment_count_28d",
-          "value": 2.0,
-          "severity": 0.5,
-          "label": "Tải học phân tán",
-          "detail": "Học viên theo học nhiều lớp cùng lúc, có thể ảnh hưởng khả năng theo bài."
-        },
-        {
-          "feature": "weekly_lesson_load_28d",
-          "value": 3.5,
-          "severity": 0.5,
-          "label": "Cường độ học cao",
-          "detail": "Tải buổi học theo tuần cao, dễ gây quá tải."
-        },
-        {
-          "feature": "approved_leave_count_28d",
-          "value": 1.0,
-          "severity": 0.5,
-          "label": "Tần suất xin phép tăng",
-          "detail": "Số đơn xin phép được duyệt trong 28 ngày gần đây tăng cao."
+          "feature": "days_since_last_lesson",
+          "value": 29.0,
+          "severity": 1.0,
+          "label": "Gián đoạn học tập",
+          "detail": "Khoảng cách từ buổi học gần nhất đến snapshot đang kéo dài."
         }
       ],
       "feature_summary": {
-        "attendance_rate_28d": 0.87,
-        "absence_count_28d": 1.0,
-        "average_total_score_28d": 7.1,
-        "homework_completion_rate_28d": 0.8,
-        "active_enrollment_count_28d": 2.0,
-        "weekly_lesson_load_28d": 3.5,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 4.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909797Z"
-    },
-    {
-      "snapshot_id": "snap_011",
-      "student_id": "stu_011",
-      "student_code": "HV011",
-      "student_name": "Tran Oanh",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-08T08:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.980842,
-      "risk_band": "HIGH",
-      "primary_reason": "Tỷ lệ chuyên cần thấp",
-      "top_features": [
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.62,
-          "severity": 1.0,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        },
-        {
-          "feature": "absence_count_28d",
-          "value": 4.0,
-          "severity": 1.0,
-          "label": "Số buổi vắng tăng cao",
-          "detail": "Học viên vắng nhiều buổi trong 28 ngày gần đây."
-        },
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.8,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.62,
-        "absence_count_28d": 4.0,
-        "average_total_score_28d": 4.8,
-        "homework_completion_rate_28d": 0.45,
+        "attendance_rate_28d": 1.0,
+        "absence_count_28d": 0.0,
+        "average_total_score_28d": 7.0,
+        "homework_completion_rate_28d": 1.0,
         "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 2.0,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 8.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909851Z"
-    },
-    {
-      "snapshot_id": "snap_012",
-      "student_id": "stu_012",
-      "student_code": "HV012",
-      "student_name": "Le Phuc",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-08T08:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.990318,
-      "risk_band": "HIGH",
-      "primary_reason": "Tỷ lệ chuyên cần thấp",
-      "top_features": [
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.58,
-          "severity": 1.0,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        },
-        {
-          "feature": "absence_count_28d",
-          "value": 5.0,
-          "severity": 1.0,
-          "label": "Số buổi vắng tăng cao",
-          "detail": "Học viên vắng nhiều buổi trong 28 ngày gần đây."
-        },
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.5,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.58,
-        "absence_count_28d": 5.0,
-        "average_total_score_28d": 4.5,
-        "homework_completion_rate_28d": 0.4,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 2.0,
+        "weekly_lesson_load_28d": 0.0,
         "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 10.0
+        "days_since_last_lesson": 29.0
       },
       "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909902Z"
-    },
-    {
-      "snapshot_id": "snap_013",
-      "student_id": "stu_013",
-      "student_code": "HV013",
-      "student_name": "Pham Quyen",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-08T08:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.930111,
-      "risk_band": "HIGH",
-      "primary_reason": "Điểm trung bình thấp",
-      "top_features": [
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.9,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        },
-        {
-          "feature": "homework_completion_rate_28d",
-          "value": 0.55,
-          "severity": 1.0,
-          "label": "Tỷ lệ hoàn thành bài tập thấp",
-          "detail": "Mức độ hoàn thành bài tập chưa đạt ngưỡng an toàn."
-        },
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.74,
-          "severity": 0.5,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.74,
-        "absence_count_28d": 3.0,
-        "average_total_score_28d": 4.9,
-        "homework_completion_rate_28d": 0.55,
-        "active_enrollment_count_28d": 2.0,
-        "weekly_lesson_load_28d": 2.5,
-        "approved_leave_count_28d": 2.0,
-        "days_since_last_lesson": 7.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.909955Z"
-    },
-    {
-      "snapshot_id": "snap_014",
-      "student_id": "stu_014",
-      "student_code": "HV014",
-      "student_name": "Hoang Son",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-08T08:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.95727,
-      "risk_band": "HIGH",
-      "primary_reason": "Tỷ lệ chuyên cần thấp",
-      "top_features": [
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.69,
-          "severity": 1.0,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        },
-        {
-          "feature": "absence_count_28d",
-          "value": 4.0,
-          "severity": 1.0,
-          "label": "Số buổi vắng tăng cao",
-          "detail": "Học viên vắng nhiều buổi trong 28 ngày gần đây."
-        },
-        {
-          "feature": "homework_completion_rate_28d",
-          "value": 0.48,
-          "severity": 1.0,
-          "label": "Tỷ lệ hoàn thành bài tập thấp",
-          "detail": "Mức độ hoàn thành bài tập chưa đạt ngưỡng an toàn."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.69,
-        "absence_count_28d": 4.0,
-        "average_total_score_28d": 5.2,
-        "homework_completion_rate_28d": 0.48,
-        "active_enrollment_count_28d": 2.0,
-        "weekly_lesson_load_28d": 2.5,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 9.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.910008Z"
-    },
-    {
-      "snapshot_id": "snap_015",
-      "student_id": "stu_015",
-      "student_code": "HV015",
-      "student_name": "Vu Trang",
-      "class_id": "class_a",
-      "class_code": "CLS-A",
-      "class_name": "Toan nang cao A",
-      "snapshot_at": "2026-04-08T08:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.906914,
-      "risk_band": "HIGH",
-      "primary_reason": "Điểm trung bình thấp",
-      "top_features": [
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.7,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        },
-        {
-          "feature": "homework_completion_rate_28d",
-          "value": 0.52,
-          "severity": 1.0,
-          "label": "Tỷ lệ hoàn thành bài tập thấp",
-          "detail": "Mức độ hoàn thành bài tập chưa đạt ngưỡng an toàn."
-        },
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.77,
-          "severity": 0.5,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.77,
-        "absence_count_28d": 3.0,
-        "average_total_score_28d": 4.7,
-        "homework_completion_rate_28d": 0.52,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 2.0,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 6.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.910062Z"
-    },
-    {
-      "snapshot_id": "snap_016",
-      "student_id": "stu_016",
-      "student_code": "HV016",
-      "student_name": "Doan Uyen",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-09T18:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.966413,
-      "risk_band": "HIGH",
-      "primary_reason": "Tỷ lệ chuyên cần thấp",
-      "top_features": [
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.65,
-          "severity": 1.0,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        },
-        {
-          "feature": "absence_count_28d",
-          "value": 4.0,
-          "severity": 1.0,
-          "label": "Số buổi vắng tăng cao",
-          "detail": "Học viên vắng nhiều buổi trong 28 ngày gần đây."
-        },
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.6,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.65,
-        "absence_count_28d": 4.0,
-        "average_total_score_28d": 4.6,
-        "homework_completion_rate_28d": 0.43,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 3.0,
-        "approved_leave_count_28d": 0.0,
-        "days_since_last_lesson": 8.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.910114Z"
-    },
-    {
-      "snapshot_id": "snap_017",
-      "student_id": "stu_017",
-      "student_code": "HV017",
-      "student_name": "Dang Viet",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-09T18:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.994554,
-      "risk_band": "HIGH",
-      "primary_reason": "Tỷ lệ chuyên cần thấp",
-      "top_features": [
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.61,
-          "severity": 1.0,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        },
-        {
-          "feature": "absence_count_28d",
-          "value": 5.0,
-          "severity": 1.0,
-          "label": "Số buổi vắng tăng cao",
-          "detail": "Học viên vắng nhiều buổi trong 28 ngày gần đây."
-        },
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.4,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.61,
-        "absence_count_28d": 5.0,
-        "average_total_score_28d": 4.4,
-        "homework_completion_rate_28d": 0.41,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 3.0,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 11.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.910166Z"
-    },
-    {
-      "snapshot_id": "snap_018",
-      "student_id": "stu_018",
-      "student_code": "HV018",
-      "student_name": "Bui Yen",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-09T18:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.933595,
-      "risk_band": "HIGH",
-      "primary_reason": "Điểm trung bình thấp",
-      "top_features": [
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.9,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        },
-        {
-          "feature": "homework_completion_rate_28d",
-          "value": 0.5,
-          "severity": 1.0,
-          "label": "Tỷ lệ hoàn thành bài tập thấp",
-          "detail": "Mức độ hoàn thành bài tập chưa đạt ngưỡng an toàn."
-        },
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.72,
-          "severity": 0.5,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.72,
-        "absence_count_28d": 3.0,
-        "average_total_score_28d": 4.9,
-        "homework_completion_rate_28d": 0.5,
-        "active_enrollment_count_28d": 2.0,
-        "weekly_lesson_load_28d": 3.5,
-        "approved_leave_count_28d": 2.0,
-        "days_since_last_lesson": 6.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.910219Z"
-    },
-    {
-      "snapshot_id": "snap_019",
-      "student_id": "stu_019",
-      "student_code": "HV019",
-      "student_name": "Nguyen Anh Thu",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-09T18:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.960934,
-      "risk_band": "HIGH",
-      "primary_reason": "Tỷ lệ chuyên cần thấp",
-      "top_features": [
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.68,
-          "severity": 1.0,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        },
-        {
-          "feature": "absence_count_28d",
-          "value": 4.0,
-          "severity": 1.0,
-          "label": "Số buổi vắng tăng cao",
-          "detail": "Học viên vắng nhiều buổi trong 28 ngày gần đây."
-        },
-        {
-          "feature": "homework_completion_rate_28d",
-          "value": 0.47,
-          "severity": 1.0,
-          "label": "Tỷ lệ hoàn thành bài tập thấp",
-          "detail": "Mức độ hoàn thành bài tập chưa đạt ngưỡng an toàn."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.68,
-        "absence_count_28d": 4.0,
-        "average_total_score_28d": 5.1,
-        "homework_completion_rate_28d": 0.47,
-        "active_enrollment_count_28d": 2.0,
-        "weekly_lesson_load_28d": 3.5,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 9.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.910273Z"
-    },
-    {
-      "snapshot_id": "snap_020",
-      "student_id": "stu_020",
-      "student_code": "HV020",
-      "student_name": "Tran Bao",
-      "class_id": "class_b",
-      "class_code": "CLS-B",
-      "class_name": "Anh van giao tiep B",
-      "snapshot_at": "2026-04-09T18:00:00Z",
-      "risk_label": "AT_RISK",
-      "risk_score": 0.904347,
-      "risk_band": "HIGH",
-      "primary_reason": "Điểm trung bình thấp",
-      "top_features": [
-        {
-          "feature": "average_total_score_28d",
-          "value": 4.8,
-          "severity": 1.0,
-          "label": "Điểm trung bình thấp",
-          "detail": "Điểm tổng kết trung bình đang thấp hơn mức kỳ vọng."
-        },
-        {
-          "feature": "homework_completion_rate_28d",
-          "value": 0.58,
-          "severity": 1.0,
-          "label": "Tỷ lệ hoàn thành bài tập thấp",
-          "detail": "Mức độ hoàn thành bài tập chưa đạt ngưỡng an toàn."
-        },
-        {
-          "feature": "attendance_rate_28d",
-          "value": 0.75,
-          "severity": 0.5,
-          "label": "Tỷ lệ chuyên cần thấp",
-          "detail": "Tỷ lệ tham dự trong 28 ngày gần đây thấp hơn ngưỡng an toàn."
-        }
-      ],
-      "feature_summary": {
-        "attendance_rate_28d": 0.75,
-        "absence_count_28d": 3.0,
-        "average_total_score_28d": 4.8,
-        "homework_completion_rate_28d": 0.58,
-        "active_enrollment_count_28d": 1.0,
-        "weekly_lesson_load_28d": 3.0,
-        "approved_leave_count_28d": 1.0,
-        "days_since_last_lesson": 7.0
-      },
-      "model_version": "logistic_regression",
-      "predicted_at": "2026-04-25T02:28:41.910325Z"
+      "predicted_at": "2026-05-11T11:15:33.762253Z"
     }
   ]
 }

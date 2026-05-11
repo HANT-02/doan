@@ -112,6 +112,6 @@
       "lightweight"
     ],
     "rationale": "Các mô hình có metric tương đương trên tập kiểm thử hiện tại; ưu tiên Logistic Regression vì vẫn là mô hình học máy chính thức, nhẹ khi huấn luyện/suy luận và có khả năng giải thích tốt hơn Random Forest.",
-    "selected_at": "2026-04-28T07:58:34.051710Z"
+    "selected_at": "2026-05-11T11:15:33.607185Z"
   }
 }

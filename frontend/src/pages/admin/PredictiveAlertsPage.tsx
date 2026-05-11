@@ -15,8 +15,9 @@ import {
 import { PsychologyRounded, RefreshRounded, SearchRounded, WarningAmberRounded } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { toast } from 'sonner';
 
-import { useGetAtRiskPredictionsQuery } from '@/api/predictiveApi';
+import { useGetAtRiskPredictionsQuery, useTrainAtRiskFromDBMutation } from '@/api/predictiveApi';
 import PageHeader from '@/components/common/PageHeader';
 import { getApiErrorMessage } from '@/utils/apiError';
 
@@ -38,10 +39,24 @@ export const PredictiveAlertsPage = () => {
         only_at_risk: onlyAtRisk,
         refresh: refreshKey > 0,
     });
+    const [trainAtRiskFromDB, { isLoading: isTraining }] = useTrainAtRiskFromDBMutation();
 
     const rows = data?.data?.items || [];
     const summary = data?.data?.summary;
     const modelMetadata = data?.data?.model_metadata;
+
+    const handleTrainFromDB = async () => {
+        try {
+            const result = await trainAtRiskFromDB().unwrap();
+            const hasWarning = result.data?.steps?.some((step) => step.status === 'warning');
+            const notify = hasWarning ? toast.warning : toast.success;
+            notify(result.data?.message || 'Đã train lại mô hình từ DB');
+            setPage(0);
+            setRefreshKey((current) => current + 1);
+        } catch (trainError) {
+            toast.error(getApiErrorMessage(trainError, 'Không thể train lại mô hình từ DB.'));
+        }
+    };
 
     const columns = useMemo<GridColDef[]>(() => [
         {
@@ -141,10 +156,10 @@ export const PredictiveAlertsPage = () => {
                     <Button
                         variant="contained"
                         startIcon={<RefreshRounded />}
-                        onClick={() => setRefreshKey((current) => current + 1)}
-                        disabled={isFetching}
+                        onClick={handleTrainFromDB}
+                        disabled={isFetching || isTraining}
                     >
-                        Train lại từ DB
+                        {isTraining ? 'Đang train...' : 'Train lại từ DB'}
                     </Button>
                 )}
             />
@@ -237,7 +252,7 @@ export const PredictiveAlertsPage = () => {
                 <DataGrid
                     rows={rows}
                     columns={columns}
-                    loading={isLoading || isFetching}
+                    loading={isLoading || isFetching || isTraining}
                     paginationMode="server"
                     rowCount={data?.data?.pagination?.total_items || 0}
                     paginationModel={{ page, pageSize }}

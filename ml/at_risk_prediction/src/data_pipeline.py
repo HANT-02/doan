@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,8 +28,12 @@ def _ensure_datetime(value: Any) -> datetime | None:
     if value is None or value == "":
         return None
     if isinstance(value, datetime):
-        return value
-    return pd.to_datetime(value).to_pydatetime()
+        parsed = value
+    else:
+        parsed = pd.to_datetime(value).to_pydatetime()
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
 
 
 def _safe_float(value: Any, default: float) -> float:
@@ -39,6 +43,12 @@ def _safe_float(value: Any, default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _safe_str(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value)
 
 
 def load_source_tables(engine: Engine) -> dict[str, pd.DataFrame]:
@@ -122,6 +132,14 @@ def build_dataset_from_db(
 ) -> pd.DataFrame:
     tables = load_source_tables(engine)
     return build_dataset_from_tables(tables, definition)
+
+
+def build_inference_dataset_from_db(
+    engine: Engine,
+    definition: DatasetDefinition = DEFAULT_DATASET_DEFINITION,
+) -> pd.DataFrame:
+    tables = load_source_tables(engine)
+    return build_inference_dataset_from_tables(tables, definition)
 
 
 def build_dataset_from_tables(
@@ -258,12 +276,12 @@ def build_dataset_from_tables(
                 records.append(
                     {
                         "snapshot_id": _make_snapshot_id(student_id, enrollment["class_id"], snapshot_at),
-                        "student_id": student_id,
-                        "student_code": student.get("code", ""),
-                        "student_name": student.get("full_name", ""),
-                        "class_id": enrollment["class_id"],
-                        "class_code": enrollment.get("class_code", ""),
-                        "class_name": enrollment.get("class_name", ""),
+                        "student_id": _safe_str(student_id),
+                        "student_code": _safe_str(student.get("code", "")),
+                        "student_name": _safe_str(student.get("full_name", "")),
+                        "class_id": _safe_str(enrollment["class_id"]),
+                        "class_code": _safe_str(enrollment.get("class_code", "")),
+                        "class_name": _safe_str(enrollment.get("class_name", "")),
                         "snapshot_at": snapshot_at.isoformat(),
                         "attendance_rate_28d": _attendance_rate(obs_attendance),
                         "absence_count_28d": float(_absence_count(obs_attendance)),
@@ -298,6 +316,177 @@ def build_dataset_from_tables(
     dataset = pd.DataFrame.from_records(records)
     if dataset.empty:
         raise ValueError("Khong tao duoc dong dataset nao tu nguon du lieu hien tai.")
+
+    dataset = dataset.drop_duplicates(subset=["snapshot_id"]).sort_values("snapshot_id").reset_index(drop=True)
+    return dataset[DATASET_COLUMNS]
+
+
+def build_inference_dataset_from_tables(
+    tables: dict[str, pd.DataFrame],
+    definition: DatasetDefinition = DEFAULT_DATASET_DEFINITION,
+) -> pd.DataFrame:
+    students = tables["students"].copy()
+    enrollments = tables["enrollments"].copy()
+    lessons = tables["lessons"].copy()
+    attendance = tables["attendance"].copy()
+    lesson_summaries = tables["lesson_summaries"].copy()
+    academic_records = tables["academic_records"].copy()
+    leave_requests = tables["leave_requests"].copy()
+
+    for frame, column_names in (
+        (lessons, ["date_start", "date_end"]),
+        (enrollments, ["approved_at", "created_at", "class_start_date", "class_end_date"]),
+        (attendance, ["marked_at"]),
+        (lesson_summaries, ["created_at", "homework_deadline"]),
+        (academic_records, ["created_at"]),
+        (leave_requests, ["apply_date"]),
+    ):
+        for column in column_names:
+            if column in frame.columns:
+                frame[column] = pd.to_datetime(frame[column], errors="coerce")
+
+    lesson_by_id = {
+        row["id"]: row
+        for row in lessons.to_dict("records")
+    }
+    lessons_by_class: dict[str, list[dict[str, Any]]] = {}
+    for row in lessons.to_dict("records"):
+        lessons_by_class.setdefault(row["class_id"], []).append(row)
+    for class_id in lessons_by_class:
+        lessons_by_class[class_id].sort(key=lambda item: item["date_start"])
+
+    summaries_by_id = {
+        row["id"]: row
+        for row in lesson_summaries.to_dict("records")
+    }
+    students_by_id = {
+        row["id"]: row
+        for row in students.to_dict("records")
+    }
+
+    enrollments_by_student: dict[str, list[dict[str, Any]]] = {}
+    for row in enrollments.to_dict("records"):
+        enrollments_by_student.setdefault(row["student_id"], []).append(row)
+
+    attendance_by_student_class: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in attendance.to_dict("records"):
+        lesson = lesson_by_id.get(row["lesson_id"])
+        if not lesson:
+            continue
+        key = (row["student_id"], lesson["class_id"])
+        attendance_by_student_class.setdefault(key, []).append(
+            {
+                "at": lesson["date_start"],
+                "status": int(row["status"]),
+            }
+        )
+
+    academic_by_student_class: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in academic_records.to_dict("records"):
+        summary = summaries_by_id.get(row["lesson_summary_id"])
+        if not summary:
+            continue
+        lesson = lesson_by_id.get(summary["lesson_id"])
+        if not lesson:
+            continue
+        key = (row["student_id"], lesson["class_id"])
+        academic_by_student_class.setdefault(key, []).append(
+            {
+                "at": lesson["date_start"],
+                "homework_completed": bool(row["homework_completed"]),
+                "total_score": _safe_float(row["total_score"], 0.0),
+                "is_completed": bool(row["is_completed"]),
+            }
+        )
+
+    leaves_by_student: dict[str, list[dict[str, Any]]] = {}
+    for row in leave_requests.to_dict("records"):
+        leaves_by_student.setdefault(row["student_id"], []).append(
+            {
+                "at": row["apply_date"],
+                "class_id": row["class_id"],
+            }
+        )
+
+    now = datetime.utcnow()
+    records: list[dict[str, Any]] = []
+    for student_id, student_enrollments in enrollments_by_student.items():
+        student = students_by_id.get(student_id)
+        if not student:
+            continue
+
+        for enrollment in student_enrollments:
+            snapshot_at = _pick_inference_snapshot_at(lessons_by_class.get(enrollment["class_id"], []), enrollment, now)
+            if snapshot_at is None:
+                continue
+            if not _is_enrollment_active_at(enrollment, snapshot_at):
+                continue
+
+            observation_start = snapshot_at - timedelta(days=definition.observation_window_days)
+            key = (student_id, enrollment["class_id"])
+            obs_attendance = _filter_between(
+                attendance_by_student_class.get(key, []),
+                "at",
+                observation_start,
+                snapshot_at,
+                include_start=True,
+                include_end=True,
+            )
+            obs_academic = _completed_records(
+                _filter_between(
+                    academic_by_student_class.get(key, []),
+                    "at",
+                    observation_start,
+                    snapshot_at,
+                    include_start=True,
+                    include_end=True,
+                )
+            )
+            active_class_ids = _active_enrollment_class_ids(student_enrollments, snapshot_at)
+
+            records.append(
+                {
+                    "snapshot_id": _make_snapshot_id(student_id, enrollment["class_id"], snapshot_at),
+                    "student_id": _safe_str(student_id),
+                    "student_code": _safe_str(student.get("code", "")),
+                    "student_name": _safe_str(student.get("full_name", "")),
+                    "class_id": _safe_str(enrollment["class_id"]),
+                    "class_code": _safe_str(enrollment.get("class_code", "")),
+                    "class_name": _safe_str(enrollment.get("class_name", "")),
+                    "snapshot_at": snapshot_at.isoformat(),
+                    "attendance_rate_28d": _attendance_rate(obs_attendance),
+                    "absence_count_28d": float(_absence_count(obs_attendance)),
+                    "average_total_score_28d": _average_score(obs_academic),
+                    "homework_completion_rate_28d": _homework_completion_rate(obs_academic),
+                    "active_enrollment_count_28d": float(len(active_class_ids)),
+                    "weekly_lesson_load_28d": _weekly_lesson_load(
+                        lessons_by_class,
+                        active_class_ids,
+                        observation_start,
+                        snapshot_at,
+                        definition.observation_window_days,
+                    ),
+                    "approved_leave_count_28d": float(
+                        _approved_leave_count(
+                            leaves_by_student.get(student_id, []),
+                            observation_start,
+                            snapshot_at,
+                            enrollment["class_id"],
+                        )
+                    ),
+                    "days_since_last_lesson": _days_since_last_lesson(
+                        lessons_by_class,
+                        active_class_ids,
+                        snapshot_at,
+                        definition.observation_window_days,
+                    ),
+                    "label": LABEL_NOT_AT_RISK,
+                }
+            )
+
+    dataset = pd.DataFrame.from_records(records)
+    if dataset.empty:
+        raise ValueError("Khong tao duoc dong inference nao tu nguon du lieu hien tai.")
 
     dataset = dataset.drop_duplicates(subset=["snapshot_id"]).sort_values("snapshot_id").reset_index(drop=True)
     return dataset[DATASET_COLUMNS]
@@ -540,3 +729,25 @@ def _days_since_last_lesson(
 
 def _make_snapshot_id(student_id: str, class_id: str, snapshot_at: datetime) -> str:
     return f"{student_id}:{class_id}:{snapshot_at.strftime('%Y%m%d')}"
+
+
+def _pick_inference_snapshot_at(
+    class_lessons: list[dict[str, Any]],
+    enrollment: dict[str, Any],
+    now: datetime,
+) -> datetime | None:
+    lesson_times = [
+        lesson_at
+        for lesson_at in (_ensure_datetime(lesson.get("date_start")) for lesson in class_lessons)
+        if lesson_at is not None
+    ]
+    past_or_current = [lesson_at for lesson_at in lesson_times if lesson_at <= now]
+    if past_or_current:
+        return max(past_or_current)
+    if lesson_times:
+        return min(lesson_times)
+
+    class_start = _ensure_datetime(enrollment.get("class_start_date"))
+    if class_start and class_start > now:
+        return class_start
+    return now

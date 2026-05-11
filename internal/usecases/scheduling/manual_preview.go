@@ -25,7 +25,7 @@ func buildVariableIndex(variables []Variable) map[string]Variable {
 
 func findDomainValueByOptionKey(values []DomainValue, optionKey string) (DomainValue, bool) {
 	for _, value := range values {
-		if previewCandidateOptionKey(value) == optionKey {
+		if previewCandidateOptionKey(value) == optionKey || legacyPreviewCandidateOptionKey(value) == optionKey {
 			return value, true
 		}
 	}
@@ -34,6 +34,16 @@ func findDomainValueByOptionKey(values []DomainValue, optionKey string) (DomainV
 }
 
 func previewCandidateOptionKey(value DomainValue) string {
+	return fmt.Sprintf(
+		"%s|%s|%s|%s",
+		value.TimeSlot.Start.Format("2006-01-02T15:04"),
+		value.TimeSlot.End.Format("2006-01-02T15:04"),
+		value.TimeSlot.ShiftID,
+		value.RoomID,
+	)
+}
+
+func legacyPreviewCandidateOptionKey(value DomainValue) string {
 	return fmt.Sprintf(
 		"%s|%s|%s|%s",
 		value.TimeSlot.Start.Format(time.RFC3339),

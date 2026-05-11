@@ -156,6 +156,7 @@ var ProgramUseCaseProviders = wire.NewSet(
 var PredictiveUseCaseProviders = wire.NewSet(
 	predictive.NewListStudentPredictionsUseCase,
 	predictive.NewGetModelMetadataUseCase,
+	predictive.NewTrainAtRiskFromDBUseCase,
 )
 
 var LessonUseCaseProviders = wire.NewSet(

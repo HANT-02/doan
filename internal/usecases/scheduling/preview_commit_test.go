@@ -161,6 +161,68 @@ func TestCommitPreviewUseCase_ReturnsConflictWhenExistingLessonOverlaps(t *testi
 	}
 }
 
+func TestCommitPreviewUseCase_AcceptsCandidateOptionKeyFromPreview(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{}
+	classScheduleRepo := &previewClassScheduleRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+	uow := &previewUnitOfWorkStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+	commitUseCase := NewCommitPreviewUseCase(
+		lessonRepo,
+		classScheduleRepo,
+		uow,
+		logger.NewZapLogger(logger.Config{Level: "error", Format: "json", Output: "stdout", ServiceName: "test", Environment: "test"}),
+		store,
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+	if len(result.Assignments) == 0 {
+		t.Fatalf("expected assignments")
+	}
+
+	assignment := result.Assignments[0]
+	options := result.CandidateOptions[assignment.VariableID]
+	var selectedKey string
+	for _, option := range options {
+		if option.RoomID == assignment.RoomID && option.StartTime.Equal(assignment.StartTime) && option.EndTime.Equal(assignment.EndTime) {
+			selectedKey = option.Key
+			break
+		}
+	}
+	if selectedKey == "" {
+		t.Fatalf("expected preview candidate option matching assignment")
+	}
+
+	_, err = commitUseCase.Execute(context.Background(), CommitPreviewInput{
+		RunID: result.RunID,
+		ManualAssignments: []ManualAssignmentOverride{
+			{VariableID: assignment.VariableID, OptionKey: selectedKey},
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected preview candidate option key to be accepted by commit, got %v", err)
+	}
+}
+
 func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T) {
 	t.Parallel()
 
