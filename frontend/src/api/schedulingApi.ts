@@ -1,8 +1,8 @@
 import { baseApi } from './baseApi';
 
 export interface SchedulingFilters {
-    date_from: string;
-    date_to: string;
+    date_from?: string;
+    date_to?: string;
     class_ids?: string[];
     teacher_ids?: string[];
     room_ids?: string[];
@@ -190,6 +190,12 @@ export const schedulingApi = baseApi.injectEndpoints({
                     status: response.data?.status || 'FAILED',
                 },
             }),
+            invalidatesTags: [
+                { type: 'Lesson', id: 'LIST' },
+                { type: 'Lesson', id: 'TEACHER-LIST' },
+                { type: 'Lesson', id: 'STUDENT-TIMETABLE' },
+                { type: 'Scheduling', id: 'LATEST' },
+            ],
         }),
     }),
 });

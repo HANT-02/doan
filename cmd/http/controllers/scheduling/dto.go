@@ -1,8 +1,8 @@
 package scheduling
 
 type PreviewScheduleRequest struct {
-	DateFrom   string   `json:"date_from" binding:"required"`
-	DateTo     string   `json:"date_to" binding:"required"`
+	DateFrom   string   `json:"date_from"`
+	DateTo     string   `json:"date_to"`
 	ClassIDs   []string `json:"class_ids"`
 	TeacherIDs []string `json:"teacher_ids"`
 	RoomIDs    []string `json:"room_ids"`

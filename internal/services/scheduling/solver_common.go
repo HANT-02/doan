@@ -13,7 +13,7 @@ type preparedSchedulingProblem struct {
 }
 
 func prepareSchedulingProblem(input SolverInput) preparedSchedulingProblem {
-	variables, presetConflicts := buildVariables(input.Classes, input.TeacherIDs)
+	variables, presetConflicts := buildVariables(input)
 	domains, noDomainConflicts := buildDomains(variables, input.Rooms, input, indexClassSchedules(input.Classes), input.Shifts)
 
 	return preparedSchedulingProblem{

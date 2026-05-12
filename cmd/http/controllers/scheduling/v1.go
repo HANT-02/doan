@@ -3,6 +3,7 @@ package scheduling
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"doan/cmd/http/rest"
@@ -42,19 +43,27 @@ func (ctrl *ControllerV1) Preview(c *gin.Context) {
 		return
 	}
 
-	dateFrom, err := parsePreviewDate(req.DateFrom)
-	if err != nil {
-		rest.ResponseError(c, http.StatusBadRequest, "Invalid date_from. Expected YYYY-MM-DD or RFC3339", err)
-		return
+	var dateFrom time.Time
+	if strings.TrimSpace(req.DateFrom) != "" {
+		var err error
+		dateFrom, err = parsePreviewDate(req.DateFrom)
+		if err != nil {
+			rest.ResponseError(c, http.StatusBadRequest, "Invalid date_from. Expected YYYY-MM-DD or RFC3339", err)
+			return
+		}
 	}
 
-	dateTo, err := parsePreviewDate(req.DateTo)
-	if err != nil {
-		rest.ResponseError(c, http.StatusBadRequest, "Invalid date_to. Expected YYYY-MM-DD or RFC3339", err)
-		return
+	var dateTo time.Time
+	if strings.TrimSpace(req.DateTo) != "" {
+		var err error
+		dateTo, err = parsePreviewDate(req.DateTo)
+		if err != nil {
+			rest.ResponseError(c, http.StatusBadRequest, "Invalid date_to. Expected YYYY-MM-DD or RFC3339", err)
+			return
+		}
 	}
 
-	if dateTo.Before(dateFrom) {
+	if !dateFrom.IsZero() && !dateTo.IsZero() && dateTo.Before(dateFrom) {
 		rest.ResponseError(c, http.StatusBadRequest, "Invalid date range. date_to must be greater than or equal to date_from", nil)
 		return
 	}

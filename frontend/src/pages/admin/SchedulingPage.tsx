@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -38,7 +38,6 @@ import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 import { useGetClassesQuery } from '@/api/classApi';
-import { useGetRoomsQuery } from '@/api/roomApi';
 import {
     useCommitSchedulingPreviewMutation,
     useLazyGetLatestSchedulingPreviewQuery,
@@ -55,14 +54,26 @@ import PageHeader from '@/components/common/PageHeader';
 import { getApiErrorMessage } from '@/utils/apiError';
 
 const schedulingSchema = z.object({
-    date_from: z.string().min(1, 'Vui lòng chọn ngày bắt đầu'),
-    date_to: z.string().min(1, 'Vui lòng chọn ngày kết thúc'),
+    mode: z.enum(['class', 'teacher']),
+    expected_start_date: z.string().optional(),
     class_ids: z.array(z.string()).optional(),
     teacher_ids: z.array(z.string()).optional(),
-    room_ids: z.array(z.string()).optional(),
-}).refine((values) => values.date_to >= values.date_from, {
-    message: 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu',
-    path: ['date_to'],
+}).refine((values) => {
+    if (values.mode === 'class') {
+        return (values.class_ids?.length || 0) > 0;
+    }
+    return true;
+}, {
+    message: 'Vui lòng chọn ít nhất một lớp để xếp lịch',
+    path: ['class_ids'],
+}).refine((values) => {
+    if (values.mode === 'teacher') {
+        return (values.teacher_ids?.length || 0) > 0;
+    }
+    return true;
+}, {
+    message: 'Vui lòng chọn ít nhất một giáo viên để lấy các lớp phụ trách',
+    path: ['teacher_ids'],
 });
 
 type SchedulingFormValues = z.infer<typeof schedulingSchema>;
@@ -106,7 +117,7 @@ type DerivedPreviewState = {
     }>;
 };
 
-const previewSteps = ['Cấu hình đầu vào', 'Chạy xem trước lịch học', 'Rà soát kết quả'];
+const previewSteps = ['Chọn đối tượng', 'Xác nhận cấu hình', 'Xem trước và xử lý'];
 const dayLabels = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 
 const formatDateInput = (value: Date) => {
@@ -116,8 +127,31 @@ const formatDateInput = (value: Date) => {
     return `${year}-${month}-${day}`;
 };
 
-const defaultDateFrom = formatDateInput(new Date());
-const defaultDateTo = formatDateInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+const fallbackDateFrom = formatDateInput(new Date());
+
+type MinimalScheduleClass = {
+    start_date?: string;
+    end_date?: string;
+};
+
+const deriveDefaultStartDate = (classes: MinimalScheduleClass[]) => {
+    const dates = classes
+        .map((item) => item.start_date)
+        .filter((value): value is string => !!value)
+        .sort();
+    return dates[0]?.slice(0, 10) || fallbackDateFrom;
+};
+
+const deriveDefaultEndDate = (classes: MinimalScheduleClass[], dateFrom: string) => {
+    const dates = classes
+        .map((item) => item.end_date)
+        .filter((value): value is string => !!value)
+        .sort();
+    if (dates.length > 0) {
+        return dates[dates.length - 1].slice(0, 10);
+    }
+    return formatDateInput(addDays(parseISO(dateFrom), 90));
+};
 
 const formatDateTime = (value: string) =>
     format(parseISO(value), 'dd/MM/yyyy HH:mm', { locale: vi });
@@ -166,15 +200,15 @@ const getConflictActionHint = (type: string) => {
         case 'NO_CLASS_INPUT':
             return 'Gợi ý: kiểm tra bộ lọc lớp, trạng thái OPEN hoặc giáo viên đã chọn.';
         case 'NO_ACTIVE_ROOM':
-            return 'Gợi ý: bỏ lọc phòng hoặc bổ sung phòng học khả dụng trước khi chạy lại.';
+            return 'Gợi ý: bổ sung phòng học khả dụng hoặc kiểm tra phòng đã gán trong lịch tuần lớp.';
         case 'PREFERRED_ROOM_UNAVAILABLE':
-            return 'Gợi ý: đổi phòng đang gán cho lớp hoặc nới lại bộ lọc phòng.';
+            return 'Gợi ý: đổi phòng đang gán trong lịch tuần lớp hoặc chọn phòng trống khi chỉnh tay.';
         case 'ROOM_CAPACITY_BLOCK':
             return 'Gợi ý: chọn phòng sức chứa lớn hơn hoặc điều chỉnh sĩ số tối đa của lớp.';
         case 'NO_SLOT_IN_RANGE':
-            return 'Gợi ý: nới khoảng ngày xếp lịch để tạo thêm khung giờ khả dụng.';
+            return 'Gợi ý: đổi ngày bắt đầu dự kiến hoặc bổ sung thêm ngày/ca trong lịch tuần lớp.';
         case 'NO_DOMAIN':
-            return 'Gợi ý: thử đổi sang slot/phòng khác trong dialog chỉnh tay hoặc giảm bớt bộ lọc.';
+            return 'Gợi ý: thử đổi sang ngày, ca hoặc phòng trống khác trong dialog chỉnh tay.';
         case 'MISSING_COURSE':
             return 'Gợi ý: gắn khóa học cho lớp trước khi chạy xem trước xếp lịch để hệ thống sinh đúng số buổi học.';
         case 'INVALID_COURSE_SESSION_COUNT':
@@ -385,8 +419,10 @@ const scoreAssignments = (assignments: SchedulingAssignment[]) => {
 };
 
 const buildWeeks = (preview: SchedulingPreview) => {
-    const start = startOfWeek(parseISO(preview.filters.date_from), { weekStartsOn: 1 });
-    const end = endOfWeek(parseISO(preview.filters.date_to), { weekStartsOn: 1 });
+    const dateFrom = preview.filters.date_from || fallbackDateFrom;
+    const dateTo = preview.filters.date_to || dateFrom;
+    const start = startOfWeek(parseISO(dateFrom), { weekStartsOn: 1 });
+    const end = endOfWeek(parseISO(dateTo), { weekStartsOn: 1 });
     return eachWeekOfInterval({ start, end }, { weekStartsOn: 1 }).map((weekStart) =>
         Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
     );
@@ -394,6 +430,7 @@ const buildWeeks = (preview: SchedulingPreview) => {
 
 export const SchedulingPage = () => {
     const [preview, setPreview] = useState<SchedulingPreview | null>(null);
+    const [wizardStep, setWizardStep] = useState(0);
     const [search, setSearch] = useState('');
     const [manualSelections, setManualSelections] = useState<Record<string, string>>({});
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -401,7 +438,6 @@ export const SchedulingPage = () => {
 
     const { data: classesData, isLoading: isLoadingClasses } = useGetClassesQuery({ page: 1, limit: 200, status: 'OPEN' });
     const { data: teachersData, isLoading: isLoadingTeachers } = useGetTeachersQuery({ page: 1, limit: 200, status: 'ACTIVE' });
-    const { data: roomsData, isLoading: isLoadingRooms } = useGetRoomsQuery({ page: 1, limit: 200 });
 
     const [previewScheduling, { isLoading: isPreviewing }] = usePreviewSchedulingMutation();
     const [commitSchedulingPreview, { isLoading: isCommitting }] = useCommitSchedulingPreviewMutation();
@@ -410,22 +446,44 @@ export const SchedulingPage = () => {
 
     const classes = classesData?.data?.classes || [];
     const teachers = teachersData?.data?.teachers || [];
-    const rooms = roomsData?.data?.rooms || [];
 
     const {
         control,
         handleSubmit,
+        trigger,
         formState: { errors },
     } = useForm<SchedulingFormValues>({
         resolver: zodResolver(schedulingSchema),
         defaultValues: {
-            date_from: defaultDateFrom,
-            date_to: defaultDateTo,
+            mode: 'class',
+            expected_start_date: '',
             class_ids: [],
             teacher_ids: [],
-            room_ids: [],
         },
     });
+
+    const selectedMode = useWatch({ control, name: 'mode' });
+    const selectedClassIds = useWatch({ control, name: 'class_ids' }) || [];
+    const selectedTeacherIds = useWatch({ control, name: 'teacher_ids' }) || [];
+    const expectedStartDate = useWatch({ control, name: 'expected_start_date' }) || '';
+
+    const selectedClasses = useMemo(
+        () => classes.filter((item) => selectedClassIds.includes(item.id)),
+        [classes, selectedClassIds],
+    );
+
+    const schedulingClasses = useMemo(() => {
+        if (selectedMode === 'class') {
+            return selectedClasses;
+        }
+        return classes.filter((item) => item.teacher_id && selectedTeacherIds.includes(item.teacher_id));
+    }, [classes, selectedClasses, selectedMode, selectedTeacherIds]);
+
+    const derivedDateFrom = expectedStartDate || deriveDefaultStartDate(schedulingClasses);
+    const derivedDateTo = deriveDefaultEndDate(schedulingClasses, derivedDateFrom);
+    const selectedTeacherLabels = teachers
+        .filter((item) => selectedTeacherIds.includes(item.id))
+        .map((item) => `${item.full_name} (${item.code})`);
 
     const derivedPreview = useMemo<DerivedPreviewState | null>(() => {
         if (!preview) {
@@ -742,6 +800,47 @@ export const SchedulingPage = () => {
         });
     }, [derivedPreview, search]);
 
+    const classPreviewSummaries = useMemo(() => {
+        if (!derivedPreview) {
+            return [];
+        }
+
+        const byClass = new Map<string, {
+            classCode: string;
+            className: string;
+            teacherLabel: string;
+            totalSessions: number;
+            scheduledSessions: number;
+            conflictTags: string[];
+            firstTime?: string;
+            lastTime?: string;
+        }>();
+
+        derivedPreview.sessions.forEach((session) => {
+            const key = session.classId || session.classCode;
+            const current = byClass.get(key) || {
+                classCode: session.classCode,
+                className: session.className,
+                teacherLabel: session.teacherLabel || 'Chưa rõ giáo viên',
+                totalSessions: session.sessionTotal || 0,
+                scheduledSessions: 0,
+                conflictTags: [],
+            };
+            current.totalSessions = Math.max(current.totalSessions, session.sessionTotal || 0);
+            if (session.resolvedAssignment) {
+                current.scheduledSessions += 1;
+                const start = session.resolvedAssignment.start_time;
+                const end = session.resolvedAssignment.end_time;
+                if (!current.firstTime || start < current.firstTime) current.firstTime = start;
+                if (!current.lastTime || end > current.lastTime) current.lastTime = end;
+            }
+            current.conflictTags = uniqueTags([...current.conflictTags, ...session.conflictTags]);
+            byClass.set(key, current);
+        });
+
+        return Array.from(byClass.values()).sort((left, right) => left.classCode.localeCompare(right.classCode));
+    }, [derivedPreview]);
+
     const activeSession = useMemo(
         () => derivedPreview?.sessions.find((session) => session.variableId === activeSessionId) || null,
         [activeSessionId, derivedPreview],
@@ -762,7 +861,7 @@ export const SchedulingPage = () => {
         setPendingOptionKey(activeSessionAvailableOptions[0]?.key || '');
     }, [activeSession, activeSessionAvailableOptions, pendingOptionKey]);
 
-    const activeStep = preview ? 2 : 0;
+    const activeStep = wizardStep;
     const canCommitPreview = !!derivedPreview && derivedPreview.status === 'COMPLETED';
 
     const getAvailableOptionsForSession = (session: SessionDraft) =>
@@ -776,12 +875,26 @@ export const SchedulingPage = () => {
 
     const syncPreviewState = (nextPreview: SchedulingPreview) => {
         setPreview(nextPreview);
+        setWizardStep(2);
         resetManualSelections();
+    };
+
+    const handleContinueConfig = async () => {
+        const isValid = await trigger();
+        if (isValid) {
+            setWizardStep(1);
+        }
     };
 
     const handleRunPreview = handleSubmit(async (values) => {
         try {
-            const response = await previewScheduling(values).unwrap();
+            const dateFrom = values.expected_start_date || deriveDefaultStartDate(schedulingClasses);
+            const response = await previewScheduling({
+                date_from: dateFrom,
+                date_to: deriveDefaultEndDate(schedulingClasses, dateFrom),
+                class_ids: values.mode === 'class' ? values.class_ids : [],
+                teacher_ids: values.mode === 'teacher' ? values.teacher_ids : [],
+            }).unwrap();
             syncPreviewState(response.data);
             toast.success('Đã chạy xem trước xếp lịch');
         } catch (error) {
@@ -904,7 +1017,7 @@ export const SchedulingPage = () => {
         <Box>
             <PageHeader
                 title="Xếp lịch"
-                subtitle="Chạy xem trước, xem lịch theo dạng lịch và chỉnh tay các ca học bị trùng trước khi xác nhận lưư."
+                subtitle="Chạy xem trước, xem lịch theo dạng lịch và chỉnh tay các ca học bị trùng trước khi xác nhận lưu."
                 breadcrumbs={[
                     { label: 'Tổng quan', path: '/app/admin/overview' },
                     { label: 'Xếp lịch' },
@@ -918,14 +1031,6 @@ export const SchedulingPage = () => {
                             disabled={isLoadingLatest}
                         >
                             Tải lịch học xem trước mới nhất
-                        </Button>
-                        <Button
-                            variant="contained"
-                            startIcon={<PlayArrowRounded />}
-                            onClick={() => void handleRunPreview()}
-                            disabled={isPreviewing}
-                        >
-                            {isPreviewing ? 'Đang chạy...' : 'Chạy xếp lịch'}
                         </Button>
                     </Stack>
                 }
@@ -942,122 +1047,176 @@ export const SchedulingPage = () => {
                     </Stepper>
                 </Paper>
 
-                <Paper variant="outlined" sx={{ p: 3, borderRadius: 4 }}>
-                    <Stack spacing={2.5}>
-                        <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                                Bộ lọc chạy xem trước xếp lịch
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Chọn khoảng ngày và bộ lọc đầu vào tối thiểu để kiểm tra các ràng buộc cứng. Lịch xem trước sẽ được sinh theo Ca học và hiển thị trực tiếp theo lịch.
-                            </Typography>
-                        </Box>
+                {wizardStep === 0 ? (
+                    <Paper variant="outlined" sx={{ p: 3, borderRadius: 4 }}>
+                        <Stack spacing={2.5}>
+                            <Box>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                    Chọn đối tượng cần xếp lịch
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Chỉ cần chọn lớp hoặc giáo viên. Phòng, ngày học, ca học và giáo viên phụ trách sẽ lấy từ lịch tuần đã cấu hình trong từng lớp.
+                                </Typography>
+                            </Box>
 
-                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                             <Controller
                                 control={control}
-                                name="date_from"
+                                name="mode"
                                 render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        type="date"
-                                        label="Từ ngày"
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                        error={!!errors.date_from}
-                                        helperText={errors.date_from?.message}
-                                    />
+                                    <TextField {...field} select label="Xếp lịch theo" fullWidth>
+                                        <MenuItem value="class">Theo lớp học</MenuItem>
+                                        <MenuItem value="teacher">Theo giáo viên phụ trách</MenuItem>
+                                    </TextField>
                                 )}
                             />
-                            <Controller
-                                control={control}
-                                name="date_to"
-                                render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        type="date"
-                                        label="Đến ngày"
-                                        fullWidth
-                                        InputLabelProps={{ shrink: true }}
-                                        error={!!errors.date_to}
-                                        helperText={errors.date_to?.message}
-                                    />
-                                )}
-                            />
-                        </Stack>
 
-                        <Controller
-                            control={control}
-                            name="class_ids"
-                            render={({ field }) => (
-                                <Autocomplete
-                                    multiple
-                                    options={classes}
-                                    loading={isLoadingClasses}
-                                    value={classes.filter((item) => field.value?.includes(item.id))}
-                                    onChange={(_, values) => field.onChange(values.map((item) => item.id))}
-                                    getOptionLabel={(option) => `${option.name} (${option.code})`}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            label="Lọc theo lớp"
-                                            helperText="Để trống nếu muốn chạy tất cả lớp đang mở"
+                            {selectedMode === 'class' ? (
+                                <Controller
+                                    control={control}
+                                    name="class_ids"
+                                    render={({ field }) => (
+                                        <Autocomplete
+                                            multiple
+                                            options={classes}
+                                            loading={isLoadingClasses}
+                                            value={classes.filter((item) => field.value?.includes(item.id))}
+                                            onChange={(_, values) => field.onChange(values.map((item) => item.id))}
+                                            getOptionLabel={(option) => `${option.name} (${option.code})`}
+                                            renderInput={(params) => (
+                                                <TextField
+                                                    {...params}
+                                                    label="Chọn lớp"
+                                                    error={!!errors.class_ids}
+                                                    helperText={errors.class_ids?.message || 'Có thể chọn một hoặc nhiều lớp OPEN cần xếp lịch.'}
+                                                />
+                                            )}
+                                        />
+                                    )}
+                                />
+                            ) : (
+                                <Controller
+                                    control={control}
+                                    name="teacher_ids"
+                                    render={({ field }) => (
+                                        <Autocomplete
+                                            multiple
+                                            options={teachers}
+                                            loading={isLoadingTeachers}
+                                            value={teachers.filter((item) => field.value?.includes(item.id))}
+                                            onChange={(_, values) => field.onChange(values.map((item) => item.id))}
+                                            getOptionLabel={(option) => `${option.full_name} (${option.code})`}
+                                            renderInput={(params) => (
+                                                <TextField
+                                                    {...params}
+                                                    label="Chọn giáo viên"
+                                                    error={!!errors.teacher_ids}
+                                                    helperText={errors.teacher_ids?.message || 'Hệ thống sẽ lấy các lớp OPEN mà giáo viên đang phụ trách.'}
+                                                />
+                                            )}
                                         />
                                     )}
                                 />
                             )}
-                        />
 
-                        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2}>
                             <Controller
                                 control={control}
-                                name="teacher_ids"
+                                name="expected_start_date"
                                 render={({ field }) => (
-                                    <Autocomplete
-                                        multiple
-                                        options={teachers}
-                                        loading={isLoadingTeachers}
-                                        value={teachers.filter((item) => field.value?.includes(item.id))}
-                                        onChange={(_, values) => field.onChange(values.map((item) => item.id))}
-                                        getOptionLabel={(option) => `${option.full_name} (${option.code})`}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Lọc theo giáo viên"
-                                                helperText="Chỉ lấy lớp thuộc các giáo viên đã chọn"
-                                            />
-                                        )}
+                                    <TextField
+                                        {...field}
+                                        type="date"
+                                        label="Ngày bắt đầu dự kiến"
+                                        fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                        helperText={`Để trống sẽ dùng ngày bắt đầu lớp: ${format(parseISO(deriveDefaultStartDate(schedulingClasses)), 'dd/MM/yyyy', { locale: vi })}. Ngày kết thúc tự lấy theo cài đặt lớp.`}
                                     />
                                 )}
                             />
-                            <Controller
-                                control={control}
-                                name="room_ids"
-                                render={({ field }) => (
-                                    <Autocomplete
-                                        multiple
-                                        options={rooms}
-                                        loading={isLoadingRooms}
-                                        value={rooms.filter((item) => field.value?.includes(item.id))}
-                                        onChange={(_, values) => field.onChange(values.map((item) => item.id))}
-                                        getOptionLabel={(option) => `${option.name} (Sức chứa ${option.capacity})`}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Lọc theo phòng"
-                                                helperText="Dùng để kiểm tra sức chứa và trùng phòng"
-                                            />
-                                        )}
-                                    />
-                                )}
-                            />
+
+                            <Alert severity="info">
+                                Bộ lọc phòng và khoảng thời gian đã được bỏ khỏi màn này để tránh nhập trùng dữ liệu. Nếu muốn đổi phòng/ca, hãy sửa lịch tuần của lớp hoặc chỉnh tay trong màn preview.
+                            </Alert>
+
+                            <Stack direction="row" justifyContent="flex-end">
+                                <Button variant="contained" onClick={() => void handleContinueConfig()}>
+                                    Tiếp tục
+                                </Button>
+                            </Stack>
                         </Stack>
-                    </Stack>
-                </Paper>
+                    </Paper>
+                ) : null}
+
+                {wizardStep === 1 ? (
+                    <Paper variant="outlined" sx={{ p: 3, borderRadius: 4 }}>
+                        <Stack spacing={2.5}>
+                            <Box>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                    Xác nhận cấu hình trước khi chạy
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Hệ thống sẽ sinh số buổi cần xếp dựa trên khóa học, lịch tuần và khoảng ngày của lớp.
+                                </Typography>
+                            </Box>
+
+                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, flex: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                        Đối tượng
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {selectedMode === 'class'
+                                            ? `${selectedClasses.length} lớp được chọn`
+                                            : `${selectedTeacherLabels.length} giáo viên, ${schedulingClasses.length} lớp phụ trách`}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                                        {(selectedMode === 'class'
+                                            ? selectedClasses.map((item) => `${item.name} (${item.code})`)
+                                            : selectedTeacherLabels
+                                        ).map((label) => (
+                                            <Chip key={label} label={label} size="small" variant="outlined" />
+                                        ))}
+                                    </Stack>
+                                </Paper>
+
+                                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, flex: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                        Khoảng ngày hệ thống dùng
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Từ {format(parseISO(derivedDateFrom), 'dd/MM/yyyy', { locale: vi })} đến {format(parseISO(derivedDateTo), 'dd/MM/yyyy', { locale: vi })}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Ngày bắt đầu lấy từ lựa chọn dự kiến hoặc start date của lớp; ngày kết thúc lấy từ end date của lớp.
+                                    </Typography>
+                                </Paper>
+                            </Stack>
+
+                            <Alert severity={schedulingClasses.length > 0 ? 'success' : 'warning'}>
+                                {schedulingClasses.length > 0
+                                    ? 'Cấu hình đã sẵn sàng. Preview sẽ dùng lịch tuần lớp để chọn ngày, ca và phòng.'
+                                    : 'Chưa tìm thấy lớp OPEN phù hợp. Bạn có thể quay lại đổi lớp hoặc giáo viên.'}
+                            </Alert>
+
+                            <Stack direction="row" justifyContent="space-between">
+                                <Button variant="outlined" onClick={() => setWizardStep(0)}>
+                                    Quay lại
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<PlayArrowRounded />}
+                                    onClick={() => void handleRunPreview()}
+                                    disabled={isPreviewing || schedulingClasses.length === 0}
+                                >
+                                    {isPreviewing ? 'Đang chạy...' : 'Chạy xếp lịch'}
+                                </Button>
+                            </Stack>
+                        </Stack>
+                    </Paper>
+                ) : null}
 
                 {isPreviewing || isLoadingPreview || isLoadingLatest ? renderPreviewSkeleton() : null}
 
-                {!isPreviewing && !isLoadingPreview && !isLoadingLatest && !preview ? (
+                {!isPreviewing && !isLoadingPreview && !isLoadingLatest && !preview && wizardStep === 2 ? (
                     <Paper
                         variant="outlined"
                         sx={{ p: 6, borderRadius: 4, borderStyle: 'dashed', textAlign: 'center' }}
@@ -1080,7 +1239,7 @@ export const SchedulingPage = () => {
                     </Paper>
                 ) : null}
 
-                {preview && derivedPreview ? (
+                {preview && derivedPreview && wizardStep === 2 ? (
                     <Stack spacing={2.5}>
                         <Paper
                             variant="outlined"
@@ -1108,6 +1267,43 @@ export const SchedulingPage = () => {
                                     <Chip label={`Điểm số mềm ${derivedPreview.summary.softScore}`} color="primary" variant="outlined" />
                                     <Chip label={`${derivedPreview.manualAssignmentPayload.length} chỉnh tay`} color="secondary" variant="outlined" />
                                 </Stack>
+                            </Stack>
+                        </Paper>
+
+                        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
+                                Thông tin lớp trong preview
+                            </Typography>
+                            <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} flexWrap="wrap" useFlexGap>
+                                {classPreviewSummaries.map((item) => (
+                                    <Paper
+                                        key={item.classCode}
+                                        variant="outlined"
+                                        sx={{ p: 1.75, borderRadius: 3, flex: '1 1 280px', borderColor: item.conflictTags.length ? 'warning.light' : 'success.light' }}
+                                    >
+                                        <Stack spacing={1}>
+                                            <Box>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                                    {item.classCode} - {item.className}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {item.teacherLabel}
+                                                </Typography>
+                                            </Box>
+                                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                                <Chip size="small" label={`${item.scheduledSessions}/${item.totalSessions || item.scheduledSessions} buổi đã xếp`} color="primary" variant="outlined" />
+                                                {item.firstTime ? (
+                                                    <Chip
+                                                        size="small"
+                                                        label={`${formatCompactDateTime(item.firstTime)} - ${item.lastTime ? formatCompactDateTime(item.lastTime) : ''}`}
+                                                        variant="outlined"
+                                                    />
+                                                ) : null}
+                                            </Stack>
+                                            {renderConflictChips(item.conflictTags)}
+                                        </Stack>
+                                    </Paper>
+                                ))}
                             </Stack>
                         </Paper>
 
@@ -1142,6 +1338,12 @@ export const SchedulingPage = () => {
                                     }}
                                 />
                                 <Stack direction="row" spacing={1}>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => setWizardStep(1)}
+                                    >
+                                        Quay lại cấu hình
+                                    </Button>
                                     <Button
                                         variant="outlined"
                                         startIcon={<RefreshRounded />}

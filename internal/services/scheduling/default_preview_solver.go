@@ -37,9 +37,9 @@ func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*Solv
 	return buildSolverOutput(input, problem.variables, assignmentsByID, problem.presetConflicts, problem.noDomainConflicts, solverConflicts), nil
 }
 
-func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, []PreviewConflict) {
-	teacherFilter := make(map[string]struct{}, len(teacherIDs))
-	for _, teacherID := range teacherIDs {
+func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
+	teacherFilter := make(map[string]struct{}, len(input.TeacherIDs))
+	for _, teacherID := range input.TeacherIDs {
 		teacherFilter[teacherID] = struct{}{}
 	}
 
@@ -48,7 +48,7 @@ func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, 
 		conflicts []PreviewConflict
 	)
 
-	for _, classEntity := range classes {
+	for _, classEntity := range input.Classes {
 		if classEntity.TeacherID == nil || *classEntity.TeacherID == "" {
 			conflicts = append(conflicts, PreviewConflict{
 				VariableID: classEntity.ID,
@@ -73,18 +73,6 @@ func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, 
 			continue
 		}
 
-		if classEntity.Course.SessionCount <= 0 {
-			conflicts = append(conflicts, PreviewConflict{
-				VariableID: classEntity.ID,
-				ClassID:    classEntity.ID,
-				ClassCode:  classEntity.Code,
-				ClassName:  classEntity.Name,
-				Type:       "INVALID_COURSE_SESSION_COUNT",
-				Message:    "Khóa học của lớp chưa có `session_count` hợp lệ, nên chưa thể sinh đủ số buổi cho preview.",
-			})
-			continue
-		}
-
 		if classEntity.Course.SessionDurationMinutes <= 0 {
 			conflicts = append(conflicts, PreviewConflict{
 				VariableID: classEntity.ID,
@@ -93,6 +81,18 @@ func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, 
 				ClassName:  classEntity.Name,
 				Type:       "INVALID_COURSE_DURATION",
 				Message:    "Khóa học của lớp chưa có `session_duration_minutes` hợp lệ, nên chưa thể sinh thời lượng buổi học chính xác.",
+			})
+			continue
+		}
+
+		if len(classEntity.ClassSchedules) == 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "MISSING_CLASS_SCHEDULE",
+				Message:    "Lớp chưa có lịch tuần (`class_schedule`), nên chưa thể tính số buổi cần xếp từ thời gian học của lớp.",
 			})
 			continue
 		}
@@ -115,14 +115,36 @@ func buildVariables(classes []entities.Class, teacherIDs []string) ([]Variable, 
 			preferredRoomID = *classEntity.RoomID
 		}
 
-		for sessionIndex := 1; sessionIndex <= classEntity.Course.SessionCount; sessionIndex++ {
+		sessionTotal := countUniqueTimeSlots(generateTimeSlotsForVariable(
+			input.DateFrom,
+			input.DateTo,
+			classEntity.Course.SessionDurationMinutes,
+			classEntity.ClassSchedules,
+			input.Shifts,
+		))
+		if sessionTotal <= 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "NO_SLOT_IN_RANGE",
+				Message: fmt.Sprintf(
+					"Trong khoảng ngày của lớp chưa tạo được buổi học nào theo lịch tuần (%s). Hãy kiểm tra ngày bắt đầu/kết thúc lớp hoặc lịch tuần lớp.",
+					describeScheduleDays(classEntity.ClassSchedules),
+				),
+			})
+			continue
+		}
+
+		for sessionIndex := 1; sessionIndex <= sessionTotal; sessionIndex++ {
 			variables = append(variables, Variable{
 				ID:              fmt.Sprintf("%s-session-%02d", classEntity.ID, sessionIndex),
 				ClassID:         classEntity.ID,
 				ClassCode:       classEntity.Code,
 				ClassName:       classEntity.Name,
 				SessionIndex:    sessionIndex,
-				SessionTotal:    classEntity.Course.SessionCount,
+				SessionTotal:    sessionTotal,
 				TeacherID:       *classEntity.TeacherID,
 				TeacherLabel:    teacherLabel,
 				ExpectedCapcity: classEntity.MaxStudents,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"doan/internal/entities"
 	repositoryinterface "doan/internal/repositories/interface"
 	schedulingservice "doan/internal/services/scheduling"
 	"doan/pkg/logger"
@@ -52,9 +53,64 @@ func NewPreviewUseCase(
 	}
 }
 
+func normalizePreviewDateRange(dateFrom, dateTo time.Time, classes []entities.Class) (time.Time, time.Time) {
+	if dateFrom.IsZero() {
+		dateFrom = earliestClassStartDate(classes)
+	}
+	if dateFrom.IsZero() {
+		dateFrom = truncateToDate(time.Now())
+	}
+
+	if dateTo.IsZero() {
+		dateTo = latestClassEndDate(classes)
+	}
+	if dateTo.IsZero() || dateTo.Before(dateFrom) {
+		dateTo = dateFrom.AddDate(0, 3, 0)
+	}
+
+	return truncateToDate(dateFrom), truncateToDate(dateTo)
+}
+
+func earliestClassStartDate(classes []entities.Class) time.Time {
+	var earliest time.Time
+	for _, classEntity := range classes {
+		if classEntity.StartDate.IsZero() {
+			continue
+		}
+		if earliest.IsZero() || classEntity.StartDate.Before(earliest) {
+			earliest = classEntity.StartDate
+		}
+	}
+	return earliest
+}
+
+func latestClassEndDate(classes []entities.Class) time.Time {
+	var latest time.Time
+	for _, classEntity := range classes {
+		if classEntity.EndDate == nil || classEntity.EndDate.IsZero() {
+			continue
+		}
+		if latest.IsZero() || classEntity.EndDate.After(latest) {
+			latest = *classEntity.EndDate
+		}
+	}
+	return latest
+}
+
+func truncateToDate(value time.Time) time.Time {
+	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, value.Location())
+}
+
 func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*PreviewResult, error) {
 	ctxLogger := logger.NewLogger(ctx)
 
+	classes, err := loadSchedulingClasses(ctx, uc.classRepo, input.ClassIDs, input.TeacherIDs)
+	if err != nil {
+		ctxLogger.Errorf("Failed to load classes for scheduling preview: %v", err)
+		return nil, err
+	}
+
+	input.DateFrom, input.DateTo = normalizePreviewDateRange(input.DateFrom, input.DateTo, classes)
 	if input.DateTo.Before(input.DateFrom) {
 		return &PreviewResult{
 			RunID:       utils.GenerateUUIDWithPrefix("sched-preview-"),
@@ -76,12 +132,6 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 				},
 			},
 		}, nil
-	}
-
-	classes, err := loadSchedulingClasses(ctx, uc.classRepo, input.ClassIDs, input.TeacherIDs)
-	if err != nil {
-		ctxLogger.Errorf("Failed to load classes for scheduling preview: %v", err)
-		return nil, err
 	}
 
 	rooms, err := loadSchedulingRooms(ctx, uc.roomRepo, input.RoomIDs)

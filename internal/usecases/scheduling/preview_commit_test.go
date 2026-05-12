@@ -290,7 +290,7 @@ func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T)
 	}
 }
 
-func TestPreviewUseCase_ReturnsSpecificConflictWhenDateRangeHasTooFewScheduleSlots(t *testing.T) {
+func TestPreviewUseCase_ComputesRequestedSessionsFromClassWeeklySchedule(t *testing.T) {
 	t.Parallel()
 
 	store := schedulingservice.NewPreviewStore[PreviewResult]()
@@ -316,20 +316,20 @@ func TestPreviewUseCase_ReturnsSpecificConflictWhenDateRangeHasTooFewScheduleSlo
 		t.Fatalf("unexpected preview error: %v", err)
 	}
 
-	if result.Status != "PARTIAL" {
-		t.Fatalf("expected PARTIAL preview status, got %s", result.Status)
+	if result.Status != "COMPLETED" {
+		t.Fatalf("expected COMPLETED preview status, got %s", result.Status)
+	}
+	if result.Summary.RequestedSessions != 2 {
+		t.Fatalf("expected requested sessions to match 2 weekly schedule slots in range, got %d", result.Summary.RequestedSessions)
 	}
 	if result.Summary.ScheduledLessons != 2 {
 		t.Fatalf("expected exactly 2 scheduled lessons in the selected range, got %d", result.Summary.ScheduledLessons)
 	}
-	if result.Summary.UnscheduledLessons != 6 {
-		t.Fatalf("expected 6 unscheduled lessons, got %d", result.Summary.UnscheduledLessons)
+	if result.Summary.UnscheduledLessons != 0 {
+		t.Fatalf("expected no unscheduled lessons, got %d", result.Summary.UnscheduledLessons)
 	}
-
-	for _, conflict := range result.Conflicts {
-		if conflict.Type != "INSUFFICIENT_SCHEDULE_SLOTS" {
-			t.Fatalf("expected INSUFFICIENT_SCHEDULE_SLOTS conflict, got %s", conflict.Type)
-		}
+	if len(result.Conflicts) != 0 {
+		t.Fatalf("expected no conflicts, got %d", len(result.Conflicts))
 	}
 }
 
