@@ -1113,7 +1113,7 @@ export const SchedulingPage = () => {
 
                         {derivedPreview.remainingConflicts.length > 0 ? (
                             <Alert severity={derivedPreview.calendarAssignments.length > 0 ? 'warning' : 'error'}>
-                                Lịch xem trước còn {derivedPreview.remainingConflicts.length} vấn đề cần xử lý. Bạn có thể đổi slot/phòng cho từng ca học ngay hoặc quay lại sửa dữ liệu lớp nếu trùng lịch là do thiếu giáo viên/lịch tuần.
+                                Lịch xem trước còn {derivedPreview.remainingConflicts.length} vấn đề cần xử lý. Bạn có thể đổi chỗ/phòng cho từng ca học ngay hoặc quay lại sửa dữ liệu lớp nếu trùng lịch là do thiếu giáo viên/lịch tuần.
                             </Alert>
                         ) : (
                             <Alert severity="success">Lịch xem trước hiện không còn lịch trùng.</Alert>
@@ -1187,7 +1187,7 @@ export const SchedulingPage = () => {
                                             Xem trước lịch
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            Các buổi đã xếp được hiển thị theo tuần. Bấm vào từng card để đổi slot/phòng ngay tại chỗ.
+                                            Các buổi đã xếp được hiển thị theo tuần. Bấm vào từng card để đổi chỗ/phòng ngay tại chỗ.
                                         </Typography>
                                     </Box>
                                 </Stack>
@@ -1305,7 +1305,7 @@ export const SchedulingPage = () => {
                                                                                             startIcon={<EditCalendarRounded />}
                                                                                             onClick={() => openEditDialog(assignment.variable_id)}
                                                                                         >
-                                                                                            Đổi slot
+                                                                                            Đổi chỗ
                                                                                         </Button>
                                                                                     </Stack>
                                                                                 </Paper>
