@@ -2,6 +2,17 @@
 
 Clean architecture Go monorepo with GORM, Wire DI, and Gin framework.
 
+## Scope hiện tại
+
+Phạm vi hiện tại của đồ án được chốt theo trục `scheduling`:
+
+- trọng tâm kỹ thuật là bài toán xếp lịch học;
+- benchmark nhiều thuật toán trên cùng bộ dữ liệu chuẩn;
+- chọn `CP-SAT` làm solver chính dựa trên số liệu thực nghiệm;
+- phần `machine learning / at_risk prediction` không còn nằm trong scope chính, chỉ xem là hướng phát triển tương lai.
+
+Tài liệu scope mới nhất: [docs/KE_HOACH_CHOT_SCOPE_XEP_LICH_2026-05-13.md](/Users/hant/golang/doan/docs/KE_HOACH_CHOT_SCOPE_XEP_LICH_2026-05-13.md)
+
 ## 🚀 Quick Start
 
 ```bash
@@ -178,10 +189,10 @@ lsof -ti:8080 | xargs kill -9
 
 ## 📚 Documentation
 
-- **START_HERE.md** - Quick start guide
-- **SETUP.md** - Detailed setup instructions  
-- **DEVELOPMENT.md** - Development workflow
-- **QUICK_REFERENCE.md** - Command reference
+- [Kế hoạch scope scheduling](/Users/hant/golang/doan/docs/KE_HOACH_CHOT_SCOPE_XEP_LICH_2026-05-13.md)
+- [Benchmark report scheduling](/Users/hant/golang/doan/docs/SCHEDULING_BENCHMARK_REPORT_2026-04-14.md)
+- [Benchmark demo flow scheduling](/Users/hant/golang/doan/docs/SCHEDULING_BENCHMARK_DEMO_FLOW_2026-04-22.md)
+- [Q&A phản biện scheduling](/Users/hant/golang/doan/docs/SCHEDULING_DEFENSE_QA_2026-04-22.md)
 
 ## 🤝 Contributing
 
@@ -205,4 +216,3 @@ This project is licensed under the MIT License.
 - [Wire](https://github.com/google/wire) - Dependency injection
 - [Gin](https://github.com/gin-gonic/gin) - Web framework
 - [Zap](https://github.com/uber-go/zap) - Logging library
-
