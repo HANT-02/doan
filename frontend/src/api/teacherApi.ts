@@ -8,10 +8,9 @@ export interface Teacher {
     phone?: string;
     status: string;
     employment_type: string;
-    specialization?: string;
-    bio?: string;
     is_school_teacher?: boolean;
     school_name?: string;
+    skills?: string[];
     notes?: string;
     created_at: string;
     updated_at: string;

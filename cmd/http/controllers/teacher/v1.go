@@ -77,6 +77,7 @@ func (c *ControllerV1) CreateTeacher(ctx *gin.Context) {
 		SchoolName:      req.SchoolName,
 		EmploymentType:  req.EmploymentType,
 		Status:          req.Status,
+		Skills:          req.Skills,
 		Notes:           req.Notes,
 	})
 
@@ -167,6 +168,7 @@ func (c *ControllerV1) UpdateTeacher(ctx *gin.Context) {
 		SchoolName:      req.SchoolName,
 		EmploymentType:  req.EmploymentType,
 		Status:          req.Status,
+		Skills:          req.Skills,
 		Notes:           req.Notes,
 	})
 
@@ -449,6 +451,7 @@ func mapTeacherToResponse(t *entities.Teacher) TeacherResponse {
 		SchoolName:      t.SchoolName,
 		EmploymentType:  t.EmploymentType,
 		Status:          t.Status,
+		Skills:          append([]string(nil), t.Skills...),
 		Notes:           t.Notes,
 		CreatedAt:       t.CreatedAt,
 		UpdatedAt:       t.UpdatedAt,

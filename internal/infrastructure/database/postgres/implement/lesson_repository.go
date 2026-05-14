@@ -45,6 +45,7 @@ func (r *lessonRepository) FindOverlappingLessons(
 	classIDs []string,
 	teacherIDs []string,
 	roomIDs []string,
+	statuses []string,
 ) ([]entities.Lesson, error) {
 	if to.Before(from) {
 		to = from
@@ -71,14 +72,17 @@ func (r *lessonRepository) FindOverlappingLessons(
 	}
 
 	lessons := make([]entities.Lesson, 0)
-	err := postgres.GetDb(ctx, r.db).
+	query := postgres.GetDb(ctx, r.db).
 		Preload("Class").
 		Preload("Teacher").
 		Preload("Room").
 		Where("date_start < ? AND date_end > ?", to, from).
 		Where("("+strings.Join(filters, " OR ")+")", args...).
-		Order("date_start ASC").
-		Find(&lessons).Error
+		Order("date_start ASC")
+	if len(statuses) > 0 {
+		query = query.Where("status IN ?", statuses)
+	}
+	err := query.Find(&lessons).Error
 	if err != nil {
 		return nil, err
 	}

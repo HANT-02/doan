@@ -3,6 +3,7 @@ package scheduling
 type PreviewScheduleRequest struct {
 	DateFrom   string   `json:"date_from"`
 	DateTo     string   `json:"date_to"`
+	Mode       string   `json:"mode"`
 	ClassIDs   []string `json:"class_ids"`
 	TeacherIDs []string `json:"teacher_ids"`
 	RoomIDs    []string `json:"room_ids"`

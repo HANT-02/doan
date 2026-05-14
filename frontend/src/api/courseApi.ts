@@ -13,6 +13,7 @@ export interface Course {
     total_hours?: number;
     price?: number;
     status: string;
+    required_skills?: string[];
     created_at: string;
     updated_at: string;
 }

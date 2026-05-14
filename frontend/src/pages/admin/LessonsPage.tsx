@@ -21,7 +21,6 @@ import {
     ChevronRightRounded,
     RefreshRounded,
     TodayRounded,
-    VisibilityOutlined,
     ViewWeekRounded,
 } from '@mui/icons-material';
 import {
@@ -43,6 +42,7 @@ import { useGetLessonsQuery, type Lesson } from '@/api/lessonApi';
 import { useGetClassesQuery } from '@/api/classApi';
 import { useGetTeachersQuery } from '@/api/teacherApi';
 import PageHeader from '@/components/common/PageHeader';
+import ScheduleCardShell from '@/components/schedule/ScheduleCardShell';
 import { getApiErrorMessage } from '@/utils/apiError';
 
 type CalendarViewMode = 'week' | 'month';
@@ -52,6 +52,14 @@ type CalendarDay = {
     lessons: Lesson[];
 };
 
+const lessonLifecycleOptions = [
+    { value: '', label: 'Tất cả trạng thái' },
+    { value: 'PUBLISHED', label: 'Published' },
+    { value: 'HISTORY', label: 'History' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'UNPLANNED', label: 'Unplanned' },
+];
+
 const weekLabels = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 
 const formatDateParam = (value: Date) => format(value, 'yyyy-MM-dd');
@@ -60,14 +68,20 @@ const formatDateTime = (value: string) => format(parseISO(value), 'dd/MM/yyyy HH
 
 const formatTimeOnly = (value: string) => format(parseISO(value), 'HH:mm', { locale: vi });
 
-const palette = [
-    { bg: 'rgba(14, 116, 144, 0.10)', border: '#0ea5e9' },
-    { bg: 'rgba(5, 150, 105, 0.10)', border: '#10b981' },
-    { bg: 'rgba(234, 88, 12, 0.10)', border: '#f97316' },
-    { bg: 'rgba(190, 24, 93, 0.10)', border: '#ec4899' },
-    { bg: 'rgba(79, 70, 229, 0.10)', border: '#6366f1' },
-    { bg: 'rgba(161, 98, 7, 0.10)', border: '#eab308' },
-];
+function getLessonStatusMeta(status: Lesson['status']) {
+    switch (status) {
+        case 'PUBLISHED':
+            return { label: 'Published', color: 'success' as const };
+        case 'HISTORY':
+            return { label: 'History', color: 'default' as const };
+        case 'DRAFT':
+            return { label: 'Draft', color: 'warning' as const };
+        case 'UNPLANNED':
+            return { label: 'Unplanned', color: 'error' as const };
+        default:
+            return { label: status || 'Unknown', color: 'default' as const };
+    }
+}
 
 function buildVisibleRange(anchorDate: Date, viewMode: CalendarViewMode) {
     if (viewMode === 'week') {
@@ -101,20 +115,14 @@ function buildCalendarDays(anchorDate: Date, viewMode: CalendarViewMode, lessons
     return days;
 }
 
-function getLessonTone(lesson: Lesson) {
-    const seed = lesson.class_id
-        .split('')
-        .reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    return palette[seed % palette.length];
-}
-
 export default function LessonsPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
+    const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
     const [anchorDate, setAnchorDate] = useState(new Date());
     const [classId, setClassId] = useState(searchParams.get('class_id') || '');
     const [teacherId, setTeacherId] = useState('');
+    const [lessonStatus, setLessonStatus] = useState('');
 
     const visibleRange = useMemo(
         () => buildVisibleRange(anchorDate, viewMode),
@@ -127,12 +135,13 @@ export default function LessonsPage() {
             limit: 500,
             class_id: classId || undefined,
             teacher_id: teacherId || undefined,
+            status: lessonStatus || undefined,
             date_from: formatDateParam(visibleRange.start),
             date_to: formatDateParam(visibleRange.end),
             sortBy: 'date_start',
             sortOrder: 'asc',
         }),
-        [classId, teacherId, visibleRange.end, visibleRange.start],
+        [classId, lessonStatus, teacherId, visibleRange.end, visibleRange.start],
     );
 
     const { data: lessonsResponse, isLoading, isFetching, isError, error, refetch } = useGetLessonsQuery(queryParams);
@@ -143,7 +152,7 @@ export default function LessonsPage() {
     const totalItems = lessonsResponse?.data?.pagination?.total_items || 0;
     const classes = classesResponse?.data?.classes || [];
     const teachers = teachersResponse?.data?.teachers || [];
-    const hasFilters = !!(classId || teacherId);
+    const hasFilters = !!(classId || teacherId || lessonStatus);
 
     const calendarDays = useMemo(
         () => buildCalendarDays(anchorDate, viewMode, lessons),
@@ -186,67 +195,23 @@ export default function LessonsPage() {
     };
 
     const renderLessonCard = (lesson: Lesson) => {
-        const tone = getLessonTone(lesson);
+        const statusMeta = getLessonStatusMeta(lesson.status);
         return (
-            <Paper
+            <ScheduleCardShell
                 key={lesson.id}
-                variant="outlined"
+                seed={lesson.class_id}
+                title={lesson.class?.name || lesson.class_id}
+                subtitle={`${lesson.class?.code || 'Không có mã lớp'} • ${formatTimeOnly(lesson.date_start)} - ${formatTimeOnly(lesson.date_end)}`}
+                lines={[
+                    lesson.teacher?.full_name || 'Chưa phân công giáo viên',
+                    lesson.room?.name || 'Chưa xếp phòng',
+                ]}
+                chips={[{ label: statusMeta.label, color: statusMeta.color }]}
+                note={lesson.notes || undefined}
+                actionLabel="Xem"
+                onActionClick={() => navigate(`/app/admin/lessons/${lesson.id}`)}
                 onClick={() => navigate(`/app/admin/lessons/${lesson.id}`)}
-                sx={{
-                    p: 1.25,
-                    borderRadius: 2.5,
-                    cursor: 'pointer',
-                    borderLeft: `4px solid ${tone.border}`,
-                    backgroundColor: tone.bg,
-                    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
-                    '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: 2,
-                    },
-                }}
-            >
-                <Stack spacing={0.75}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-                        <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
-                                {lesson.class?.name || lesson.class_id}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {lesson.class?.code || 'Không có mã lớp'}
-                            </Typography>
-                        </Box>
-                        <Button
-                            size="small"
-                            startIcon={<VisibilityOutlined />}
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                navigate(`/app/admin/lessons/${lesson.id}`);
-                            }}
-                            sx={{ minWidth: 'auto', px: 1 }}
-                        >
-                            Xem
-                        </Button>
-                    </Stack>
-
-                    <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                        {formatTimeOnly(lesson.date_start)} - {formatTimeOnly(lesson.date_end)}
-                    </Typography>
-
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                        {lesson.teacher?.full_name || 'Chưa phân công giáo viên'}
-                    </Typography>
-
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                        {lesson.room?.name || 'Chưa xếp phòng'}
-                    </Typography>
-
-                    {lesson.notes ? (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
-                            {lesson.notes}
-                        </Typography>
-                    ) : null}
-                </Stack>
-            </Paper>
+            />
         );
     };
 
@@ -306,6 +271,21 @@ export default function LessonsPage() {
                                     {teachers.map((teacher) => (
                                         <MenuItem key={teacher.id} value={teacher.id}>
                                             {teacher.full_name}
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+
+                                <TextField
+                                    select
+                                    label="Lifecycle"
+                                    value={lessonStatus}
+                                    onChange={(event) => setLessonStatus(event.target.value)}
+                                    size="small"
+                                    fullWidth
+                                >
+                                    {lessonLifecycleOptions.map((option) => (
+                                        <MenuItem key={option.value || 'all'} value={option.value}>
+                                            {option.label}
                                         </MenuItem>
                                     ))}
                                 </TextField>
@@ -401,6 +381,7 @@ export default function LessonsPage() {
                                         onClick={() => {
                                             setClassId('');
                                             setTeacherId('');
+                                            setLessonStatus('');
                                         }}
                                     >
                                         Xóa bộ lọc

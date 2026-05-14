@@ -16,6 +16,10 @@ export interface Lesson {
     };
     date_start: string;
     date_end: string;
+    status: 'DRAFT' | 'PUBLISHED' | 'HISTORY' | 'UNPLANNED';
+    published_at?: string;
+    source_preview_run_id?: string;
+    change_reason?: string;
     room_id?: string;
     room?: {
         id: string;
@@ -162,6 +166,7 @@ export interface ListLessonsParams {
     limit?: number;
     class_id?: string;
     teacher_id?: string;
+    status?: string;
     date_from?: string;
     date_to?: string;
     sortBy?: string;

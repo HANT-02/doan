@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"doan/internal/entities"
+	skillservice "doan/internal/services/skills"
 )
 
 type legacyPreviewSolver struct{}
@@ -93,6 +94,25 @@ func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
 				ClassName:  classEntity.Name,
 				Type:       "MISSING_CLASS_SCHEDULE",
 				Message:    "Lớp chưa có lịch tuần (`class_schedule`), nên chưa thể tính số buổi cần xếp từ thời gian học của lớp.",
+			})
+			continue
+		}
+
+		missingRequiredSkills := skillservice.MissingRequiredCodes(
+			[]string(classEntity.Teacher.Skills),
+			[]string(classEntity.Course.RequiredSkills),
+		)
+		if len(missingRequiredSkills) > 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "SKILL_MISMATCH",
+				Message: fmt.Sprintf(
+					"Giáo viên phụ trách chưa đáp ứng kỹ năng/chứng chỉ bắt buộc của khóa học. Thiếu: %s.",
+					strings.Join(missingRequiredSkills, ", "),
+				),
 			})
 			continue
 		}

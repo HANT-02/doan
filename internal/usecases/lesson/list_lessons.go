@@ -14,6 +14,7 @@ import (
 type ListLessonsInput struct {
 	ClassID   string
 	TeacherID string
+	Status    string
 	DateFrom  *time.Time
 	DateTo    *time.Time
 	Page      int
@@ -55,6 +56,14 @@ func (uc *listLessonsUseCase) Execute(ctx context.Context, input ListLessonsInpu
 	}
 	if input.TeacherID != "" {
 		commonCond.AddCondition("teacher_id", input.TeacherID, repositories.Equal)
+	}
+	if input.Status != "" {
+		statuses := splitLessonStatuses(input.Status)
+		if len(statuses) == 1 {
+			commonCond.AddCondition("status", statuses[0], repositories.Equal)
+		} else if len(statuses) > 1 {
+			commonCond.AddCondition("status", statuses, repositories.In)
+		}
 	}
 	if input.DateFrom != nil {
 		commonCond.AddCondition("date_start", *input.DateFrom, repositories.GreaterThanOrEqual)
@@ -110,4 +119,17 @@ func (uc *listLessonsUseCase) Execute(ctx context.Context, input ListLessonsInpu
 			TotalPages:   totalPages,
 		},
 	}, nil
+}
+
+func splitLessonStatuses(raw string) []string {
+	parts := strings.Split(raw, ",")
+	statuses := make([]string, 0, len(parts))
+	for _, part := range parts {
+		normalized := strings.ToUpper(strings.TrimSpace(part))
+		if normalized == "" {
+			continue
+		}
+		statuses = append(statuses, normalized)
+	}
+	return statuses
 }

@@ -4,21 +4,25 @@ import (
 	"context"
 	"doan/internal/entities"
 	repointerface "doan/internal/repositories/interface"
+	skillservice "doan/internal/services/skills"
 	"doan/pkg/logger"
 	"errors"
+
+	"github.com/lib/pq"
 )
 
 type CreateCourseInput struct {
-	Code                   string  `json:"code"`
-	Name                   string  `json:"name"`
-	Description            string  `json:"description"`
-	GradeLevel             string  `json:"grade_level"`
-	Subject                string  `json:"subject"`
-	SessionCount           int     `json:"session_count"`
-	SessionDurationMinutes int     `json:"session_duration_minutes"`
-	TotalHours             float64 `json:"total_hours"`
-	Price                  float64 `json:"price"`
-	Status                 string  `json:"status"`
+	Code                   string   `json:"code"`
+	Name                   string   `json:"name"`
+	Description            string   `json:"description"`
+	GradeLevel             string   `json:"grade_level"`
+	Subject                string   `json:"subject"`
+	SessionCount           int      `json:"session_count"`
+	SessionDurationMinutes int      `json:"session_duration_minutes"`
+	TotalHours             float64  `json:"total_hours"`
+	Price                  float64  `json:"price"`
+	Status                 string   `json:"status"`
+	RequiredSkills         []string `json:"required_skills"`
 }
 
 type CreateCourseOutput struct {
@@ -45,6 +49,7 @@ func (uc *createCourseUseCaseImpl) Execute(ctx context.Context, input CreateCour
 	if input.Status == "" {
 		input.Status = "ACTIVE"
 	}
+	normalizedRequiredSkills := skillservice.NormalizeCodes(input.RequiredSkills)
 	course := &entities.Course{
 		Code:                   input.Code,
 		Name:                   input.Name,
@@ -56,6 +61,7 @@ func (uc *createCourseUseCaseImpl) Execute(ctx context.Context, input CreateCour
 		TotalHours:             input.TotalHours,
 		Price:                  input.Price,
 		Status:                 input.Status,
+		RequiredSkills:         pq.StringArray(normalizedRequiredSkills),
 	}
 	created, err := uc.repo.Create(ctx, course)
 	if err != nil {

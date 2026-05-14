@@ -108,7 +108,12 @@ type DerivedPreviewState = {
         scheduledLessons: number;
         unscheduledLessons: number;
         conflictCount: number;
+        baseSoftScore: number;
         softScore: number;
+        scoreDelta: number;
+        manualAdjustmentCount: number;
+        manualAdjustmentLimit: number;
+        excessiveManualAdjustment: boolean;
     };
     status: 'FAILED' | 'PARTIAL' | 'COMPLETED';
     manualAssignmentPayload: Array<{
@@ -173,7 +178,10 @@ const getConflictSeverity = (type: string): 'error' | 'warning' | 'info' => {
         case 'NO_ACTIVE_ROOM':
         case 'NO_ACTIVE_SHIFT':
         case 'NO_VALID_DATE_RANGE':
+        case 'SKILL_MISMATCH':
             return 'error';
+        case 'INSUFFICIENT_ENROLLMENT':
+        case 'EXCESSIVE_MANUAL_ADJUSTMENT':
         case 'ASSIGNMENT_CONFLICT':
         case 'SYSTEM_LESSON_CONFLICT':
         case 'NO_DOMAIN':
@@ -197,6 +205,8 @@ const getConflictActionHint = (type: string) => {
             return 'Gợi ý: xem card lesson đã lưu trên calendar rồi đổi tay sang ca/ngày/phòng khác để tránh đè dữ liệu hiện có.';
         case 'MISSING_TEACHER':
             return 'Gợi ý: vào Quản lý lớp học để gán giáo viên phụ trách rồi chạy lại xem trước.';
+        case 'SKILL_MISMATCH':
+            return 'Gợi ý: cập nhật kỹ năng/chứng chỉ cho giáo viên hoặc chỉnh `required skills` của khóa học để chỉ các lớp đủ chuẩn mới được đưa vào xếp lịch.';
         case 'NO_CLASS_INPUT':
             return 'Gợi ý: kiểm tra bộ lọc lớp, trạng thái OPEN hoặc giáo viên đã chọn.';
         case 'NO_ACTIVE_ROOM':
@@ -223,6 +233,10 @@ const getConflictActionHint = (type: string) => {
             return 'Gợi ý: vào Quản lý lớp học, mở tab lịch tuần và cấu hình ngày học cùng ca học cho lớp trước khi chạy xem trước lịch.';
         case 'INSUFFICIENT_SCHEDULE_SLOTS':
             return 'Gợi ý: tăng khoảng ngày xem trước hoặc bổ sung thêm ngày/ca trong lịch tuần lớp để đủ số slot hợp lệ.';
+        case 'INSUFFICIENT_ENROLLMENT':
+            return 'Gợi ý: chỉ đưa lớp vào xếp lịch khi lớp đã đạt ngưỡng sĩ số tối thiểu hoặc điều chỉnh lại chính sách mở lớp.';
+        case 'EXCESSIVE_MANUAL_ADJUSTMENT':
+            return 'Gợi ý: số ca cần sửa tay đang quá nhiều. Hãy tối ưu dữ liệu lớp, phòng, ca và lịch tuần trước khi chạy lại solver.';
         case 'NO_ACTIVE_SHIFT':
             return 'Gợi ý: vào Quản lý ca học để tạo hoặc kích hoạt ít nhất một `Ca học` rồi chạy lại xem trước.';
         case 'NO_VALID_DATE_RANGE':
@@ -272,9 +286,21 @@ const buildConflictTags = (type: string, message: string) => {
     if (type === 'MISSING_CLASS_SCHEDULE' || content.includes('lịch tuần')) {
         tags.push('Thiếu lịch tuần');
     }
+    if (type === 'INSUFFICIENT_ENROLLMENT' || content.includes('sĩ số') || content.includes('điều kiện mở lớp')) {
+        tags.push('Thiếu sĩ số');
+    }
+    if (type === 'EXCESSIVE_MANUAL_ADJUSTMENT' || content.includes('chỉnh tay') || content.includes('vượt ngưỡng')) {
+        tags.push('Vượt ngưỡng chỉnh tay');
+    }
+    if (type === 'SKILL_MISMATCH' || content.includes('kỹ năng') || content.includes('chứng chỉ')) {
+        tags.push('Sai kỹ năng');
+    }
 
     return uniqueTags(tags);
 };
+
+const getAllowedManualAdjustmentLimit = (requestedSessions: number) =>
+    Math.max(3, Math.ceil(requestedSessions * 0.35));
 
 const renderConflictChips = (tags: string[]) => {
     if (tags.length === 0) {
@@ -418,6 +444,38 @@ const scoreAssignments = (assignments: SchedulingAssignment[]) => {
     return score;
 };
 
+const formatScoreDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
+
+const getScoreDeltaTone = (delta: number): 'default' | 'success' | 'warning' | 'error' => {
+    if (delta > 0) {
+        return 'success';
+    }
+    if (delta < -10) {
+        return 'error';
+    }
+    if (delta < 0) {
+        return 'warning';
+    }
+    return 'default';
+};
+
+const replaceAssignmentForScoring = (
+    session: SessionDraft,
+    option: SchedulingCandidateOption,
+    assignments: SchedulingAssignment[],
+) => {
+    const nextAssignment = buildAssignmentFromOption(session, option);
+    const nextAssignments = assignments.filter((assignment) => assignment.variable_id !== session.variableId);
+    nextAssignments.push(nextAssignment);
+    return nextAssignments;
+};
+
+const getOptionScoreDelta = (
+    session: SessionDraft,
+    option: SchedulingCandidateOption,
+    previewState: DerivedPreviewState,
+) => scoreAssignments(replaceAssignmentForScoring(session, option, previewState.calendarAssignments)) - previewState.summary.softScore;
+
 const buildWeeks = (preview: SchedulingPreview) => {
     const dateFrom = preview.filters.date_from || fallbackDateFrom;
     const dateTo = preview.filters.date_to || dateFrom;
@@ -435,6 +493,7 @@ export const SchedulingPage = () => {
     const [manualSelections, setManualSelections] = useState<Record<string, string>>({});
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [pendingOptionKey, setPendingOptionKey] = useState('');
+    const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null);
 
     const { data: classesData, isLoading: isLoadingClasses } = useGetClassesQuery({ page: 1, limit: 200, status: 'OPEN' });
     const { data: teachersData, isLoading: isLoadingTeachers } = useGetTeachersQuery({ page: 1, limit: 200, status: 'ACTIVE' });
@@ -742,19 +801,30 @@ export const SchedulingPage = () => {
             sessions.map((session) => session.classId).filter((value) => value),
         ).size || preview.summary.requested_classes;
 
+        const requestedSessions = Math.max(sessions.length, preview.summary.requested_sessions);
+        const manualAdjustmentCount = manualAssignmentPayload.length;
+        const manualAdjustmentLimit = getAllowedManualAdjustmentLimit(requestedSessions);
+        const baseSoftScore = preview.summary.soft_score;
+        const softScore = scoreAssignments(resolvedAssignments);
+
         const summary = {
             requestedClasses,
-            requestedSessions: Math.max(sessions.length, preview.summary.requested_sessions),
+            requestedSessions,
             scheduledLessons: resolvedAssignments.length,
             unscheduledLessons: unresolvedSessions.length,
             conflictCount: visibleConflicts.length,
-            softScore: scoreAssignments(resolvedAssignments),
+            baseSoftScore,
+            softScore,
+            scoreDelta: softScore - baseSoftScore,
+            manualAdjustmentCount,
+            manualAdjustmentLimit,
+            excessiveManualAdjustment: manualAdjustmentCount > manualAdjustmentLimit,
         };
 
         const status =
             summary.scheduledLessons === 0
                 ? 'FAILED'
-                : summary.unscheduledLessons === 0 && summary.conflictCount === 0
+                : summary.unscheduledLessons === 0 && summary.conflictCount === 0 && !summary.excessiveManualAdjustment
                     ? 'COMPLETED'
                     : 'PARTIAL';
 
@@ -862,7 +932,7 @@ export const SchedulingPage = () => {
     }, [activeSession, activeSessionAvailableOptions, pendingOptionKey]);
 
     const activeStep = wizardStep;
-    const canCommitPreview = !!derivedPreview && derivedPreview.status === 'COMPLETED';
+    const canCommitPreview = !!derivedPreview && derivedPreview.status === 'COMPLETED' && !derivedPreview.summary.excessiveManualAdjustment;
 
     const getAvailableOptionsForSession = (session: SessionDraft) =>
         derivedPreview ? filterAvailableCandidateOptions(session, derivedPreview) : [];
@@ -871,6 +941,7 @@ export const SchedulingPage = () => {
         setManualSelections({});
         setActiveSessionId(null);
         setPendingOptionKey('');
+        setDraggedSessionId(null);
     };
 
     const syncPreviewState = (nextPreview: SchedulingPreview) => {
@@ -977,6 +1048,19 @@ export const SchedulingPage = () => {
         setActiveSessionId(null);
         setPendingOptionKey('');
     };
+
+    const handleApplyManualOption = (variableId: string, optionKey: string) => {
+        setManualSelections((current) => ({
+            ...current,
+            [variableId]: optionKey,
+        }));
+        setDraggedSessionId(null);
+    };
+
+    const draggedSession = useMemo(
+        () => derivedPreview?.sessions.find((session) => session.variableId === draggedSessionId) || null,
+        [derivedPreview, draggedSessionId],
+    );
 
     const handleCommitPreview = async () => {
         if (!preview?.run_id || !derivedPreview) {
@@ -1264,8 +1348,17 @@ export const SchedulingPage = () => {
                                     <Chip label={`${derivedPreview.summary.scheduledLessons} buổi đã xếp`} color="success" variant="outlined" />
                                     <Chip label={`${derivedPreview.summary.unscheduledLessons} buổi chưa xếp`} color="warning" variant="outlined" />
                                     <Chip label={`${derivedPreview.summary.conflictCount} trùng`} color="error" variant="outlined" />
-                                    <Chip label={`Điểm số mềm ${derivedPreview.summary.softScore}`} color="primary" variant="outlined" />
-                                    <Chip label={`${derivedPreview.manualAssignmentPayload.length} chỉnh tay`} color="secondary" variant="outlined" />
+                                    <Chip label={`Điểm mềm ${derivedPreview.summary.softScore}`} color="primary" variant="outlined" />
+                                    <Chip
+                                        label={`Delta ${formatScoreDelta(derivedPreview.summary.scoreDelta)}`}
+                                        color={getScoreDeltaTone(derivedPreview.summary.scoreDelta)}
+                                        variant="outlined"
+                                    />
+                                    <Chip
+                                        label={`Chỉnh tay ${derivedPreview.summary.manualAdjustmentCount}/${derivedPreview.summary.manualAdjustmentLimit}`}
+                                        color={derivedPreview.summary.excessiveManualAdjustment ? 'error' : 'secondary'}
+                                        variant="outlined"
+                                    />
                                 </Stack>
                             </Stack>
                         </Paper>
@@ -1314,6 +1407,18 @@ export const SchedulingPage = () => {
                         ) : (
                             <Alert severity="success">Lịch xem trước hiện không còn lịch trùng.</Alert>
                         )}
+
+                        {derivedPreview.summary.excessiveManualAdjustment ? (
+                            <Alert severity="warning">
+                                Số ca chỉnh tay hiện tại là {derivedPreview.summary.manualAdjustmentCount}, vượt ngưỡng cho phép {derivedPreview.summary.manualAdjustmentLimit}. Hãy tối ưu lại dữ liệu đầu vào thay vì vá tay quá nhiều.
+                            </Alert>
+                        ) : null}
+
+                        {derivedPreview.summary.scoreDelta < 0 ? (
+                            <Alert severity={derivedPreview.summary.scoreDelta < -10 ? 'warning' : 'info'}>
+                                Điểm luật mềm đang thấp hơn {Math.abs(derivedPreview.summary.scoreDelta)} điểm so với kết quả solver ban đầu ({derivedPreview.summary.baseSoftScore}). Nếu đây không phải phương án bắt buộc, nên chọn slot khác ít ảnh hưởng chất lượng lịch hơn.
+                            </Alert>
+                        ) : null}
 
                         <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4 }}>
                             <Stack
@@ -1377,7 +1482,7 @@ export const SchedulingPage = () => {
                                 </Alert>
                             ) : (
                                 <Alert severity="info" sx={{ mb: 2 }}>
-                                    Xác nhận lưu chỉ mở khi tất cả ca học đã được xếp và không còn trùng lịch. Hãy xử lý các ca học chưa thỏa mãn ở bảng và lịch bên dưới.
+                                    Xác nhận lưu chỉ mở khi tất cả ca học đã được xếp, không còn trùng lịch và số chỉnh tay không vượt ngưỡng cho phép. Hãy xử lý các ca học chưa thỏa mãn ở bảng và lịch bên dưới.
                                 </Alert>
                             )}
 
@@ -1415,6 +1520,11 @@ export const SchedulingPage = () => {
                                                     const dayExistingLessons = derivedPreview.existingLessons.filter((lesson) =>
                                                         isSameDay(parseISO(lesson.start_time), day),
                                                     );
+                                                    const dayDropOptions = draggedSession
+                                                        ? getAvailableOptionsForSession(draggedSession).filter((option) =>
+                                                            isSameDay(parseISO(option.start_time), day),
+                                                        )
+                                                        : [];
 
                                                     return (
                                                         <Box
@@ -1435,6 +1545,47 @@ export const SchedulingPage = () => {
                                                                         {format(day, 'dd/MM/yyyy', { locale: vi })}
                                                                     </Typography>
                                                                 </Box>
+
+                                                                {draggedSession && dayDropOptions.length > 0 ? (
+                                                                    <Paper
+                                                                        variant="outlined"
+                                                                        sx={{
+                                                                            p: 1,
+                                                                            borderRadius: 2,
+                                                                            borderStyle: 'dashed',
+                                                                            borderColor: 'secondary.main',
+                                                                            backgroundColor: 'rgba(168,85,247,0.04)',
+                                                                        }}
+                                                                        onDragOver={(event) => event.preventDefault()}
+                                                                    >
+                                                                        <Stack spacing={1}>
+                                                                            <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                                                                                Thả {draggedSession.classCode} • Buổi {draggedSession.sessionIndex}/{draggedSession.sessionTotal} vào một slot trống:
+                                                                            </Typography>
+                                                                            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                                                                                {dayDropOptions.map((option) => {
+                                                                                    const delta = getOptionScoreDelta(draggedSession, option, derivedPreview);
+                                                                                    return (
+                                                                                        <Chip
+                                                                                            key={`${draggedSession.variableId}-${option.key}`}
+                                                                                            clickable
+                                                                                            color={getScoreDeltaTone(delta)}
+                                                                                            variant="outlined"
+                                                                                            label={`${option.shift_name || option.shift_code || 'Ca'} • ${format(parseISO(option.start_time), 'HH:mm', { locale: vi })} • ${option.room_name} • Δ ${formatScoreDelta(delta)}`}
+                                                                                            onClick={() => handleApplyManualOption(draggedSession.variableId, option.key)}
+                                                                                            onDragOver={(event) => event.preventDefault()}
+                                                                                            onDrop={(event) => {
+                                                                                                event.preventDefault();
+                                                                                                handleApplyManualOption(draggedSession.variableId, option.key);
+                                                                                            }}
+                                                                                            sx={{ cursor: 'copy' }}
+                                                                                        />
+                                                                                    );
+                                                                                })}
+                                                                            </Stack>
+                                                                        </Stack>
+                                                                    </Paper>
+                                                                ) : null}
 
                                                                 {dayExistingLessons.length > 0 ? (
                                                                     <Stack spacing={1}>
@@ -1509,6 +1660,14 @@ export const SchedulingPage = () => {
                                                                                         >
                                                                                             Đổi chỗ
                                                                                         </Button>
+                                                                                        <Chip
+                                                                                            size="small"
+                                                                                            draggable
+                                                                                            label="Kéo thả để đổi ca"
+                                                                                            onDragStart={() => setDraggedSessionId(assignment.variable_id)}
+                                                                                            onDragEnd={() => setDraggedSessionId(null)}
+                                                                                            sx={{ alignSelf: 'flex-start', cursor: 'grab' }}
+                                                                                        />
                                                                                     </Stack>
                                                                                 </Paper>
                                                                             );
@@ -1594,6 +1753,16 @@ export const SchedulingPage = () => {
                                                             >
                                                                 {availableOptionCount > 0 ? 'Chọn ngày/ca/phòng trống' : 'Không còn phương án trống'}
                                                             </Button>
+                                                            {availableOptionCount > 0 ? (
+                                                                <Chip
+                                                                    size="small"
+                                                                    draggable
+                                                                    label="Kéo vào lịch tuần để đổi ca"
+                                                                    onDragStart={() => setDraggedSessionId(session.variableId)}
+                                                                    onDragEnd={() => setDraggedSessionId(null)}
+                                                                    sx={{ alignSelf: 'flex-start', cursor: 'grab' }}
+                                                                />
+                                                            ) : null}
                                                         </Stack>
                                                     </Paper>
                                                 );
@@ -1670,18 +1839,35 @@ export const SchedulingPage = () => {
                                         : 'Tất cả phương án hiện đang trùng lịch. Hãy nới khoảng ngày hoặc bổ sung ca/phòng khác.'
                                 }
                             >
-                                {activeSessionAvailableOptions.map((option) => (
-                                    <MenuItem key={option.key} value={option.key}>
-                                        <Box>
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                {formatOptionTitle(option)}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {option.shift_name || option.shift_code || 'Ca tự do'} • {format(parseISO(option.start_time), 'HH:mm', { locale: vi })} - {format(parseISO(option.end_time), 'HH:mm', { locale: vi })} • {option.room_name} trống • Sức chứa {option.room_capacity}
-                                            </Typography>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
+                                {activeSessionAvailableOptions.map((option) => {
+                                    const delta = derivedPreview ? getOptionScoreDelta(activeSession, option, derivedPreview) : 0;
+                                    return (
+                                        <MenuItem key={option.key} value={option.key}>
+                                            <Stack
+                                                direction="row"
+                                                spacing={1}
+                                                alignItems="center"
+                                                justifyContent="space-between"
+                                                sx={{ width: '100%' }}
+                                            >
+                                                <Box>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                        {formatOptionTitle(option)}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {option.shift_name || option.shift_code || 'Ca tự do'} • {format(parseISO(option.start_time), 'HH:mm', { locale: vi })} - {format(parseISO(option.end_time), 'HH:mm', { locale: vi })} • {option.room_name} trống • Sức chứa {option.room_capacity}
+                                                    </Typography>
+                                                </Box>
+                                                <Chip
+                                                    size="small"
+                                                    color={getScoreDeltaTone(delta)}
+                                                    variant="outlined"
+                                                    label={`Δ ${formatScoreDelta(delta)}`}
+                                                />
+                                            </Stack>
+                                        </MenuItem>
+                                    );
+                                })}
                             </TextField>
                         </Stack>
                     ) : null}

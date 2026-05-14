@@ -3,6 +3,7 @@ import { baseApi } from './baseApi';
 export interface SchedulingFilters {
     date_from?: string;
     date_to?: string;
+    mode?: 'cold_start' | 'replan_draft' | 'replan_with_published_lock';
     class_ids?: string[];
     teacher_ids?: string[];
     room_ids?: string[];
@@ -58,6 +59,7 @@ export interface SchedulingExistingLesson {
     class_id: string;
     class_code: string;
     class_name: string;
+    status?: string;
     teacher_id?: string;
     teacher_label?: string;
     room_id?: string;
@@ -70,6 +72,7 @@ export interface SchedulingExistingLesson {
 
 export interface SchedulingPreview {
     run_id: string;
+    mode?: string;
     status: 'FAILED' | 'PARTIAL' | 'COMPLETED';
     generated_at: string;
     filters: SchedulingFilters;
@@ -124,11 +127,13 @@ const normalizePreviewResponse = (response: RawSchedulingPreviewResponse): Sched
     message: response.message,
     data: response.data || {
         run_id: '',
+        mode: 'replan_with_published_lock',
         status: 'FAILED',
         generated_at: '',
         filters: {
             date_from: '',
             date_to: '',
+            mode: 'replan_with_published_lock',
             class_ids: [],
             teacher_ids: [],
             room_ids: [],

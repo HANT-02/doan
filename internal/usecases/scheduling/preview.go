@@ -14,9 +14,23 @@ import (
 type PreviewInput struct {
 	DateFrom   time.Time
 	DateTo     time.Time
+	Mode       string
 	ClassIDs   []string
 	TeacherIDs []string
 	RoomIDs    []string
+}
+
+func normalizePreviewMode(mode string) string {
+	switch mode {
+	case schedulingservice.PreviewModeColdStart:
+		return schedulingservice.PreviewModeColdStart
+	case schedulingservice.PreviewModeReplanDraft:
+		return schedulingservice.PreviewModeReplanDraft
+	case schedulingservice.PreviewModeReplanWithPublishedLock:
+		return schedulingservice.PreviewModeReplanWithPublishedLock
+	default:
+		return schedulingservice.PreviewModeReplanWithPublishedLock
+	}
 }
 
 type PreviewUseCase interface {
@@ -103,6 +117,7 @@ func truncateToDate(value time.Time) time.Time {
 
 func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*PreviewResult, error) {
 	ctxLogger := logger.NewLogger(ctx)
+	input.Mode = normalizePreviewMode(input.Mode)
 
 	classes, err := loadSchedulingClasses(ctx, uc.classRepo, input.ClassIDs, input.TeacherIDs)
 	if err != nil {
@@ -111,14 +126,22 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 	}
 
 	input.DateFrom, input.DateTo = normalizePreviewDateRange(input.DateFrom, input.DateTo, classes)
+	eligibleClasses, enrollmentConflicts, err := filterClassesByEnrollment(ctx, uc.enrollmentRepo, classes)
+	if err != nil {
+		ctxLogger.Errorf("Failed to evaluate class enrollment eligibility for scheduling preview: %v", err)
+		return nil, err
+	}
+	classes = eligibleClasses
 	if input.DateTo.Before(input.DateFrom) {
 		return &PreviewResult{
 			RunID:       utils.GenerateUUIDWithPrefix("sched-preview-"),
+			Mode:        input.Mode,
 			Status:      "FAILED",
 			GeneratedAt: time.Now(),
 			Filters: PreviewFilters{
 				DateFrom:   input.DateFrom,
 				DateTo:     input.DateTo,
+				Mode:       input.Mode,
 				ClassIDs:   input.ClassIDs,
 				TeacherIDs: input.TeacherIDs,
 				RoomIDs:    input.RoomIDs,
@@ -149,20 +172,22 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 	runID := utils.GenerateUUIDWithPrefix("sched-preview-")
 	result := PreviewResult{
 		RunID:       runID,
+		Mode:        input.Mode,
 		Status:      "FAILED",
 		GeneratedAt: time.Now(),
 		Filters: PreviewFilters{
 			DateFrom:   input.DateFrom,
 			DateTo:     input.DateTo,
+			Mode:       input.Mode,
 			ClassIDs:   input.ClassIDs,
 			TeacherIDs: input.TeacherIDs,
 			RoomIDs:    input.RoomIDs,
 		},
 		Assignments: []PreviewAssignment{},
-		Conflicts:   []PreviewConflict{},
+		Conflicts:   append([]PreviewConflict{}, enrollmentConflicts...),
 	}
 
-	if len(classes) == 0 {
+	if len(classes) == 0 && len(enrollmentConflicts) == 0 {
 		result.Conflicts = append(result.Conflicts, PreviewConflict{
 			Type:    "NO_CLASS_INPUT",
 			Message: "Không có lớp OPEN nào phù hợp bộ lọc hiện tại. Kiểm tra lại khoảng ngày, lớp đã chọn hoặc giáo viên đã lọc.",
@@ -239,6 +264,7 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 	} else {
 		result.Status = "COMPLETED"
 	}
+	result = maybeAppendConflictDensityConflict(result)
 
 	uc.store.Save(runID, result)
 	return &result, nil

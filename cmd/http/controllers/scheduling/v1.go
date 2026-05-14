@@ -71,6 +71,7 @@ func (ctrl *ControllerV1) Preview(c *gin.Context) {
 	output, err := ctrl.previewUseCase.Execute(c.Request.Context(), scheduling.PreviewInput{
 		DateFrom:   dateFrom,
 		DateTo:     dateTo,
+		Mode:       req.Mode,
 		ClassIDs:   req.ClassIDs,
 		TeacherIDs: req.TeacherIDs,
 		RoomIDs:    req.RoomIDs,

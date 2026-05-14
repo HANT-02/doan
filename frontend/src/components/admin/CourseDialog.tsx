@@ -27,6 +27,7 @@ const courseSchema = z.object({
     total_hours: z.coerce.number().min(0, 'Tổng giờ không hợp lệ'),
     price: z.coerce.number().min(0, 'Học phí không hợp lệ'),
     status: z.enum(['ACTIVE', 'INACTIVE']),
+    required_skills_input: z.string().optional(),
 });
 
 type CourseFormValues = z.infer<typeof courseSchema>;
@@ -58,6 +59,7 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
             total_hours: 0,
             price: 0,
             status: 'ACTIVE',
+            required_skills_input: '',
         },
     });
 
@@ -74,6 +76,7 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
                 total_hours: course.total_hours || 0,
                 price: course.price || 0,
                 status: course.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+                required_skills_input: course.required_skills?.join(', ') || '',
             });
             return;
         }
@@ -89,11 +92,22 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
             total_hours: 0,
             price: 0,
             status: 'ACTIVE',
+            required_skills_input: '',
         });
     }, [open, course, reset]);
 
     const handleFormSubmit = async (values: CourseFormValues) => {
-        await onSubmit(values);
+        const requiredSkills = (values.required_skills_input || '')
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean);
+        const { required_skills_input, ...rest } = values;
+        const payload = {
+            ...rest,
+            required_skills: requiredSkills,
+        };
+
+        await onSubmit(payload);
         onClose();
     };
 
@@ -171,6 +185,16 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
                             <MenuItem value="ACTIVE">Hoạt động</MenuItem>
                             <MenuItem value="INACTIVE">Tạm dừng</MenuItem>
                         </TextField>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                            fullWidth
+                            label="Kỹ năng / chứng chỉ bắt buộc"
+                            placeholder="Ví dụ: IELTS_8.0, TESOL"
+                            {...register('required_skills_input')}
+                            error={!!errors.required_skills_input}
+                            helperText={errors.required_skills_input?.message || 'Nhập danh sách phân tách bằng dấu phẩy để dùng làm hard-constraint cho giáo viên.'}
+                        />
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
                         <TextField

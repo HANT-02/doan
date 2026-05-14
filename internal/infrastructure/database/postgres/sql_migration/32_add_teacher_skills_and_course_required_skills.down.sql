@@ -1,0 +1,5 @@
+ALTER TABLE courses
+DROP COLUMN IF EXISTS required_skills;
+
+ALTER TABLE teachers
+DROP COLUMN IF EXISTS skills;

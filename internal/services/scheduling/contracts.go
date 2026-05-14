@@ -12,6 +12,10 @@ const (
 	SolverKeyGraphColoring = "graph_coloring"
 	SolverKeyCPSAT         = "cp_sat"
 	SolverKeyTabuSearch    = "tabu_search"
+
+	PreviewModeColdStart               = "cold_start"
+	PreviewModeReplanDraft             = "replan_draft"
+	PreviewModeReplanWithPublishedLock = "replan_with_published_lock"
 )
 
 type TimeSlot struct {
@@ -84,6 +88,7 @@ type ExistingLesson struct {
 	ClassID      string    `json:"class_id"`
 	ClassCode    string    `json:"class_code"`
 	ClassName    string    `json:"class_name"`
+	Status       string    `json:"status,omitempty"`
 	TeacherID    string    `json:"teacher_id,omitempty"`
 	TeacherLabel string    `json:"teacher_label,omitempty"`
 	RoomID       string    `json:"room_id,omitempty"`

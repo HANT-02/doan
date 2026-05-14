@@ -56,6 +56,7 @@ func (ctrl *ControllerV1) ListLessons(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	classID := c.Query("class_id")
 	teacherID := c.Query("teacher_id")
+	status := c.Query("status")
 	dateFromStr := c.Query("date_from")
 	dateToStr := c.Query("date_to")
 	sortBy := c.Query("sortBy")
@@ -80,6 +81,7 @@ func (ctrl *ControllerV1) ListLessons(c *gin.Context) {
 	output, err := ctrl.listLessonsUseCase.Execute(c.Request.Context(), lesson.ListLessonsInput{
 		ClassID:   classID,
 		TeacherID: teacherID,
+		Status:    status,
 		DateFrom:  dateFrom,
 		DateTo:    dateTo,
 		Page:      page,

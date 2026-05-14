@@ -4,28 +4,30 @@ import "time"
 
 // CreateTeacherRequest represents the request body for creating a teacher
 type CreateTeacherRequest struct {
-	Code            string `json:"code"`
-	FullName        string `json:"full_name" binding:"required"`
-	Email           string `json:"email"`
-	Phone           string `json:"phone"`
-	IsSchoolTeacher bool   `json:"is_school_teacher"`
-	SchoolName      string `json:"school_name"`
-	EmploymentType  string `json:"employment_type"` // PART_TIME, FULL_TIME
-	Status          string `json:"status"`          // ACTIVE, INACTIVE
-	Notes           string `json:"notes"`
+	Code            string   `json:"code"`
+	FullName        string   `json:"full_name" binding:"required"`
+	Email           string   `json:"email"`
+	Phone           string   `json:"phone"`
+	IsSchoolTeacher bool     `json:"is_school_teacher"`
+	SchoolName      string   `json:"school_name"`
+	EmploymentType  string   `json:"employment_type"` // PART_TIME, FULL_TIME
+	Status          string   `json:"status"`          // ACTIVE, INACTIVE
+	Skills          []string `json:"skills"`
+	Notes           string   `json:"notes"`
 }
 
 // UpdateTeacherRequest represents the request body for updating a teacher
 type UpdateTeacherRequest struct {
-	Code            *string `json:"code"`
-	FullName        *string `json:"full_name"`
-	Email           *string `json:"email"`
-	Phone           *string `json:"phone"`
-	IsSchoolTeacher *bool   `json:"is_school_teacher"`
-	SchoolName      *string `json:"school_name"`
-	EmploymentType  *string `json:"employment_type"`
-	Status          *string `json:"status"`
-	Notes           *string `json:"notes"`
+	Code            *string   `json:"code"`
+	FullName        *string   `json:"full_name"`
+	Email           *string   `json:"email"`
+	Phone           *string   `json:"phone"`
+	IsSchoolTeacher *bool     `json:"is_school_teacher"`
+	SchoolName      *string   `json:"school_name"`
+	EmploymentType  *string   `json:"employment_type"`
+	Status          *string   `json:"status"`
+	Skills          *[]string `json:"skills"`
+	Notes           *string   `json:"notes"`
 }
 
 // TeacherResponse represents a teacher in the response
@@ -39,6 +41,7 @@ type TeacherResponse struct {
 	SchoolName      string    `json:"school_name"`
 	EmploymentType  string    `json:"employment_type"`
 	Status          string    `json:"status"`
+	Skills          []string  `json:"skills"`
 	Notes           string    `json:"notes"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`

@@ -7,6 +7,12 @@ export interface Room {
     name: string;
     capacity: number;
     address?: string;
+    campus_id?: string;
+    campus?: {
+        id: string;
+        code: string;
+        name: string;
+    };
     location?: string;
     status?: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE';
     created_at: string;

@@ -29,6 +29,12 @@ import {
 import { createTeacherSchema, updateTeacherSchema } from '@/schemas/teacherSchema';
 import { toast } from 'sonner';
 
+const parseSkillInput = (value: string) =>
+    value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
 export const TeacherFormPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -54,6 +60,7 @@ export const TeacherFormPage = () => {
             school_name: '',
             employment_type: 'FULL_TIME',
             status: 'ACTIVE',
+            skills_input: '',
             notes: '',
         },
     });
@@ -70,19 +77,26 @@ export const TeacherFormPage = () => {
                 school_name: teacher.school_name || '',
                 employment_type: teacher.employment_type || 'FULL_TIME',
                 status: teacher.status || 'ACTIVE',
+                skills_input: teacher.skills?.join(', ') || '',
                 notes: teacher.notes || '',
             });
         }
     }, [responseData, isEditMode, reset]);
 
     const onSubmit = async (data: any) => {
+        const { skills_input, ...rest } = data;
+        const payload = {
+            ...rest,
+            skills: parseSkillInput(skills_input || ''),
+        };
+
         try {
             if (isEditMode && id) {
-                await updateTeacher({ id, ...data }).unwrap();
+                await updateTeacher({ id, ...payload }).unwrap();
                 toast.success('Cập nhật giáo viên thành công');
                 navigate(`/app/admin/teachers/${id}`);
             } else {
-                const result = await createTeacher(data).unwrap();
+                const result = await createTeacher(payload).unwrap();
                 toast.success('Thêm giáo viên thành công');
                 navigate(`/app/admin/teachers/${result.data.id}`);
             }
@@ -261,6 +275,23 @@ export const TeacherFormPage = () => {
                                         fullWidth
                                         error={!!errors.school_name}
                                         helperText={errors.school_name?.message as string}
+                                    />
+                                )}
+                            />
+                        </Grid>
+
+                        <Grid size={12}>
+                            <Controller
+                                name="skills_input"
+                                control={control}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        label="Kỹ năng / chứng chỉ"
+                                        placeholder="Ví dụ: IELTS_8.0, TESOL, MATH_ADVANCED"
+                                        fullWidth
+                                        error={!!errors.skills_input}
+                                        helperText={(errors.skills_input?.message as string) || 'Nhập danh sách phân tách bằng dấu phẩy. Hệ thống sẽ tự chuẩn hóa và dùng cho rule xếp lịch.'}
                                     />
                                 )}
                             />

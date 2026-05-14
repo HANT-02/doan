@@ -17,6 +17,7 @@ type PreviewSummary = schedulingservice.SolverSummary
 
 type PreviewResult struct {
 	RunID            string                              `json:"run_id"`
+	Mode             string                              `json:"mode"`
 	Status           string                              `json:"status"`
 	GeneratedAt      time.Time                           `json:"generated_at"`
 	Filters          PreviewFilters                      `json:"filters"`
@@ -36,6 +37,7 @@ type PreviewResult struct {
 type PreviewFilters struct {
 	DateFrom   time.Time `json:"date_from"`
 	DateTo     time.Time `json:"date_to"`
+	Mode       string    `json:"mode,omitempty"`
 	ClassIDs   []string  `json:"class_ids,omitempty"`
 	TeacherIDs []string  `json:"teacher_ids,omitempty"`
 	RoomIDs    []string  `json:"room_ids,omitempty"`

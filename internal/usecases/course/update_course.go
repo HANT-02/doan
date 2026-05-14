@@ -4,21 +4,25 @@ import (
 	"context"
 	"doan/internal/entities"
 	repointerface "doan/internal/repositories/interface"
+	skillservice "doan/internal/services/skills"
 	"doan/pkg/logger"
+
+	"github.com/lib/pq"
 )
 
 type UpdateCourseInput struct {
-	ID                     string   `json:"id"`
-	Code                   *string  `json:"code"`
-	Name                   *string  `json:"name"`
-	Description            *string  `json:"description"`
-	GradeLevel             *string  `json:"grade_level"`
-	Subject                *string  `json:"subject"`
-	SessionCount           *int     `json:"session_count"`
-	SessionDurationMinutes *int     `json:"session_duration_minutes"`
-	TotalHours             *float64 `json:"total_hours"`
-	Price                  *float64 `json:"price"`
-	Status                 *string  `json:"status"`
+	ID                     string    `json:"id"`
+	Code                   *string   `json:"code"`
+	Name                   *string   `json:"name"`
+	Description            *string   `json:"description"`
+	GradeLevel             *string   `json:"grade_level"`
+	Subject                *string   `json:"subject"`
+	SessionCount           *int      `json:"session_count"`
+	SessionDurationMinutes *int      `json:"session_duration_minutes"`
+	TotalHours             *float64  `json:"total_hours"`
+	Price                  *float64  `json:"price"`
+	Status                 *string   `json:"status"`
+	RequiredSkills         *[]string `json:"required_skills"`
 }
 
 type UpdateCourseOutput struct {
@@ -86,6 +90,11 @@ func (uc *updateCourseUseCaseImpl) Execute(ctx context.Context, input UpdateCour
 	if input.Status != nil {
 		course.Status = *input.Status
 		updateData["status"] = *input.Status
+	}
+	if input.RequiredSkills != nil {
+		normalizedRequiredSkills := skillservice.NormalizeCodes(*input.RequiredSkills)
+		course.RequiredSkills = pq.StringArray(normalizedRequiredSkills)
+		updateData["required_skills"] = course.RequiredSkills
 	}
 
 	err = uc.repo.Update(ctx, course.ID, updateData)

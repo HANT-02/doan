@@ -9,6 +9,7 @@ export const createTeacherSchema = z.object({
     school_name: z.string().max(255, 'School name is too long').optional().or(z.literal('')),
     employment_type: z.enum(['PART_TIME', 'FULL_TIME']).optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    skills_input: z.string().optional().or(z.literal('')),
     notes: z.string().optional().or(z.literal('')),
 });
 
@@ -21,6 +22,7 @@ export const updateTeacherSchema = z.object({
     school_name: z.string().max(255, 'School name is too long').optional().or(z.literal('')),
     employment_type: z.enum(['PART_TIME', 'FULL_TIME']).optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    skills_input: z.string().optional().or(z.literal('')),
     notes: z.string().optional().or(z.literal('')),
 });
 

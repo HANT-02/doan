@@ -11,6 +11,7 @@ import (
 type CreateRoomInput struct {
 	Name     string
 	Capacity int
+	CampusID *string
 	Location *string
 	Status   string
 }
@@ -39,6 +40,7 @@ func (uc *createRoomUseCase) Execute(ctx context.Context, input CreateRoomInput)
 	room := &entities.Room{
 		Name:     input.Name,
 		Capacity: input.Capacity,
+		CampusID: input.CampusID,
 	}
 
 	createdRoom, err := uc.roomRepo.Create(ctx, room)

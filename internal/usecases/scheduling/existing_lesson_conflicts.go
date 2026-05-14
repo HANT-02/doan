@@ -8,7 +8,34 @@ import (
 	"time"
 
 	"doan/internal/entities"
+	schedulingservice "doan/internal/services/scheduling"
 )
+
+func existingLessonStatusesForPreviewMode(mode string) []string {
+	switch normalizePreviewMode(mode) {
+	case schedulingservice.PreviewModeReplanWithPublishedLock:
+		return []string{entities.LessonStatusPublished}
+	case schedulingservice.PreviewModeReplanDraft:
+		return []string{entities.LessonStatusDraft, entities.LessonStatusUnplanned}
+	default:
+		return nil
+	}
+}
+
+func lessonLifecycleLabel(status string) string {
+	switch status {
+	case entities.LessonStatusPublished:
+		return "Published"
+	case entities.LessonStatusDraft:
+		return "Draft"
+	case entities.LessonStatusUnplanned:
+		return "Unplanned"
+	case entities.LessonStatusHistory:
+		return "History"
+	default:
+		return "Existing"
+	}
+}
 
 func (uc *previewUseCase) collectExistingLessonConflicts(
 	ctx context.Context,
@@ -23,6 +50,11 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		from, to = previewAssignmentWindow(preview.Assignments)
 	}
 
+	statuses := existingLessonStatusesForPreviewMode(preview.Mode)
+	if len(statuses) == 0 {
+		return []ExistingLesson{}, map[string]map[string]struct{}{}, []PreviewConflict{}, nil
+	}
+
 	lessons, err := uc.lessonRepo.FindOverlappingLessons(
 		ctx,
 		from,
@@ -30,6 +62,7 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		collectAssignmentClassIDs(preview.Assignments),
 		collectAssignmentTeacherIDs(preview.Assignments),
 		collectAssignmentRoomIDs(preview.Assignments),
+		statuses,
 	)
 	if err != nil {
 		return nil, nil, nil, err
@@ -83,6 +116,7 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 			ClassID:      lesson.ClassID,
 			ClassCode:    lesson.Class.Code,
 			ClassName:    lesson.Class.Name,
+			Status:       lesson.Status,
 			TeacherID:    teacherID,
 			TeacherLabel: teacherLabel,
 			RoomID:       roomID,
@@ -116,7 +150,8 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 				SessionTotal: assignment.SessionTotal,
 				Type:         "SYSTEM_LESSON_CONFLICT",
 				Message: fmt.Sprintf(
-					"Trùng với lesson đã lưu [%s - %s] vì %s.",
+					"Trùng với lesson %s đã lưu [%s - %s] vì %s.",
+					lessonLifecycleLabel(lesson.Status),
 					lesson.DateStart.Format("02/01/2006 15:04"),
 					lesson.DateEnd.Format("15:04"),
 					strings.Join(reasons, ", "),

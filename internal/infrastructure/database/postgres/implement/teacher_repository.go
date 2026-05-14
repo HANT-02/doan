@@ -66,7 +66,8 @@ func (r *teacherRepository) GetTeacherLessons(ctx context.Context, teacherID str
 		Preload("Class").
 		Preload("Room").
 		Preload("Teacher").
-		Where("teacher_id = ?", teacherID)
+		Where("teacher_id = ?", teacherID).
+		Where("status IN ?", []string{entities.LessonStatusPublished, entities.LessonStatusHistory})
 
 	// Apply date range filter if provided
 	if !from.IsZero() {
@@ -108,7 +109,8 @@ func (r *teacherRepository) GetTeachingHoursStats(ctx context.Context, teacherID
 			TO_CHAR(date_start, '%s') as period,
 			SUM(EXTRACT(EPOCH FROM (date_end - date_start)) / 3600.0) as hours
 		`, dateFormat)).
-		Where("teacher_id = ?", teacherID)
+		Where("teacher_id = ?", teacherID).
+		Where("status IN ?", []string{entities.LessonStatusPublished, entities.LessonStatusHistory})
 
 	// Apply date range filter
 	if !from.IsZero() {

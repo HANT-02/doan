@@ -2,6 +2,8 @@ package scheduling
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +13,8 @@ import (
 	repositoryinterface "doan/internal/repositories/interface"
 	schedulingservice "doan/internal/services/scheduling"
 	"doan/pkg/logger"
+
+	"github.com/lib/pq"
 )
 
 func TestPreviewAndCommitUseCase_CommitAssignmentsWithDefaultSolver(t *testing.T) {
@@ -69,6 +73,20 @@ func TestPreviewAndCommitUseCase_CommitAssignmentsWithDefaultSolver(t *testing.T
 	if len(lessonRepo.createdLessons) != 2 {
 		t.Fatalf("expected 2 lessons created in repository, got %d", len(lessonRepo.createdLessons))
 	}
+	for _, lesson := range lessonRepo.createdLessons {
+		if lesson.Status != entities.LessonStatusPublished {
+			t.Fatalf("expected committed lesson status %s, got %s", entities.LessonStatusPublished, lesson.Status)
+		}
+		if lesson.PublishedAt == nil {
+			t.Fatalf("expected committed lesson to have published_at")
+		}
+		if lesson.SourcePreviewRun == nil || *lesson.SourcePreviewRun != result.RunID {
+			t.Fatalf("expected committed lesson source_preview_run_id to be %s", result.RunID)
+		}
+		if lesson.ChangeReason != entities.LessonChangeReasonInitialSchedulingCommit {
+			t.Fatalf("expected committed lesson change_reason %s, got %s", entities.LessonChangeReasonInitialSchedulingCommit, lesson.ChangeReason)
+		}
+	}
 	if !uow.beginCalled || !uow.commitCalled || uow.rollbackCalled {
 		t.Fatalf("unexpected transaction lifecycle: begin=%t commit=%t rollback=%t", uow.beginCalled, uow.commitCalled, uow.rollbackCalled)
 	}
@@ -122,6 +140,7 @@ func TestCommitPreviewUseCase_ReturnsConflictWhenExistingLessonOverlaps(t *testi
 			RoomID:    &firstAssignment.RoomID,
 			DateStart: firstAssignment.StartTime.Add(-15 * time.Minute),
 			DateEnd:   firstAssignment.EndTime.Add(15 * time.Minute),
+			Status:    entities.LessonStatusPublished,
 		},
 	}
 
@@ -261,6 +280,7 @@ func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T)
 			RoomID:    &firstAssignment.RoomID,
 			DateStart: firstAssignment.StartTime,
 			DateEnd:   firstAssignment.EndTime,
+			Status:    entities.LessonStatusPublished,
 		},
 	}
 
@@ -287,6 +307,229 @@ func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T)
 	}
 	if !hasSystemConflict {
 		t.Fatalf("expected preview to include SYSTEM_LESSON_CONFLICT before commit")
+	}
+}
+
+func TestPreviewUseCase_ReturnsSkillMismatchConflict(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositoriesWithSkills(2, []string{"TESOL"}, []string{"IELTS_8.0", "TESOL"})
+	lessonRepo := &previewLessonRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if len(result.Assignments) != 0 {
+		t.Fatalf("expected no assignments when teacher lacks required skills, got %d", len(result.Assignments))
+	}
+
+	hasSkillMismatch := false
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == "SKILL_MISMATCH" {
+			hasSkillMismatch = true
+			if !strings.Contains(conflict.Message, "IELTS_8.0") {
+				t.Fatalf("expected missing required skill in conflict message, got %q", conflict.Message)
+			}
+		}
+	}
+
+	if !hasSkillMismatch {
+		t.Fatalf("expected preview conflicts to include SKILL_MISMATCH")
+	}
+}
+
+func TestPreviewUseCase_ColdStartIgnoresPublishedLessons(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{
+		existingLessons: []entities.Lesson{
+			{
+				ID:        "lesson-published-1",
+				ClassID:   "class-other",
+				TeacherID: stringPtr("teacher-1"),
+				RoomID:    stringPtr("room-1"),
+				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				Status:    entities.LessonStatusPublished,
+			},
+		},
+	}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		Mode:     schedulingservice.PreviewModeColdStart,
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if len(result.ExistingLessons) != 0 {
+		t.Fatalf("expected cold_start to ignore existing published lessons, got %d", len(result.ExistingLessons))
+	}
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == "SYSTEM_LESSON_CONFLICT" {
+			t.Fatalf("did not expect system lesson conflict in cold_start mode")
+		}
+	}
+}
+
+func TestPreviewUseCase_ReplanWithPublishedLockIgnoresHistoryButBlocksPublished(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{
+		existingLessons: []entities.Lesson{
+			{
+				ID:        "lesson-history-1",
+				ClassID:   "class-other-history",
+				TeacherID: stringPtr("teacher-1"),
+				RoomID:    stringPtr("room-1"),
+				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				Status:    entities.LessonStatusHistory,
+			},
+			{
+				ID:        "lesson-published-1",
+				ClassID:   "class-other-published",
+				TeacherID: stringPtr("teacher-1"),
+				RoomID:    stringPtr("room-1"),
+				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				Status:    entities.LessonStatusPublished,
+			},
+		},
+	}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		Mode:     schedulingservice.PreviewModeReplanWithPublishedLock,
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if len(result.ExistingLessons) != 1 {
+		t.Fatalf("expected only published lesson to be loaded as lock, got %d", len(result.ExistingLessons))
+	}
+	if result.ExistingLessons[0].Status != entities.LessonStatusPublished {
+		t.Fatalf("expected loaded existing lesson status %s, got %s", entities.LessonStatusPublished, result.ExistingLessons[0].Status)
+	}
+
+	hasPublishedConflict := false
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == "SYSTEM_LESSON_CONFLICT" {
+			hasPublishedConflict = true
+			if !strings.Contains(conflict.Message, "Published") {
+				t.Fatalf("expected published lifecycle label in conflict message, got %q", conflict.Message)
+			}
+		}
+		if strings.Contains(conflict.Message, "History") {
+			t.Fatalf("did not expect history lesson to appear in conflict message")
+		}
+	}
+	if !hasPublishedConflict {
+		t.Fatalf("expected replan_with_published_lock to produce published lesson conflict")
+	}
+}
+
+func TestCommitPreviewUseCase_FormatsPublishedConflictLifecycle(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{}
+	classScheduleRepo := &previewClassScheduleRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+	uow := &previewUnitOfWorkStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+	commitUseCase := NewCommitPreviewUseCase(
+		lessonRepo,
+		classScheduleRepo,
+		uow,
+		logger.NewZapLogger(logger.Config{Level: "error", Format: "json", Output: "stdout", ServiceName: "test", Environment: "test"}),
+		store,
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	firstAssignment := result.Assignments[0]
+	lessonRepo.existingLessons = []entities.Lesson{
+		{
+			ID:        "lesson-published-commit",
+			ClassID:   "class-existing",
+			TeacherID: &firstAssignment.TeacherID,
+			RoomID:    &firstAssignment.RoomID,
+			DateStart: firstAssignment.StartTime.Add(-15 * time.Minute),
+			DateEnd:   firstAssignment.EndTime.Add(15 * time.Minute),
+			Status:    entities.LessonStatusPublished,
+		},
+	}
+
+	_, err = commitUseCase.Execute(context.Background(), CommitPreviewInput{RunID: result.RunID})
+	if err == nil {
+		t.Fatalf("expected commit conflict error")
+	}
+	if !strings.Contains(err.Error(), "lesson Published dang ton tai") {
+		t.Fatalf("expected commit conflict message to mention published lifecycle, got %v", err)
 	}
 }
 
@@ -333,11 +576,175 @@ func TestPreviewUseCase_ComputesRequestedSessionsFromClassWeeklySchedule(t *test
 	}
 }
 
+func TestPreviewUseCase_FiltersClassesWithInsufficientEnrollment(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{
+		byClass: map[string][]entities.Enrollment{
+			"class-1": {
+				{ID: "enr-1", ClassID: "class-1", StudentID: "stu-1", Status: "APPROVED"},
+				{ID: "enr-2", ClassID: "class-1", StudentID: "stu-2", Status: "APPROVED"},
+				{ID: "enr-3", ClassID: "class-1", StudentID: "stu-3", Status: "APPROVED"},
+			},
+		},
+	}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if result.Summary.ScheduledLessons != 0 {
+		t.Fatalf("expected no scheduled lessons for under-enrolled class, got %d", result.Summary.ScheduledLessons)
+	}
+
+	hasEnrollmentConflict := false
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == "INSUFFICIENT_ENROLLMENT" {
+			hasEnrollmentConflict = true
+			break
+		}
+	}
+	if !hasEnrollmentConflict {
+		t.Fatalf("expected INSUFFICIENT_ENROLLMENT conflict")
+	}
+}
+
+func TestCommitPreviewUseCase_BlocksExcessiveManualAdjustments(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositoriesWithSessionCount(8)
+	lessonRepo := &previewLessonRepoStub{}
+	classScheduleRepo := &previewClassScheduleRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{
+		byClass: map[string][]entities.Enrollment{
+			"class-1": buildApprovedEnrollments("class-1", 18),
+		},
+	}
+	uow := &previewUnitOfWorkStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+	commitUseCase := NewCommitPreviewUseCase(
+		lessonRepo,
+		classScheduleRepo,
+		uow,
+		logger.NewZapLogger(logger.Config{Level: "error", Format: "json", Output: "stdout", ServiceName: "test", Environment: "test"}),
+		store,
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 10, 9, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+	manualThreshold := allowedManualAdjustmentLimit(result.Summary.RequestedSessions)
+	requiredOverrides := manualThreshold + 1
+	if len(result.Assignments) < requiredOverrides {
+		t.Fatalf("expected at least %d assignments to test manual adjustment threshold, got %d", requiredOverrides, len(result.Assignments))
+	}
+
+	manualAssignments := make([]ManualAssignmentOverride, 0, requiredOverrides)
+	for index, assignment := range result.Assignments[:requiredOverrides] {
+		options := result.CandidateOptions[assignment.VariableID]
+		var currentKey string
+		for _, option := range options {
+			if option.RoomID == assignment.RoomID && option.StartTime.Equal(assignment.StartTime) && option.EndTime.Equal(assignment.EndTime) {
+				currentKey = option.Key
+				break
+			}
+		}
+		if currentKey == "" {
+			t.Fatalf("expected current candidate key for assignment %d", index)
+		}
+		manualAssignments = append(manualAssignments, ManualAssignmentOverride{
+			VariableID: assignment.VariableID,
+			OptionKey:  currentKey,
+		})
+	}
+
+	_, err = commitUseCase.Execute(context.Background(), CommitPreviewInput{
+		RunID:             result.RunID,
+		ManualAssignments: manualAssignments,
+	})
+	if err == nil {
+		t.Fatalf("expected excessive manual adjustment error")
+	}
+
+	var conflictErr *CommitPreviewConflictError
+	if !strings.Contains(err.Error(), "chinh tay") && !strings.Contains(err.Error(), "commit") && !strings.Contains(err.Error(), "nguong") {
+		t.Fatalf("expected commit error to mention manual adjustment threshold, got %v", err)
+	}
+	if !errors.As(err, &conflictErr) {
+		t.Fatalf("expected CommitPreviewConflictError")
+	}
+
+	hasExcessiveConflict := false
+	for _, conflict := range conflictErr.Preview.Conflicts {
+		if conflict.Type == "EXCESSIVE_MANUAL_ADJUSTMENT" {
+			hasExcessiveConflict = true
+			break
+		}
+	}
+	if !hasExcessiveConflict {
+		t.Fatalf("expected EXCESSIVE_MANUAL_ADJUSTMENT conflict in preview")
+	}
+}
+
+func buildApprovedEnrollments(classID string, count int) []entities.Enrollment {
+	items := make([]entities.Enrollment, 0, count)
+	now := time.Now()
+	for index := 0; index < count; index++ {
+		items = append(items, entities.Enrollment{
+			ID:         fmt.Sprintf("enr-%s-%02d", classID, index+1),
+			ClassID:    classID,
+			StudentID:  fmt.Sprintf("student-%02d", index+1),
+			Status:     "APPROVED",
+			ApprovedAt: &now,
+		})
+	}
+	return items
+}
+
 func previewFixtureRepositories() (repositoryinterface.ClassRepository, repositoryinterface.RoomRepository, repositoryinterface.ShiftRepository) {
-	return previewFixtureRepositoriesWithSessionCount(2)
+	return previewFixtureRepositoriesWithSkills(2, []string{"MATH_CORE"}, []string{"MATH_CORE"})
 }
 
 func previewFixtureRepositoriesWithSessionCount(sessionCount int) (repositoryinterface.ClassRepository, repositoryinterface.RoomRepository, repositoryinterface.ShiftRepository) {
+	return previewFixtureRepositoriesWithSkills(sessionCount, []string{"MATH_CORE"}, []string{"MATH_CORE"})
+}
+
+func previewFixtureRepositoriesWithSkills(
+	sessionCount int,
+	teacherSkills []string,
+	requiredSkills []string,
+) (repositoryinterface.ClassRepository, repositoryinterface.RoomRepository, repositoryinterface.ShiftRepository) {
 	teacherID := "teacher-1"
 	courseID := "course-1"
 	roomID := "room-1"
@@ -373,6 +780,7 @@ func previewFixtureRepositoriesWithSessionCount(sessionCount int) (repositoryint
 					ID:       teacherID,
 					Code:     "GV-001",
 					FullName: "Giao vien 1",
+					Skills:   pq.StringArray(append([]string(nil), teacherSkills...)),
 				},
 				CourseID: &courseID,
 				Course: entities.Course{
@@ -381,6 +789,7 @@ func previewFixtureRepositoriesWithSessionCount(sessionCount int) (repositoryint
 					Name:                   "Khoa hoc Toan",
 					SessionCount:           sessionCount,
 					SessionDurationMinutes: 120,
+					RequiredSkills:         pq.StringArray(append([]string(nil), requiredSkills...)),
 				},
 				RoomID: &roomID,
 				ClassSchedules: []entities.ClassSchedule{
@@ -477,8 +886,26 @@ func (s *previewLessonRepoStub) FindOverlappingLessons(
 	_ []string,
 	_ []string,
 	_ []string,
+	statuses []string,
 ) ([]entities.Lesson, error) {
-	return append([]entities.Lesson(nil), s.existingLessons...), nil
+	if len(statuses) == 0 {
+		return append([]entities.Lesson(nil), s.existingLessons...), nil
+	}
+
+	statusSet := make(map[string]struct{}, len(statuses))
+	for _, status := range statuses {
+		statusSet[status] = struct{}{}
+	}
+
+	filtered := make([]entities.Lesson, 0, len(s.existingLessons))
+	for _, lesson := range s.existingLessons {
+		if _, ok := statusSet[lesson.Status]; !ok {
+			continue
+		}
+		filtered = append(filtered, lesson)
+	}
+
+	return filtered, nil
 }
 
 func (s *previewLessonRepoStub) GetLessonWithRelations(_ context.Context, _ string) (*entities.Lesson, error) {
@@ -545,6 +972,9 @@ func (s *previewEnrollmentRepoStub) GetByID(_ context.Context, _ interface{}) (*
 	return nil, nil
 }
 func (s *previewEnrollmentRepoStub) ListByClassID(_ context.Context, classID string) ([]entities.Enrollment, error) {
+	if s.byClass == nil {
+		return buildApprovedEnrollments(classID, 18), nil
+	}
 	return append([]entities.Enrollment(nil), s.byClass[classID]...), nil
 }
 

@@ -4,30 +4,32 @@ import "time"
 
 // CreateCourseRequest represents the request body for creating a course
 type CreateCourseRequest struct {
-	Code                   string  `json:"code" binding:"required"`
-	Name                   string  `json:"name" binding:"required"`
-	Description            string  `json:"description"`
-	GradeLevel             string  `json:"grade_level"`
-	Subject                string  `json:"subject"`
-	SessionCount           int     `json:"session_count"`
-	SessionDurationMinutes int     `json:"session_duration_minutes"`
-	TotalHours             float64 `json:"total_hours"`
-	Price                  float64 `json:"price"`
-	Status                 string  `json:"status"`
+	Code                   string   `json:"code" binding:"required"`
+	Name                   string   `json:"name" binding:"required"`
+	Description            string   `json:"description"`
+	GradeLevel             string   `json:"grade_level"`
+	Subject                string   `json:"subject"`
+	SessionCount           int      `json:"session_count"`
+	SessionDurationMinutes int      `json:"session_duration_minutes"`
+	TotalHours             float64  `json:"total_hours"`
+	Price                  float64  `json:"price"`
+	Status                 string   `json:"status"`
+	RequiredSkills         []string `json:"required_skills"`
 }
 
 // UpdateCourseRequest represents the request body for updating a course
 type UpdateCourseRequest struct {
-	Code                   *string  `json:"code"`
-	Name                   *string  `json:"name"`
-	Description            *string  `json:"description"`
-	GradeLevel             *string  `json:"grade_level"`
-	Subject                *string  `json:"subject"`
-	SessionCount           *int     `json:"session_count"`
-	SessionDurationMinutes *int     `json:"session_duration_minutes"`
-	TotalHours             *float64 `json:"total_hours"`
-	Price                  *float64 `json:"price"`
-	Status                 *string  `json:"status"`
+	Code                   *string   `json:"code"`
+	Name                   *string   `json:"name"`
+	Description            *string   `json:"description"`
+	GradeLevel             *string   `json:"grade_level"`
+	Subject                *string   `json:"subject"`
+	SessionCount           *int      `json:"session_count"`
+	SessionDurationMinutes *int      `json:"session_duration_minutes"`
+	TotalHours             *float64  `json:"total_hours"`
+	Price                  *float64  `json:"price"`
+	Status                 *string   `json:"status"`
+	RequiredSkills         *[]string `json:"required_skills"`
 }
 
 // CourseResponse represents a course in the response
@@ -43,6 +45,7 @@ type CourseResponse struct {
 	TotalHours             float64   `json:"total_hours"`
 	Price                  float64   `json:"price"`
 	Status                 string    `json:"status"`
+	RequiredSkills         []string  `json:"required_skills"`
 	CreatedAt              time.Time `json:"created_at"`
 	UpdatedAt              time.Time `json:"updated_at"`
 }

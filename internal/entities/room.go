@@ -11,6 +11,8 @@ type Room struct {
 	Name      string         `gorm:"type:varchar(255);not null" json:"name"`
 	Capacity  int            `json:"capacity"`
 	Address   string         `gorm:"type:text" json:"address"`
+	CampusID  *string        `json:"campus_id,omitempty"`
+	Campus    Campus         `gorm:"foreignKey:CampusID" json:"campus,omitempty"`
 	CreatedAt time.Time      `gorm:"default:now()" json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`

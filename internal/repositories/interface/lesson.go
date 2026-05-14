@@ -18,6 +18,7 @@ type LessonRepository interface {
 		classIDs []string,
 		teacherIDs []string,
 		roomIDs []string,
+		statuses []string,
 	) ([]entities.Lesson, error)
 	GetLessonWithRelations(ctx context.Context, id string) (*entities.Lesson, error)
 }
