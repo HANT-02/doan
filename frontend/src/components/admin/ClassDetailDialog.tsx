@@ -27,9 +27,11 @@ import {
 } from '@mui/material';
 import {
     AddRounded,
+    CompareArrowsRounded,
     DeleteOutlineRounded,
     EditOutlined,
     InfoOutlined,
+    PauseCircleOutlineRounded,
     PersonOutline,
     RefreshRounded,
     SchoolOutlined,
@@ -42,9 +44,13 @@ import { toast } from 'sonner';
 import {
     useAssignTeacherMutation,
     useEnrollStudentsMutation,
+    useGetClassesQuery,
     useGetClassByIdQuery,
     useGetClassRosterQuery,
     useRemoveStudentsMutation,
+    useReserveStudentMutation,
+    useResumeStudentMutation,
+    useTransferStudentMutation,
     type Class,
 } from '@/api/classApi';
 import { useGetStudentsQuery, type Student } from '@/api/studentApi';
@@ -121,6 +127,11 @@ export default function ClassDetailDialog({
     const [rosterSearch, setRosterSearch] = useState('');
     const [studentSearch, setStudentSearch] = useState('');
     const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
+    const [studentToReserve, setStudentToReserve] = useState<Student | null>(null);
+    const [studentToResume, setStudentToResume] = useState<Student | null>(null);
+    const [studentToTransfer, setStudentToTransfer] = useState<Student | null>(null);
+    const [transferTarget, setTransferTarget] = useState<Class | null>(null);
+    const [transferReason, setTransferReason] = useState('');
 
     const {
         data: classResponse,
@@ -140,6 +151,10 @@ export default function ClassDetailDialog({
     } = useGetClassRosterQuery(classId || '', {
         skip: !open || !classId,
     });
+    const { data: classesResponse, isFetching: isFetchingClasses } = useGetClassesQuery(
+        { page: 1, limit: 300, status: 'OPEN' },
+        { skip: !open },
+    );
     const { data: teachersResponse, isFetching: isFetchingTeachers } = useGetTeachersQuery(
         { page: 1, limit: 200, status: 'ACTIVE' },
         { skip: !open },
@@ -151,9 +166,13 @@ export default function ClassDetailDialog({
 
     const [enrollStudents, { isLoading: isEnrolling }] = useEnrollStudentsMutation();
     const [removeStudents, { isLoading: isRemoving }] = useRemoveStudentsMutation();
+    const [reserveStudent, { isLoading: isReserving }] = useReserveStudentMutation();
+    const [resumeStudent, { isLoading: isResuming }] = useResumeStudentMutation();
+    const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
     const [assignTeacher, { isLoading: isAssigning }] = useAssignTeacherMutation();
 
     const teachers = useMemo(() => teachersResponse?.data?.teachers || [], [teachersResponse?.data?.teachers]);
+    const allClasses = useMemo(() => classesResponse?.data?.classes || [], [classesResponse?.data?.classes]);
     const classData = classResponse?.data || null;
     const roster = rosterResponse?.data;
 
@@ -181,6 +200,13 @@ export default function ClassDetailDialog({
         }
     }, [isEnrollDialogOpen]);
 
+    useEffect(() => {
+        if (!studentToTransfer) {
+            setTransferTarget(null);
+            setTransferReason('');
+        }
+    }, [studentToTransfer]);
+
     const rosterStudents = useMemo(() => {
         const keyword = rosterSearch.trim().toLowerCase();
         const rows = roster?.students || [];
@@ -197,14 +223,26 @@ export default function ClassDetailDialog({
     }, [roster?.students, rosterSearch]);
 
     const availableStudents = useMemo(() => {
-        const enrolledIds = new Set((roster?.students || []).map((student) => student.id));
+        const enrolledIds = new Set([
+            ...(roster?.students || []).map((student) => student.id),
+            ...(roster?.reserved_students || []).map((student) => student.id),
+        ]);
         return (studentsResponse?.data?.students || []).filter((student) => !enrolledIds.has(student.id));
-    }, [roster?.students, studentsResponse?.data?.students]);
+    }, [roster?.reserved_students, roster?.students, studentsResponse?.data?.students]);
 
     const selectedStudentMap = useMemo(
         () => new Map(availableStudents.map((student) => [student.id, student])),
         [availableStudents],
     );
+
+    const transferTargets = useMemo(() => {
+        const currentCourseId = classData?.course_id;
+        const currentClassId = classData?.id;
+        const openClasses = allClasses.filter((item) => item.id !== currentClassId && item.status === 'OPEN');
+        const sameCourse = openClasses.filter((item) => currentCourseId && item.course_id === currentCourseId);
+        const fallback = openClasses.filter((item) => !currentCourseId || item.course_id !== currentCourseId);
+        return [...sameCourse, ...fallback];
+    }, [allClasses, classData?.course_id, classData?.id]);
 
     const capacityLimit = roster?.capacity_limit || classData?.max_students || 0;
     const currentCount = roster?.current_count || 0;
@@ -255,6 +293,69 @@ export default function ClassDetailDialog({
             setStudentToRemove(null);
         } catch (error) {
             toast.error(getErrorMessage(error, 'Không thể xóa học sinh khỏi lớp'));
+        }
+    };
+
+    const handleReserveStudent = async () => {
+        if (!classId || !studentToReserve) {
+            return;
+        }
+
+        try {
+            const result = await reserveStudent({
+                classId,
+                studentId: studentToReserve.id,
+            }).unwrap();
+            toast.success(result.data?.impacted_lesson_count
+                ? `Đã bảo lưu ${studentToReserve.full_name}. Có ${result.data.impacted_lesson_count} buổi tương lai cần theo dõi học bù.`
+                : `Đã bảo lưu ${studentToReserve.full_name}.`);
+            setStudentToReserve(null);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Không thể bảo lưu học viên'));
+        }
+    };
+
+    const handleTransferStudent = async () => {
+        if (!classId || !studentToTransfer || !transferTarget) {
+            toast.error('Vui lòng chọn lớp đích để chuyển học viên');
+            return;
+        }
+
+        try {
+            const result = await transferStudent({
+                classId,
+                studentId: studentToTransfer.id,
+                target_class_id: transferTarget.id,
+                reason: transferReason.trim() || undefined,
+            }).unwrap();
+            const remaining = result.data?.remaining_capacity;
+            toast.success(
+                remaining !== undefined
+                    ? `Đã chuyển ${studentToTransfer.full_name} sang ${transferTarget.name}. Chỗ trống còn lại: ${remaining}.`
+                    : `Đã chuyển ${studentToTransfer.full_name} sang ${transferTarget.name}.`,
+            );
+            setStudentToTransfer(null);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Không thể chuyển lớp cho học viên'));
+        }
+    };
+
+    const handleResumeStudent = async () => {
+        if (!classId || !studentToResume) {
+            return;
+        }
+
+        try {
+            const result = await resumeStudent({
+                classId,
+                studentId: studentToResume.id,
+            }).unwrap();
+            toast.success(result.data?.impacted_lesson_count
+                ? `Đã hoàn tác bảo lưu cho ${studentToResume.full_name}. Có ${result.data.impacted_lesson_count} buổi tương lai cần rà lại.`
+                : `Đã hoàn tác bảo lưu cho ${studentToResume.full_name}.`);
+            setStudentToResume(null);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Không thể hoàn tác bảo lưu'));
         }
     };
 
@@ -320,18 +421,36 @@ export default function ClassDetailDialog({
         {
             field: 'actions',
             headerName: '',
-            width: 86,
+            minWidth: 280,
             sortable: false,
-            align: 'center',
+            flex: 1,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Button
-                    color="error"
-                    size="small"
-                    startIcon={<DeleteOutlineRounded />}
-                    onClick={() => setStudentToRemove(params.row)}
-                >
-                    Xóa
-                </Button>
+                <Stack direction="row" spacing={1} sx={{ py: 1 }}>
+                    <Button
+                        color="warning"
+                        size="small"
+                        startIcon={<PauseCircleOutlineRounded />}
+                        onClick={() => setStudentToReserve(params.row)}
+                    >
+                        Bảo lưu
+                    </Button>
+                    <Button
+                        color="primary"
+                        size="small"
+                        startIcon={<CompareArrowsRounded />}
+                        onClick={() => setStudentToTransfer(params.row)}
+                    >
+                        Chuyển lớp
+                    </Button>
+                    <Button
+                        color="error"
+                        size="small"
+                        startIcon={<DeleteOutlineRounded />}
+                        onClick={() => setStudentToRemove(params.row)}
+                    >
+                        Xóa
+                    </Button>
+                </Stack>
             ),
         },
     ];
@@ -466,7 +585,7 @@ export default function ClassDetailDialog({
         <Stack spacing={2}>
             {capacityExceeded ? (
                 <Alert severity="error">
-                    Lớp đang vượt sức chứa cho phép ({currentCount}/{capacityLimit}). Cần điều chỉnh roster hoặc sức chứa phòng/lớp.
+                    Lớp đang vượt sức chứa cho phép ({currentCount}/{capacityLimit}). Cần điều chỉnh học viên hoặc sức chứa phòng/lớp.
                 </Alert>
             ) : null}
             {!capacityExceeded && capacityReached ? (
@@ -533,6 +652,59 @@ export default function ClassDetailDialog({
                         },
                     }}
                 />
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
+                <Stack spacing={1.5}>
+                    <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                            Học viên đang bảo lưu
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Có thể hoàn tác ngay tại đây nếu vừa thao tác nhầm hoặc muốn cho học viên quay lại lớp.
+                        </Typography>
+                    </Box>
+
+                    {(roster?.reserved_students || []).length > 0 ? (
+                        <Stack spacing={1.25}>
+                            {(roster?.reserved_students || []).map((student) => (
+                                <Paper
+                                    key={student.id}
+                                    variant="outlined"
+                                    sx={{ p: 1.5, borderRadius: 2.5, bgcolor: 'warning.50', borderColor: 'warning.light' }}
+                                >
+                                    <Stack
+                                        direction={{ xs: 'column', md: 'row' }}
+                                        spacing={1.5}
+                                        justifyContent="space-between"
+                                        alignItems={{ xs: 'flex-start', md: 'center' }}
+                                    >
+                                        <Box>
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                {student.full_name || 'Chưa có tên học sinh'}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {student.code || 'Chưa có mã học sinh'}
+                                                {student.grade_level ? ` • ${student.grade_level}` : ''}
+                                                {student.phone ? ` • ${student.phone}` : ''}
+                                            </Typography>
+                                        </Box>
+                                        <Button
+                                            variant="outlined"
+                                            color="warning"
+                                            startIcon={<RefreshRounded />}
+                                            onClick={() => setStudentToResume(student)}
+                                        >
+                                            Hoàn tác bảo lưu
+                                        </Button>
+                                    </Stack>
+                                </Paper>
+                            ))}
+                        </Stack>
+                    ) : (
+                        <Alert severity="info">Hiện chưa có học viên nào đang ở trạng thái bảo lưu.</Alert>
+                    )}
+                </Stack>
             </Paper>
         </Stack>
     );
@@ -658,7 +830,7 @@ export default function ClassDetailDialog({
                                                 {classData?.name}
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                Theo dõi roster, sĩ số và giáo viên phụ trách trong một màn hình.
+                                                Theo dõi học sinh, sĩ số và giáo viên phụ trách trong một màn hình.
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -793,6 +965,81 @@ export default function ClassDetailDialog({
                 onClose={() => setStudentToRemove(null)}
                 onConfirm={() => void handleRemoveStudent()}
             />
+
+            <ConfirmDialog
+                open={!!studentToReserve}
+                title="Bảo lưu học viên"
+                message={
+                    studentToReserve
+                        ? `Bảo lưu ${studentToReserve.full_name} khỏi lớp hiện tại? Hệ thống sẽ giảm sĩ số active và giữ lại các buổi tương lai để theo dõi học bù/chuyển lớp.`
+                        : ''
+                }
+                confirmText="Bảo lưu"
+                loading={isReserving}
+                onClose={() => setStudentToReserve(null)}
+                onConfirm={() => void handleReserveStudent()}
+            />
+
+            <ConfirmDialog
+                open={!!studentToResume}
+                title="Hoàn tác bảo lưu"
+                message={
+                    studentToResume
+                        ? `Cho ${studentToResume.full_name} quay lại lớp hiện tại? Hệ thống sẽ chuyển trạng thái từ bảo lưu sang đang theo học.`
+                        : ''
+                }
+                confirmText="Cho quay lại lớp"
+                loading={isResuming}
+                onClose={() => setStudentToResume(null)}
+                onConfirm={() => void handleResumeStudent()}
+            />
+
+            <Dialog open={!!studentToTransfer} onClose={() => setStudentToTransfer(null)} fullWidth maxWidth="sm">
+                <DialogTitle>Chuyển lớp học viên</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2.5} sx={{ pt: 1 }}>
+                        {studentToTransfer ? (
+                            <Alert severity="info">
+                                Chuyển <strong>{studentToTransfer.full_name}</strong> sang lớp tương thích. Backend sẽ chặn nếu lớp đích đầy, khác chương trình, trùng lịch hoặc không đủ travel gap.
+                            </Alert>
+                        ) : null}
+
+                        <Autocomplete<Class, false, false, false>
+                            options={transferTargets}
+                            loading={isFetchingClasses}
+                            value={transferTarget}
+                            onChange={(_, value) => setTransferTarget(value)}
+                            getOptionLabel={(option) => `${option.name} (${option.code})`}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Lớp đích"
+                                    helperText="Ưu tiên lớp cùng course. Nếu không phù hợp, backend sẽ từ chối."
+                                />
+                            )}
+                        />
+
+                        <TextField
+                            label="Lý do chuyển lớp"
+                            value={transferReason}
+                            onChange={(event) => setTransferReason(event.target.value)}
+                            multiline
+                            minRows={2}
+                            placeholder="Ví dụ: đổi ca để tránh trùng lịch, cân bằng sĩ số, chuyển cơ sở..."
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setStudentToTransfer(null)}>Đóng</Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void handleTransferStudent()}
+                        disabled={!transferTarget || isTransferring}
+                    >
+                        {isTransferring ? 'Đang chuyển...' : 'Xác nhận chuyển lớp'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }

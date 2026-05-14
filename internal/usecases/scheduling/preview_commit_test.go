@@ -33,6 +33,7 @@ func TestPreviewAndCommitUseCase_CommitAssignmentsWithDefaultSolver(t *testing.T
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -108,6 +109,7 @@ func TestCommitPreviewUseCase_ReturnsConflictWhenExistingLessonOverlaps(t *testi
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -196,6 +198,7 @@ func TestCommitPreviewUseCase_AcceptsCandidateOptionKeyFromPreview(t *testing.T)
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -256,6 +259,7 @@ func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T)
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -324,6 +328,7 @@ func TestPreviewUseCase_ReturnsSkillMismatchConflict(t *testing.T) {
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -381,6 +386,7 @@ func TestPreviewUseCase_ColdStartIgnoresPublishedLessons(t *testing.T) {
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -439,6 +445,7 @@ func TestPreviewUseCase_ReplanWithPublishedLockIgnoresHistoryButBlocksPublished(
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -492,6 +499,7 @@ func TestCommitPreviewUseCase_FormatsPublishedConflictLifecycle(t *testing.T) {
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -547,6 +555,7 @@ func TestPreviewUseCase_ComputesRequestedSessionsFromClassWeeklySchedule(t *test
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -598,6 +607,7 @@ func TestPreviewUseCase_FiltersClassesWithInsufficientEnrollment(t *testing.T) {
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -626,6 +636,60 @@ func TestPreviewUseCase_FiltersClassesWithInsufficientEnrollment(t *testing.T) {
 	}
 }
 
+func TestPreviewUseCase_CountsEnrolledStudentsForEnrollmentThreshold(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{}
+
+	enrollments := make([]entities.Enrollment, 0, 18)
+	for i := 0; i < 18; i++ {
+		enrollments = append(enrollments, entities.Enrollment{
+			ID:        fmt.Sprintf("enr-%d", i+1),
+			ClassID:   "class-1",
+			StudentID: fmt.Sprintf("stu-%d", i+1),
+			Status:    entities.EnrollmentStatusEnrolled,
+		})
+	}
+
+	enrollmentRepo := &previewEnrollmentRepoStub{
+		byClass: map[string][]entities.Enrollment{
+			"class-1": enrollments,
+		},
+	}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		&previewTravelRepoStub{},
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		ClassIDs: []string{"class-1"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == "INSUFFICIENT_ENROLLMENT" {
+			t.Fatalf("did not expect INSUFFICIENT_ENROLLMENT conflict when class has 18 ENROLLED students: %s", conflict.Message)
+		}
+	}
+
+	if result.Summary.RequestedClasses == 0 {
+		t.Fatalf("expected preview to keep class eligible for scheduling")
+	}
+}
+
 func TestCommitPreviewUseCase_BlocksExcessiveManualAdjustments(t *testing.T) {
 	t.Parallel()
 
@@ -646,6 +710,7 @@ func TestCommitPreviewUseCase_BlocksExcessiveManualAdjustments(t *testing.T) {
 		shiftRepo,
 		lessonRepo,
 		enrollmentRepo,
+		&previewTravelRepoStub{},
 		store,
 		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
 	)
@@ -952,7 +1017,20 @@ type previewEnrollmentRepoStub struct {
 
 func (s *previewEnrollmentRepoStub) GetTable() string { return "enrollments" }
 func (s *previewEnrollmentRepoStub) GetByCondition(_ context.Context, _ *repositories.CommonCondition) (*repositories.Pagination[entities.Enrollment], error) {
-	return &repositories.Pagination[entities.Enrollment]{}, nil
+	data := make([]*entities.Enrollment, 0)
+	if s.byClass != nil {
+		for _, classEnrollments := range s.byClass {
+			for i := range classEnrollments {
+				data = append(data, &classEnrollments[i])
+			}
+		}
+	}
+	return &repositories.Pagination[entities.Enrollment]{
+		Data: data,
+		Meta: repositories.Meta{
+			TotalItems: uint64(len(data)),
+		},
+	}, nil
 }
 func (s *previewEnrollmentRepoStub) GetTotal(_ context.Context, _ *repositories.CommonCondition) (uint64, error) {
 	return 0, nil
@@ -997,4 +1075,126 @@ func (s *previewUnitOfWorkStub) Commit(_ context.Context) error {
 func (s *previewUnitOfWorkStub) Rollback(_ context.Context) error {
 	s.rollbackCalled = true
 	return nil
+}
+
+type previewTravelRepoStub struct {
+	repositories.BaseRepository[entities.CampusTravelTime]
+}
+
+func (s *previewTravelRepoStub) GetByCondition(ctx context.Context, condition *repositories.CommonCondition) (*repositories.Pagination[entities.CampusTravelTime], error) {
+	return &repositories.Pagination[entities.CampusTravelTime]{Data: []*entities.CampusTravelTime{}}, nil
+}
+
+func TestPreviewUseCase_NonvolatileReplanning_MinimizesDisruption(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+
+	// A Published lesson exactly matching the 1st session of the fixture
+	lessonRepo := &previewLessonRepoStub{
+		existingLessons: []entities.Lesson{
+			{
+				ID:        "lesson-published-target",
+				ClassID:   "class-1",
+				TeacherID: stringPtr("teacher-1"),
+				RoomID:    stringPtr("room-1"),
+				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				Status:    entities.LessonStatusPublished,
+			},
+		},
+	}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		&previewTravelRepoStub{},
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	// In replan_draft mode, it should load the published lesson as target, and NO schedule change should occur
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		Mode:     schedulingservice.PreviewModeReplanDraft,
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if result.Summary.ScheduleChangeCount != 0 {
+		t.Fatalf("expected 0 schedule changes for stable replanning, got %d", result.Summary.ScheduleChangeCount)
+	}
+	if result.Summary.RoomChangeCount != 0 {
+		t.Fatalf("expected 0 room changes, got %d", result.Summary.RoomChangeCount)
+	}
+	if result.Summary.TeacherChangeCount != 0 {
+		t.Fatalf("expected 0 teacher changes, got %d", result.Summary.TeacherChangeCount)
+	}
+}
+
+func TestPreviewUseCase_CapacityUtilization(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+
+	lessonRepo := &previewLessonRepoStub{}
+	enrollments := make([]entities.Enrollment, 0, 16)
+	now := time.Now()
+	for i := 0; i < 16; i++ {
+		enrollments = append(enrollments, entities.Enrollment{
+			StudentID:  fmt.Sprintf("student-%d", i),
+			ClassID:    "class-1",
+			Status:     "ENROLLED",
+			ApprovedAt: &now,
+		})
+	}
+
+	enrollmentRepo := &previewEnrollmentRepoStub{
+		byClass: map[string][]entities.Enrollment{
+			"class-1": enrollments,
+		},
+	}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		&previewTravelRepoStub{},
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		Mode:     schedulingservice.PreviewModeReplanDraft,
+		ClassIDs: []string{"class-1"}, // only preview class 1
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	if result.Status == "FAILED" {
+		t.Fatalf("preview failed, expected PARTIAL or COMPLETED")
+	}
+
+	for _, assignment := range result.Assignments {
+		if assignment.ExpectedStudentCount != 16 {
+			t.Errorf("expected student count 16 for class-1, got %d", assignment.ExpectedStudentCount)
+		}
+	}
+
+	if result.Summary.AverageCapacityUtilization <= 0.0 {
+		t.Errorf("expected average capacity utilization to be > 0, got %f", result.Summary.AverageCapacityUtilization)
+	}
 }

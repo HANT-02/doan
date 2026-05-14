@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+const (
+	EnrollmentStatusApplied     = "APPLIED"
+	EnrollmentStatusApproved    = "APPROVED"
+	EnrollmentStatusEnrolled    = "ENROLLED"
+	EnrollmentStatusSuspended   = "SUSPENDED"
+	EnrollmentStatusTransferred = "TRANSFERRED"
+)
+
 // Table 3.12
 type Enrollment struct {
 	ID         string         `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`

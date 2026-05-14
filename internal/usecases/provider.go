@@ -96,6 +96,9 @@ var ClassUseCaseProviders = wire.NewSet(
 	class.NewListClassesUseCase,
 	class.NewEnrollStudentsUseCase,
 	class.NewRemoveStudentsUseCase,
+	class.NewReserveStudentUseCase,
+	class.NewResumeStudentUseCase,
+	class.NewTransferStudentUseCase,
 	class.NewAssignTeacherUseCase,
 	class.NewGetClassSchedulesUseCase,
 	class.NewCreateClassScheduleUseCase,
@@ -125,6 +128,8 @@ var SchedulingUseCaseProviders = wire.NewSet(
 	scheduling.NewBenchmarkUseCase,
 	scheduling.NewGetPreviewUseCase,
 	scheduling.NewCommitPreviewUseCase,
+	scheduling.NewSubstituteUseCase,
+	scheduling.NewMakeupUseCase,
 )
 
 var MaterialUseCaseProviders = wire.NewSet(

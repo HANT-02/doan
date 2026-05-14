@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sort"
+
+	"doan/internal/entities"
 )
 
 type tabuSearchSolver struct {
@@ -39,10 +41,10 @@ func (s *tabuSearchSolver) Label() string {
 
 func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
 	problem := prepareSchedulingProblem(input)
-	initial := s.buildInitialState(problem.variables, problem.domains)
+	initial := s.buildInitialState(&problem, problem.variables, problem.domains)
 	best := tabuState{
 		assignments: cloneAssignments(initial),
-		penalty:     s.evaluate(initial, problem.variables),
+		penalty:     s.evaluate(initial, problem.variables, problem.targetLessons),
 	}
 	current := tabuState{
 		assignments: cloneAssignments(initial),
@@ -60,12 +62,12 @@ func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverO
 		for _, variable := range problem.variables {
 			for _, candidate := range limitedNeighborhood(problem.domains[variable.ID], 6) {
 				candidateAssignments := cloneAssignments(current.assignments)
-				for _, blocking := range findBlockingAssignments(variable, candidate, candidateAssignments) {
+				for _, blocking := range problem.findBlockingAssignments(variable, candidate, candidateAssignments) {
 					delete(candidateAssignments, blocking.VariableID)
 				}
 				candidateAssignments[variable.ID] = newPreviewAssignment(variable, candidate, "TABU_OK")
 
-				penalty := s.evaluate(candidateAssignments, problem.variables)
+				penalty := s.evaluate(candidateAssignments, problem.variables, problem.targetLessons)
 				moveKey := formatTabuMove(variable.ID, candidate)
 				tabuExpiry, isTabu := tabu[moveKey]
 				if isTabu && tabuExpiry > iteration && penalty >= best.penalty {
@@ -95,11 +97,12 @@ func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverO
 		}
 	}
 
-	repaired := repairAssignments(problem.variables, variableMap, problem.domains, best.assignments)
-	return buildSolverOutput(input, problem.variables, repaired, problem.presetConflicts, problem.noDomainConflicts, nil), nil
+	repaired := repairAssignments(&problem, problem.variables, variableMap, problem.domains, best.assignments)
+	return buildSolverOutput(input, problem.variables, repaired, problem.presetConflicts, problem.noDomainConflicts, nil, problem.targetLessons), nil
 }
 
 func (s *tabuSearchSolver) buildInitialState(
+	problem *preparedSchedulingProblem,
 	variables []Variable,
 	domains map[string][]DomainValue,
 ) map[string]PreviewAssignment {
@@ -111,7 +114,7 @@ func (s *tabuSearchSolver) buildInitialState(
 
 	for _, variable := range ordered {
 		for _, candidate := range domains[variable.ID] {
-			if hasConflict(variable, candidate, assignments) {
+			if problem.hasConflict(variable, candidate, assignments) {
 				continue
 			}
 			assignments[variable.ID] = newPreviewAssignment(variable, candidate, "TABU_INITIAL")
@@ -122,7 +125,7 @@ func (s *tabuSearchSolver) buildInitialState(
 	return assignments
 }
 
-func (s *tabuSearchSolver) evaluate(assignments map[string]PreviewAssignment, variables []Variable) int {
+func (s *tabuSearchSolver) evaluate(assignments map[string]PreviewAssignment, variables []Variable, targetLessons map[string]entities.Lesson) int {
 	penalty := (len(variables) - len(assignments)) * 1000
 	items := assignmentsToSlice(assignments)
 	for i := 0; i < len(items); i++ {
@@ -136,7 +139,7 @@ func (s *tabuSearchSolver) evaluate(assignments map[string]PreviewAssignment, va
 		}
 	}
 
-	penalty -= scoreAssignments(items)
+	penalty -= scoreAssignments(items, targetLessons)
 	return penalty
 }
 
@@ -148,6 +151,7 @@ func limitedNeighborhood(values []DomainValue, limit int) []DomainValue {
 }
 
 func repairAssignments(
+	problem *preparedSchedulingProblem,
 	variables []Variable,
 	variableMap map[string]Variable,
 	domains map[string][]DomainValue,
@@ -161,7 +165,7 @@ func repairAssignments(
 			continue
 		}
 		domainValue, ok := findDomainValueForAssignment(domains[assignment.VariableID], assignment)
-		if !ok || hasConflict(variable, domainValue, repaired) {
+		if !ok || problem.hasConflict(variable, domainValue, repaired) {
 			continue
 		}
 		repaired[assignment.VariableID] = newPreviewAssignment(variable, domainValue, "TABU_OK")
@@ -172,7 +176,7 @@ func repairAssignments(
 			continue
 		}
 		for _, candidate := range domains[variable.ID] {
-			if hasConflict(variable, candidate, repaired) {
+			if problem.hasConflict(variable, candidate, repaired) {
 				continue
 			}
 			repaired[variable.ID] = newPreviewAssignment(variable, candidate, "TABU_REPAIRED")

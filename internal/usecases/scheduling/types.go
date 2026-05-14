@@ -3,6 +3,7 @@ package scheduling
 import (
 	"time"
 
+	"doan/internal/entities"
 	schedulingservice "doan/internal/services/scheduling"
 )
 
@@ -32,6 +33,8 @@ type PreviewResult struct {
 	NoDomainConflicts map[string]PreviewConflict     `json:"-"`
 	DomainOptions     map[string][]DomainValue       `json:"-"`
 	ClassStudentIDs   map[string]map[string]struct{} `json:"-"`
+	RoomsByID         map[string]entities.Room       `json:"-"`
+	TravelMap         map[string]int                 `json:"-"`
 }
 
 type PreviewFilters struct {

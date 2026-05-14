@@ -309,7 +309,7 @@ export const ClassesPage = () => {
                 Chưa có lớp học nào phù hợp bộ lọc
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Thử đổi từ khóa tìm kiếm hoặc tạo lớp học mới để bắt đầu quản lý roster.
+                Thử đổi từ khóa tìm kiếm hoặc tạo lớp học mới để bắt đầu quản lý học viên.
             </Typography>
             <Button variant="contained" startIcon={<AddRounded />} onClick={handleAdd}>
                 Tạo lớp học đầu tiên
@@ -321,7 +321,7 @@ export const ClassesPage = () => {
         <Box>
             <PageHeader
                 title="Quản lý lớp học"
-                subtitle="Theo dõi danh sách lớp, roster học sinh và giáo viên phụ trách theo chuẩn demo edu admin."
+                subtitle="Theo dõi danh sách lớp, học sinh và giáo viên phụ trách theo chuẩn demo edu admin."
                 breadcrumbs={[
                     { label: 'Tổng quan', path: '/app/admin/overview' },
                     { label: 'Quản lý lớp học' },

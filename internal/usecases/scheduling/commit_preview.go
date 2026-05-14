@@ -186,12 +186,6 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 				return nil, err
 			}
 
-			if _, ok := manualAssignmentIDs[assignment.VariableID]; ok {
-				if err := uc.ensureManualScheduleTemplate(txCtx, assignment); err != nil {
-					return nil, err
-				}
-			}
-
 			committedLessons++
 		}
 
@@ -210,49 +204,6 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 		ScheduledLessons: committedLessons,
 		Status:           "COMMITTED",
 	}, nil
-}
-
-func (uc *commitPreviewUseCase) ensureManualScheduleTemplate(ctx context.Context, assignment PreviewAssignment) error {
-	if assignment.ClassID == "" || assignment.ShiftID == "" {
-		return nil
-	}
-
-	existingSchedules, err := uc.classScheduleRepo.GetSchedulesByClassID(ctx, assignment.ClassID)
-	if err != nil {
-		return err
-	}
-
-	dayOfWeek := weekdayToScheduleDay(assignment.StartTime.Weekday())
-	if dayOfWeek == "" {
-		return nil
-	}
-
-	for _, schedule := range existingSchedules {
-		sameRoom := false
-		switch {
-		case schedule.RoomID == nil && assignment.RoomID == "":
-			sameRoom = true
-		case schedule.RoomID != nil && *schedule.RoomID == assignment.RoomID:
-			sameRoom = true
-		}
-
-		if schedule.DayOfWeek == dayOfWeek && schedule.ShiftID == assignment.ShiftID && sameRoom {
-			return nil
-		}
-	}
-
-	var roomID *string
-	if assignment.RoomID != "" {
-		roomID = &assignment.RoomID
-	}
-
-	_, err = uc.classScheduleRepo.Create(ctx, &entities.ClassSchedule{
-		ClassID:   assignment.ClassID,
-		DayOfWeek: dayOfWeek,
-		ShiftID:   assignment.ShiftID,
-		RoomID:    roomID,
-	})
-	return err
 }
 
 func weekdayToScheduleDay(weekday time.Weekday) string {

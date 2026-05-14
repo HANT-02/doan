@@ -50,24 +50,25 @@ type DomainValue struct {
 }
 
 type PreviewAssignment struct {
-	VariableID    string    `json:"variable_id"`
-	ClassID       string    `json:"class_id"`
-	ClassCode     string    `json:"class_code"`
-	ClassName     string    `json:"class_name"`
-	SessionIndex  int       `json:"session_index"`
-	SessionTotal  int       `json:"session_total"`
-	TeacherID     string    `json:"teacher_id"`
-	TeacherLabel  string    `json:"teacher_label"`
-	RoomID        string    `json:"room_id"`
-	RoomName      string    `json:"room_name"`
-	RoomCapacity  int       `json:"room_capacity"`
-	ShiftID       string    `json:"shift_id,omitempty"`
-	ShiftCode     string    `json:"shift_code,omitempty"`
-	ShiftName     string    `json:"shift_name,omitempty"`
-	ShiftType     string    `json:"shift_type,omitempty"`
-	StartTime     time.Time `json:"start_time"`
-	EndTime       time.Time `json:"end_time"`
-	ConstraintFit string    `json:"constraint_fit"`
+	VariableID           string    `json:"variable_id"`
+	ClassID              string    `json:"class_id"`
+	ClassCode            string    `json:"class_code"`
+	ClassName            string    `json:"class_name"`
+	SessionIndex         int       `json:"session_index"`
+	SessionTotal         int       `json:"session_total"`
+	TeacherID            string    `json:"teacher_id"`
+	TeacherLabel         string    `json:"teacher_label"`
+	RoomID               string    `json:"room_id"`
+	RoomName             string    `json:"room_name"`
+	RoomCapacity         int       `json:"room_capacity"`
+	ExpectedStudentCount int       `json:"expected_student_count"`
+	ShiftID              string    `json:"shift_id,omitempty"`
+	ShiftCode            string    `json:"shift_code,omitempty"`
+	ShiftName            string    `json:"shift_name,omitempty"`
+	ShiftType            string    `json:"shift_type,omitempty"`
+	StartTime            time.Time `json:"start_time"`
+	EndTime              time.Time `json:"end_time"`
+	ConstraintFit        string    `json:"constraint_fit"`
 }
 
 type PreviewCandidateOption struct {
@@ -111,23 +112,30 @@ type PreviewConflict struct {
 }
 
 type SolverSummary struct {
-	RequestedClasses   int `json:"requested_classes"`
-	RequestedSessions  int `json:"requested_sessions"`
-	ScheduledLessons   int `json:"scheduled_lessons"`
-	UnscheduledLessons int `json:"unscheduled_lessons"`
-	ConflictCount      int `json:"conflict_count"`
-	SoftScore          int `json:"soft_score"`
+	RequestedClasses           int     `json:"requested_classes"`
+	RequestedSessions          int     `json:"requested_sessions"`
+	ScheduledLessons           int     `json:"scheduled_lessons"`
+	UnscheduledLessons         int     `json:"unscheduled_lessons"`
+	ConflictCount              int     `json:"conflict_count"`
+	SoftScore                  int     `json:"soft_score"`
+	ScheduleChangeCount        int     `json:"schedule_change_count"`
+	TeacherChangeCount         int     `json:"teacher_change_count"`
+	RoomChangeCount            int     `json:"room_change_count"`
+	AverageCapacityUtilization float64 `json:"average_capacity_utilization"`
 }
 
 type SolverInput struct {
-	DateFrom   time.Time
-	DateTo     time.Time
-	ClassIDs   []string
-	TeacherIDs []string
-	RoomIDs    []string
-	Classes    []entities.Class
-	Rooms      []entities.Room
-	Shifts     []entities.Shift
+	DateFrom      time.Time
+	DateTo        time.Time
+	ClassIDs      []string
+	TeacherIDs    []string
+	RoomIDs       []string
+	Classes       []entities.Class
+	Rooms         []entities.Room
+	Shifts        []entities.Shift
+	RoomsByID     map[string]entities.Room
+	TravelMap     map[string]int
+	TargetLessons []entities.Lesson
 }
 
 type SolverOutput struct {

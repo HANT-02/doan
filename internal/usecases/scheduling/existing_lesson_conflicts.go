@@ -40,6 +40,8 @@ func lessonLifecycleLabel(status string) string {
 func (uc *previewUseCase) collectExistingLessonConflicts(
 	ctx context.Context,
 	preview PreviewResult,
+	travelMap map[string]int,
+	roomsByID map[string]entities.Room,
 ) ([]ExistingLesson, map[string]map[string]struct{}, []PreviewConflict, error) {
 	if preview.Filters.DateTo.Before(preview.Filters.DateFrom) {
 		return []ExistingLesson{}, map[string]map[string]struct{}{}, []PreviewConflict{}, nil
@@ -68,10 +70,6 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		return nil, nil, nil, err
 	}
 
-	if len(lessons) == 0 {
-		return []ExistingLesson{}, map[string]map[string]struct{}{}, []PreviewConflict{}, nil
-	}
-
 	classIDs := make(map[string]struct{})
 	for _, variable := range preview.Variables {
 		if variable.ClassID != "" {
@@ -87,6 +85,10 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 	studentIDsByClass, err := uc.loadStudentIDsByClass(ctx, classIDs)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	if len(lessons) == 0 {
+		return []ExistingLesson{}, studentIDsByClass, []PreviewConflict{}, nil
 	}
 
 	events := make([]ExistingLesson, 0, len(lessons))
@@ -133,6 +135,44 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		studentSet := studentIDsByClass[assignment.ClassID]
 		for _, lesson := range lessons {
 			if !overlaps(assignment.StartTime, assignment.EndTime, lesson.DateStart, lesson.DateEnd) {
+				if assignment.TeacherID != "" && lesson.TeacherID != nil && assignment.TeacherID == *lesson.TeacherID && sameCalendarDay(assignment.StartTime, lesson.DateStart) {
+					var previousEnd, nextStart time.Time
+					var fromRoom, toRoom entities.Room
+
+					if assignment.EndTime.Before(lesson.DateStart) || assignment.EndTime.Equal(lesson.DateStart) {
+						previousEnd = assignment.EndTime
+						nextStart = lesson.DateStart
+						fromRoom = roomsByID[assignment.RoomID]
+						if lesson.RoomID != nil {
+							toRoom = roomsByID[*lesson.RoomID]
+						}
+					} else {
+						previousEnd = lesson.DateEnd
+						nextStart = assignment.StartTime
+						if lesson.RoomID != nil {
+							fromRoom = roomsByID[*lesson.RoomID]
+						}
+						toRoom = roomsByID[assignment.RoomID]
+					}
+
+					if !schedulingservice.HasSufficientTravelGap(previousEnd, nextStart, &fromRoom, &toRoom, travelMap) {
+						conflicts = append(conflicts, PreviewConflict{
+							VariableID:   assignment.VariableID,
+							ClassID:      assignment.ClassID,
+							ClassCode:    assignment.ClassCode,
+							ClassName:    assignment.ClassName,
+							SessionIndex: assignment.SessionIndex,
+							SessionTotal: assignment.SessionTotal,
+							Type:         "SYSTEM_LESSON_CONFLICT",
+							Message: fmt.Sprintf(
+								"Trùng với lesson %s đã lưu [%s - %s] vì di chuyển không kịp.",
+								lessonLifecycleLabel(lesson.Status),
+								lesson.DateStart.Format("02/01/2006 15:04"),
+								lesson.DateEnd.Format("15:04"),
+							),
+						})
+					}
+				}
 				continue
 			}
 

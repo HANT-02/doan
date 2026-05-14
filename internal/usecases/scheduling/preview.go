@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"doan/internal/entities"
+	"doan/internal/repositories"
 	repositoryinterface "doan/internal/repositories/interface"
 	schedulingservice "doan/internal/services/scheduling"
 	"doan/pkg/logger"
@@ -38,13 +39,14 @@ type PreviewUseCase interface {
 }
 
 type previewUseCase struct {
-	classRepo      repositoryinterface.ClassRepository
-	roomRepo       repositoryinterface.RoomRepository
-	shiftRepo      repositoryinterface.ShiftRepository
-	lessonRepo     repositoryinterface.LessonRepository
-	enrollmentRepo repositoryinterface.EnrollmentRepository
-	store          schedulingservice.PreviewStore[PreviewResult]
-	solver         schedulingservice.SchedulingSolver
+	classRepo        repositoryinterface.ClassRepository
+	roomRepo         repositoryinterface.RoomRepository
+	shiftRepo        repositoryinterface.ShiftRepository
+	lessonRepo       repositoryinterface.LessonRepository
+	enrollmentRepo   repositoryinterface.EnrollmentRepository
+	campusTravelRepo repositoryinterface.CampusTravelTimeRepository
+	store            schedulingservice.PreviewStore[PreviewResult]
+	solver           schedulingservice.SchedulingSolver
 }
 
 func NewPreviewUseCase(
@@ -53,17 +55,19 @@ func NewPreviewUseCase(
 	shiftRepo repositoryinterface.ShiftRepository,
 	lessonRepo repositoryinterface.LessonRepository,
 	enrollmentRepo repositoryinterface.EnrollmentRepository,
+	campusTravelRepo repositoryinterface.CampusTravelTimeRepository,
 	store schedulingservice.PreviewStore[PreviewResult],
 	solver schedulingservice.SchedulingSolver,
 ) PreviewUseCase {
 	return &previewUseCase{
-		classRepo:      classRepo,
-		roomRepo:       roomRepo,
-		shiftRepo:      shiftRepo,
-		lessonRepo:     lessonRepo,
-		enrollmentRepo: enrollmentRepo,
-		store:          store,
-		solver:         solver,
+		classRepo:        classRepo,
+		roomRepo:         roomRepo,
+		shiftRepo:        shiftRepo,
+		lessonRepo:       lessonRepo,
+		enrollmentRepo:   enrollmentRepo,
+		campusTravelRepo: campusTravelRepo,
+		store:            store,
+		solver:           solver,
 	}
 }
 
@@ -169,6 +173,24 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		return nil, err
 	}
 
+	travelTimePage, err := uc.campusTravelRepo.GetByCondition(ctx, repositories.NewCommonCondition().WithPaging(1000, 1))
+	if err != nil {
+		ctxLogger.Errorf("Failed to load campus travel times for scheduling preview: %v", err)
+		return nil, err
+	}
+	travelTimes := make([]entities.CampusTravelTime, 0, len(travelTimePage.Data))
+	for _, ptr := range travelTimePage.Data {
+		if ptr != nil {
+			travelTimes = append(travelTimes, *ptr)
+		}
+	}
+	travelMap := schedulingservice.BuildCampusTravelTimeMap(travelTimes)
+
+	roomsByID := make(map[string]entities.Room, len(rooms))
+	for _, room := range rooms {
+		roomsByID[room.ID] = room
+	}
+
 	runID := utils.GenerateUUIDWithPrefix("sched-preview-")
 	result := PreviewResult{
 		RunID:       runID,
@@ -208,29 +230,56 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		})
 	}
 
+	targetLessonStatuses := []string{entities.LessonStatusPublished, entities.LessonStatusDraft}
+	if input.Mode == schedulingservice.PreviewModeColdStart {
+		targetLessonStatuses = nil
+	}
+	var targetLessonsList []entities.Lesson
+	if len(targetLessonStatuses) > 0 && len(input.ClassIDs) > 0 {
+		targetLessonsList, err = uc.lessonRepo.FindOverlappingLessons(
+			ctx,
+			input.DateFrom,
+			input.DateTo.Add(24*time.Hour),
+			input.ClassIDs,
+			nil,
+			nil,
+			targetLessonStatuses,
+		)
+		if err != nil {
+			ctxLogger.Errorf("Failed to load target lessons for scheduling preview: %v", err)
+			return nil, err
+		}
+	}
+
 	output, err := uc.solver.Solve(ctx, schedulingservice.SolverInput{
-		DateFrom:   input.DateFrom,
-		DateTo:     input.DateTo,
-		ClassIDs:   input.ClassIDs,
-		TeacherIDs: input.TeacherIDs,
-		RoomIDs:    input.RoomIDs,
-		Classes:    classes,
-		Rooms:      rooms,
-		Shifts:     shifts,
+		DateFrom:      input.DateFrom,
+		DateTo:        input.DateTo,
+		ClassIDs:      input.ClassIDs,
+		TeacherIDs:    input.TeacherIDs,
+		RoomIDs:       input.RoomIDs,
+		Classes:       classes,
+		Rooms:         rooms,
+		Shifts:        shifts,
+		RoomsByID:     roomsByID,
+		TravelMap:     travelMap,
+		TargetLessons: targetLessonsList,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	previewContext := schedulingservice.BuildPreviewContext(schedulingservice.SolverInput{
-		DateFrom:   input.DateFrom,
-		DateTo:     input.DateTo,
-		ClassIDs:   input.ClassIDs,
-		TeacherIDs: input.TeacherIDs,
-		RoomIDs:    input.RoomIDs,
-		Classes:    classes,
-		Rooms:      rooms,
-		Shifts:     shifts,
+		DateFrom:      input.DateFrom,
+		DateTo:        input.DateTo,
+		ClassIDs:      input.ClassIDs,
+		TeacherIDs:    input.TeacherIDs,
+		RoomIDs:       input.RoomIDs,
+		Classes:       classes,
+		Rooms:         rooms,
+		Shifts:        shifts,
+		RoomsByID:     roomsByID,
+		TravelMap:     travelMap,
+		TargetLessons: targetLessonsList,
 	})
 
 	result.Status = output.Status
@@ -242,12 +291,14 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 	result.PresetConflicts = previewContext.PresetConflicts
 	result.NoDomainConflicts = previewContext.NoDomainConflicts
 	result.DomainOptions = previewContext.Domains
+	result.RoomsByID = roomsByID
+	result.TravelMap = travelMap
 
 	if result.Summary.RequestedClasses == 0 {
 		result.Summary.RequestedClasses = len(classes)
 	}
 
-	existingLessons, classStudentIDs, existingConflicts, err := uc.collectExistingLessonConflicts(ctx, result)
+	existingLessons, classStudentIDs, existingConflicts, err := uc.collectExistingLessonConflicts(ctx, result, travelMap, roomsByID)
 	if err != nil {
 		ctxLogger.Errorf("Failed to collect existing lesson conflicts for scheduling preview: %v", err)
 		return nil, err
@@ -265,6 +316,33 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		result.Status = "COMPLETED"
 	}
 	result = maybeAppendConflictDensityConflict(result)
+
+	// B5: Capacity utilization calculation
+	classMaxStudents := make(map[string]int)
+	for _, classEntity := range classes {
+		classMaxStudents[classEntity.ID] = classEntity.MaxStudents
+	}
+
+	totalStudentCount := 0
+	totalCapacity := 0
+
+	for i := range result.Assignments {
+		classID := result.Assignments[i].ClassID
+		studentCount := len(result.ClassStudentIDs[classID])
+		result.Assignments[i].ExpectedStudentCount = studentCount
+
+		maxStudents := classMaxStudents[classID]
+		roomCapacity := result.Assignments[i].RoomCapacity
+
+		limit := CalculateCapacityLimit(roomCapacity, maxStudents)
+
+		totalStudentCount += studentCount
+		totalCapacity += limit
+	}
+
+	if totalCapacity > 0 {
+		result.Summary.AverageCapacityUtilization = float64(totalStudentCount) / float64(totalCapacity)
+	}
 
 	uc.store.Save(runID, result)
 	return &result, nil

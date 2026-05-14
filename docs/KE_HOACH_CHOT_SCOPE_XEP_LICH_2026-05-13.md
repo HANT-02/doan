@@ -563,3 +563,24 @@ Từ thời điểm này, toàn bộ câu chuyện của đồ án nên xoay qua
 > Hệ thống không chỉ quản lý dữ liệu trung tâm dạy thêm, mà giải quyết bài toán xếp lịch học bằng nhiều thuật toán, đo đạc được bằng dữ liệu thực nghiệm, và lựa chọn `CP-SAT` làm solver chính dựa trên kết quả benchmark.
 
 Đó là trục thuyết phục nhất để viết báo cáo, demo hệ thống và trả lời phản biện.
+
+## Việc tôi đã làm bằng tay ngày 14/05/2026:
+Tối ưu hoá màn hình Xếp lịch (Scheduling Preview)
+Danh sách này tổng hợp các tác vụ và cải tiến đã được thực hiện để nâng cao trải nghiệm người dùng (UX) và hiệu năng của chức năng xếp lịch.
+
+Gỡ bỏ tính năng kéo thả (Drag and Drop)
+Xóa các logic liên quan đến kéo thả để đổi ca do không phù hợp với các ca học cách xa nhau giữa các tuần.
+Cải tiến UX thao tác "Đổi chỗ" (Manual Adjustment)
+Xoá bỏ popup cản trở tầm nhìn khi bấm "Đổi chỗ".
+Chuyển thao tác đổi chỗ thành việc click chọn trực tiếp trên giao diện Calendar: khi chọn đổi ca, các slot trống hợp lệ được hiển thị như những khối (card) nét đứt trên lịch để dễ quan sát.
+Làm nổi bật (highlight viền, màu nền) ca học đang được chọn để chỉnh sửa.
+Thao tác tự động áp dụng (apply) đổi chỗ và thoát chế độ sửa ngay khi người dùng click vào một slot trống hợp lệ, tiết kiệm số lần nhấp chuột.
+Tối ưu hoá hiệu năng tính toán Local State (React)
+Tối ưu cơ chế kiểm tra trùng lịch (Overlap Check) ở frontend bằng cách thay thế hàm parseISO nặng nề bằng so sánh chuỗi (string comparison) trực tiếp, cải thiện tốc độ kiểm tra lên hàng trăm lần.
+Loại bỏ các tính toán filter dư thừa trong vòng lặp render 70 ô ngày của Calendar, sử dụng startsWith thay vì Parse ngày.
+Đảm bảo việc nhấp chọn đổi vị trí nhiều chip liên tục phản hồi mượt mà và tức thời.
+Cập nhật UI/UX thêm Khóa học cho Lớp
+Bổ sung 2 trường Chương trình học (Program) và Khóa học (Course) vào màn hình thêm/sửa lớp học (ClassDialog.tsx) để giải quyết lỗi "Lớp chưa gắn khóa học nên chưa thể sinh số buổi học" khi chạy preview.
+Sửa lỗi Backend lưu sai Lịch tuần
+Tại commit_preview.go, gỡ bỏ logic ensureManualScheduleTemplate bị lỗi.
+Đảm bảo việc "đổi tay" xử lý sự cố trong lúc xem trước lịch chỉ sinh ra đúng 1 buổi học thực tế (Lesson) thay vì tự động ghi đè/tạo mới vào lịch học cố định hàng tuần (ClassSchedule) của lớp đó.

@@ -413,7 +413,7 @@ export default function TeacherAttendancePage() {
                                         <TableRow>
                                             <TableCell colSpan={4}>
                                                 <Typography variant="body2" color="text.secondary">
-                                                    Buổi học này chưa có dữ liệu roster để điểm danh.
+                                                    Buổi học này chưa có dữ liệu học viên để điểm danh.
                                                 </Typography>
                                             </TableCell>
                                         </TableRow>

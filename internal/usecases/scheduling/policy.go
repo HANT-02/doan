@@ -32,7 +32,7 @@ func filterClassesByEnrollment(
 			return nil, nil, err
 		}
 
-		currentCount := countApprovedEnrollments(enrollments)
+		currentCount := countEligibleOpenClassEnrollments(enrollments)
 		requiredCount := requiredEnrollmentCount(classEntity.MaxStudents, defaultMinimumEnrollmentRatio)
 		if requiredCount > 0 && currentCount < requiredCount {
 			conflicts = append(conflicts, PreviewConflict{
@@ -58,10 +58,10 @@ func filterClassesByEnrollment(
 	return eligible, conflicts, nil
 }
 
-func countApprovedEnrollments(enrollments []entities.Enrollment) int {
+func countEligibleOpenClassEnrollments(enrollments []entities.Enrollment) int {
 	count := 0
 	for _, enrollment := range enrollments {
-		if enrollment.ApprovedAt != nil || enrollment.Status == "APPROVED" {
+		if enrollment.Status == entities.EnrollmentStatusApproved || enrollment.Status == entities.EnrollmentStatusEnrolled {
 			count++
 		}
 	}

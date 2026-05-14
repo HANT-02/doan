@@ -16,6 +16,9 @@ type Controller interface {
 	ListClasses(c *gin.Context)
 	EnrollStudents(c *gin.Context)
 	RemoveStudents(c *gin.Context)
+	ReserveStudent(c *gin.Context)
+	ResumeStudent(c *gin.Context)
+	TransferStudent(c *gin.Context)
 	AssignTeacher(c *gin.Context)
 	GetClassSchedules(c *gin.Context)
 	CreateClassSchedule(c *gin.Context)
@@ -41,6 +44,9 @@ func RegisterRoutesV1(router *gin.RouterGroup, ctrl Controller, configManager co
 	v1.DELETE("/:id", authMiddleware, adminRole, ctrl.DeleteClass)
 	v1.POST("/:id/students", authMiddleware, adminRole, ctrl.EnrollStudents)
 	v1.DELETE("/:id/students", authMiddleware, adminRole, ctrl.RemoveStudents)
+	v1.POST("/:id/students/:studentId/reserve", authMiddleware, adminRole, ctrl.ReserveStudent)
+	v1.POST("/:id/students/:studentId/resume", authMiddleware, adminRole, ctrl.ResumeStudent)
+	v1.POST("/:id/students/:studentId/transfer", authMiddleware, adminRole, ctrl.TransferStudent)
 	v1.PUT("/:id/teacher", authMiddleware, adminRole, ctrl.AssignTeacher)
 
 	// Class Schedule operations

@@ -20,6 +20,8 @@ type ControllerV1 struct {
 	benchmarkUseCase  scheduling.BenchmarkUseCase
 	getPreviewUseCase scheduling.GetPreviewUseCase
 	commitUseCase     scheduling.CommitPreviewUseCase
+	substituteUseCase scheduling.SubstituteUseCase
+	makeupUseCase     scheduling.MakeupUseCase
 }
 
 func NewSchedulingControllerV1(
@@ -27,12 +29,16 @@ func NewSchedulingControllerV1(
 	benchmarkUseCase scheduling.BenchmarkUseCase,
 	getPreviewUseCase scheduling.GetPreviewUseCase,
 	commitUseCase scheduling.CommitPreviewUseCase,
+	substituteUseCase scheduling.SubstituteUseCase,
+	makeupUseCase scheduling.MakeupUseCase,
 ) *ControllerV1 {
 	return &ControllerV1{
 		previewUseCase:    previewUseCase,
 		benchmarkUseCase:  benchmarkUseCase,
 		getPreviewUseCase: getPreviewUseCase,
 		commitUseCase:     commitUseCase,
+		substituteUseCase: substituteUseCase,
+		makeupUseCase:     makeupUseCase,
 	}
 }
 
@@ -205,4 +211,102 @@ func parsePreviewDate(raw string) (time.Time, error) {
 	}
 
 	return time.Parse(time.RFC3339, raw)
+}
+
+func (ctrl *ControllerV1) SuggestSubstitute(c *gin.Context) {
+	lessonID := c.Param("id")
+	if lessonID == "" {
+		rest.ResponseError(c, http.StatusBadRequest, "Lesson ID is required", nil)
+		return
+	}
+
+	actor := buildSchedulingActor(c)
+	suggestions, err := ctrl.substituteUseCase.SuggestSubstituteTeachers(c.Request.Context(), actor, lessonID)
+	if err != nil {
+		switch {
+		case errors.Is(err, scheduling.ErrSubstituteAccessDenied):
+			rest.ResponseError(c, http.StatusForbidden, "Access denied for substitute suggestion", err)
+		default:
+			rest.ResponseError(c, http.StatusInternalServerError, "Failed to suggest substitute teachers", err)
+		}
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, "Substitute teachers suggested successfully", suggestions)
+}
+
+func (ctrl *ControllerV1) AssignSubstitute(c *gin.Context) {
+	lessonID := c.Param("id")
+	if lessonID == "" {
+		rest.ResponseError(c, http.StatusBadRequest, "Lesson ID is required", nil)
+		return
+	}
+
+	var req AssignSubstituteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	actor := buildSchedulingActor(c)
+	err := ctrl.substituteUseCase.AssignSubstitute(c.Request.Context(), actor, lessonID, req.NewTeacherID, req.Reason)
+	if err != nil {
+		switch {
+		case errors.Is(err, scheduling.ErrSubstituteAccessDenied):
+			rest.ResponseError(c, http.StatusForbidden, "Access denied for substitute assignment", err)
+		case errors.Is(err, scheduling.ErrSubstituteNotEligible):
+			rest.ResponseError(c, http.StatusBadRequest, "Selected substitute teacher is not eligible", err)
+		default:
+			rest.ResponseError(c, http.StatusInternalServerError, "Failed to assign substitute teacher", err)
+		}
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, "Substitute teacher assigned successfully", nil)
+}
+
+func (ctrl *ControllerV1) FindMakeupSpots(c *gin.Context) {
+	lessonID := c.Param("id")
+	if lessonID == "" {
+		rest.ResponseError(c, http.StatusBadRequest, "Lesson ID is required", nil)
+		return
+	}
+
+	var req FindMakeupSpotsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid query parameters", err)
+		return
+	}
+
+	output, err := ctrl.makeupUseCase.FindMakeupSpots(c.Request.Context(), scheduling.FindMakeupSpotsInput{
+		LessonID:  lessonID,
+		StudentID: req.StudentID,
+		Limit:     req.Limit,
+	})
+	if err != nil {
+		rest.ResponseError(c, http.StatusInternalServerError, "Failed to find makeup spots", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, "Makeup spots found successfully", output)
+}
+
+func buildSchedulingActor(c *gin.Context) scheduling.Actor {
+	actor := scheduling.Actor{}
+	if userID, ok := c.Get("user_id"); ok {
+		if value, ok := userID.(string); ok {
+			actor.UserID = value
+		}
+	}
+	if userEmail, ok := c.Get("user_email"); ok {
+		if value, ok := userEmail.(string); ok {
+			actor.Email = value
+		}
+	}
+	if userRole, ok := c.Get("user_role"); ok {
+		if value, ok := userRole.(string); ok {
+			actor.Role = value
+		}
+	}
+	return actor
 }

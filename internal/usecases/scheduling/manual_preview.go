@@ -5,6 +5,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"doan/internal/entities"
+	schedulingservice "doan/internal/services/scheduling"
 )
 
 func buildAssignmentMap(assignments []PreviewAssignment) map[string]PreviewAssignment {
@@ -119,7 +122,7 @@ func buildPreviewConflicts(base PreviewResult, assignments map[string]PreviewAss
 		})
 	}
 
-	for _, conflict := range buildAssignmentConflicts(sortAssignments(assignments)) {
+	for _, conflict := range buildAssignmentConflicts(sortAssignments(assignments), base.TravelMap, base.RoomsByID) {
 		conflicts = append(conflicts, conflict)
 	}
 
@@ -130,7 +133,7 @@ func buildPreviewConflicts(base PreviewResult, assignments map[string]PreviewAss
 	return conflicts
 }
 
-func buildAssignmentConflicts(assignments []PreviewAssignment) []PreviewConflict {
+func buildAssignmentConflicts(assignments []PreviewAssignment, travelMap map[string]int, roomsByID map[string]entities.Room) []PreviewConflict {
 	reasonMap := make(map[string][]string)
 
 	for i := 0; i < len(assignments); i++ {
@@ -138,6 +141,27 @@ func buildAssignmentConflicts(assignments []PreviewAssignment) []PreviewConflict
 			left := assignments[i]
 			right := assignments[j]
 			if !assignmentsOverlap(left, right) {
+				if left.TeacherID != "" && left.TeacherID == right.TeacherID && sameCalendarDay(left.StartTime, right.StartTime) {
+					var previousEnd, nextStart time.Time
+					var fromRoom, toRoom entities.Room
+
+					if left.EndTime.Before(right.StartTime) || left.EndTime.Equal(right.StartTime) {
+						previousEnd = left.EndTime
+						nextStart = right.StartTime
+						fromRoom = roomsByID[left.RoomID]
+						toRoom = roomsByID[right.RoomID]
+					} else {
+						previousEnd = right.EndTime
+						nextStart = left.StartTime
+						fromRoom = roomsByID[right.RoomID]
+						toRoom = roomsByID[left.RoomID]
+					}
+
+					if !schedulingservice.HasSufficientTravelGap(previousEnd, nextStart, &fromRoom, &toRoom, travelMap) {
+						reasonMap[left.VariableID] = append(reasonMap[left.VariableID], buildConflictReason("di chuyển không kịp", right))
+						reasonMap[right.VariableID] = append(reasonMap[right.VariableID], buildConflictReason("di chuyển không kịp", left))
+					}
+				}
 				continue
 			}
 

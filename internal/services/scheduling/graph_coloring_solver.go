@@ -22,12 +22,13 @@ func (s *graphColoringSolver) Label() string {
 func (s *graphColoringSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
 	problem := prepareSchedulingProblem(input)
 	adjacency := buildConflictAdjacency(problem.variables)
-	assignments := s.greedyColor(problem.variables, problem.domains, adjacency)
+	assignments := s.greedyColor(&problem, problem.variables, problem.domains, adjacency)
 
-	return buildSolverOutput(input, problem.variables, assignments, problem.presetConflicts, problem.noDomainConflicts, nil), nil
+	return buildSolverOutput(input, problem.variables, assignments, problem.presetConflicts, problem.noDomainConflicts, nil, problem.targetLessons), nil
 }
 
 func (s *graphColoringSolver) greedyColor(
+	problem *preparedSchedulingProblem,
 	variables []Variable,
 	domains map[string][]DomainValue,
 	adjacency map[string]map[string]struct{},
@@ -68,7 +69,7 @@ func (s *graphColoringSolver) greedyColor(
 
 		for _, slotKey := range slotKeys {
 			for _, candidate := range grouped[slotKey] {
-				if hasConflict(variable, candidate, assignments) {
+				if problem.hasConflict(variable, candidate, assignments) {
 					continue
 				}
 

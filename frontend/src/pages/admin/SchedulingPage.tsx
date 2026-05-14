@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,11 +22,13 @@ import {
     StepLabel,
     Stepper,
     TextField,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import {
     CalendarMonthRounded,
     EditCalendarRounded,
+    InfoOutlined,
     PlayArrowRounded,
     RefreshRounded,
     RuleRounded,
@@ -55,6 +57,7 @@ import { getApiErrorMessage } from '@/utils/apiError';
 
 const schedulingSchema = z.object({
     mode: z.enum(['class', 'teacher']),
+    preview_strategy: z.enum(['cold_start', 'replan_draft', 'replan_with_published_lock']),
     expected_start_date: z.string().optional(),
     class_ids: z.array(z.string()).optional(),
     teacher_ids: z.array(z.string()).optional(),
@@ -120,6 +123,50 @@ type DerivedPreviewState = {
         variable_id: string;
         option_key: string;
     }>;
+};
+
+const previewStrategyOptions = [
+    {
+        value: 'replan_with_published_lock' as const,
+        label: 'Giữ lịch đã công bố',
+        description: 'Giữ các buổi đã công bố làm mốc ổn định, chỉ điều chỉnh cục bộ phần nháp hoặc xung đột mới.',
+    },
+    {
+        value: 'replan_draft' as const,
+        label: 'Xếp lại vùng nháp',
+        description: 'Cho phép xếp lại trên vùng nháp và các buổi mục tiêu, nhưng vẫn ưu tiên ít xáo trộn hơn xếp mới hoàn toàn.',
+    },
+    {
+        value: 'cold_start' as const,
+        label: 'Xếp mới hoàn toàn',
+        description: 'Xem như bài toán xếp từ đầu để so sánh đường cơ sở giữa các thuật toán và bộ dữ liệu đầu vào.',
+    },
+];
+
+const previewModeLabel = (value?: string) => {
+    switch (value) {
+        case 'cold_start':
+            return 'Xếp mới hoàn toàn';
+        case 'replan_draft':
+            return 'Xếp lại vùng nháp';
+        case 'replan_with_published_lock':
+            return 'Giữ lịch đã công bố';
+        default:
+            return value || 'Không rõ chế độ';
+    }
+};
+
+const previewStatusLabel = (value?: string) => {
+    switch (value) {
+        case 'FAILED':
+            return 'Thất bại';
+        case 'PARTIAL':
+            return 'Một phần';
+        case 'COMPLETED':
+            return 'Hoàn tất';
+        default:
+            return value || 'Chưa rõ';
+    }
 };
 
 const previewSteps = ['Chọn đối tượng', 'Xác nhận cấu hình', 'Xem trước và xử lý'];
@@ -202,13 +249,13 @@ const getConflictActionHint = (type: string) => {
         case 'ASSIGNMENT_CONFLICT':
             return 'Gợi ý: chọn lại slot/phòng cho một trong các buổi đang trùng ngay trong workspace bên dưới.';
         case 'SYSTEM_LESSON_CONFLICT':
-            return 'Gợi ý: xem card lesson đã lưu trên calendar rồi đổi tay sang ca/ngày/phòng khác để tránh đè dữ liệu hiện có.';
+            return 'Gợi ý: xem card buổi học đã lưu trên lịch rồi đổi tay sang ca/ngày/phòng khác để tránh đè dữ liệu hiện có.';
         case 'MISSING_TEACHER':
             return 'Gợi ý: vào Quản lý lớp học để gán giáo viên phụ trách rồi chạy lại xem trước.';
         case 'SKILL_MISMATCH':
             return 'Gợi ý: cập nhật kỹ năng/chứng chỉ cho giáo viên hoặc chỉnh `required skills` của khóa học để chỉ các lớp đủ chuẩn mới được đưa vào xếp lịch.';
         case 'NO_CLASS_INPUT':
-            return 'Gợi ý: kiểm tra bộ lọc lớp, trạng thái OPEN hoặc giáo viên đã chọn.';
+            return 'Gợi ý: kiểm tra bộ lọc lớp, trạng thái đang mở hoặc giáo viên đã chọn.';
         case 'NO_ACTIVE_ROOM':
             return 'Gợi ý: bổ sung phòng học khả dụng hoặc kiểm tra phòng đã gán trong lịch tuần lớp.';
         case 'PREFERRED_ROOM_UNAVAILABLE':
@@ -236,13 +283,13 @@ const getConflictActionHint = (type: string) => {
         case 'INSUFFICIENT_ENROLLMENT':
             return 'Gợi ý: chỉ đưa lớp vào xếp lịch khi lớp đã đạt ngưỡng sĩ số tối thiểu hoặc điều chỉnh lại chính sách mở lớp.';
         case 'EXCESSIVE_MANUAL_ADJUSTMENT':
-            return 'Gợi ý: số ca cần sửa tay đang quá nhiều. Hãy tối ưu dữ liệu lớp, phòng, ca và lịch tuần trước khi chạy lại solver.';
+            return 'Gợi ý: số ca cần sửa tay đang quá nhiều. Hãy tối ưu dữ liệu lớp, phòng, ca và lịch tuần trước khi chạy lại thuật toán.';
         case 'NO_ACTIVE_SHIFT':
             return 'Gợi ý: vào Quản lý ca học để tạo hoặc kích hoạt ít nhất một `Ca học` rồi chạy lại xem trước.';
         case 'NO_VALID_DATE_RANGE':
             return 'Gợi ý: chọn ngày kết thúc lớn hơn hoặc bằng ngày bắt đầu.';
         default:
-            return 'Gợi ý: rà lại dữ liệu lớp, giáo viên, phòng và bộ lọc preview.';
+            return 'Gợi ý: rà lại dữ liệu lớp, giáo viên, phòng và bộ lọc xem trước.';
     }
 };
 
@@ -360,12 +407,10 @@ const buildAssignmentFromOption = (
 });
 
 const overlaps = (left: SchedulingAssignment, right: SchedulingAssignment) =>
-    parseISO(left.start_time) < parseISO(right.end_time) &&
-    parseISO(right.start_time) < parseISO(left.end_time);
+    left.start_time < right.end_time && right.start_time < left.end_time;
 
 const overlapsExistingLesson = (assignment: SchedulingAssignment, lesson: SchedulingExistingLesson) =>
-    parseISO(assignment.start_time) < parseISO(lesson.end_time) &&
-    parseISO(lesson.start_time) < parseISO(assignment.end_time);
+    assignment.start_time < lesson.end_time && lesson.start_time < assignment.end_time;
 
 const getCandidateConflictMessages = (
     session: SessionDraft,
@@ -399,13 +444,13 @@ const getCandidateConflictMessages = (
         }
 
         if (assignment.class_id && assignment.class_id === lesson.class_id) {
-            messages.push(`trùng lớp với lesson đã lưu ${lesson.class_code}`);
+            messages.push(`trùng lớp với buổi đã lưu ${lesson.class_code}`);
         }
         if (assignment.teacher_id && lesson.teacher_id && assignment.teacher_id === lesson.teacher_id) {
-            messages.push(`trùng giáo viên với lesson đã lưu ${lesson.class_code}`);
+            messages.push(`trùng giáo viên với buổi đã lưu ${lesson.class_code}`);
         }
         if (assignment.room_id && lesson.room_id && assignment.room_id === lesson.room_id) {
-            messages.push(`phòng ${option.room_name} đã có lesson ${lesson.class_code}`);
+            messages.push(`phòng ${option.room_name} đã có buổi ${lesson.class_code}`);
         }
     });
 
@@ -427,11 +472,12 @@ const scoreAssignments = (assignments: SchedulingAssignment[]) => {
             continue;
         }
 
-        const currentEnd = parseISO(current.end_time);
-        const nextStart = parseISO(next.start_time);
-        if (!isSameDay(currentEnd, nextStart)) {
+        if (current.end_time.slice(0, 10) !== next.start_time.slice(0, 10)) {
             continue;
         }
+
+        const currentEnd = parseISO(current.end_time);
+        const nextStart = parseISO(next.start_time);
 
         const gapMinutes = (nextStart.getTime() - currentEnd.getTime()) / (1000 * 60);
         if (gapMinutes >= 0 && gapMinutes <= 30) {
@@ -476,6 +522,207 @@ const getOptionScoreDelta = (
     previewState: DerivedPreviewState,
 ) => scoreAssignments(replaceAssignmentForScoring(session, option, previewState.calendarAssignments)) - previewState.summary.softScore;
 
+type ScoreContribution = {
+    key: string;
+    score: number;
+    gapMinutes: number;
+    side: 'before' | 'after';
+};
+
+type ScoreDeltaInsight = {
+    delta: number;
+    positives: string[];
+    negatives: string[];
+    neutral: string[];
+};
+
+const getNeighborContributions = (
+    assignment: SchedulingAssignment,
+    assignments: SchedulingAssignment[],
+) => {
+    if (!assignment.teacher_id) {
+        return [] as ScoreContribution[];
+    }
+
+    const assignmentStartPrefix = assignment.start_time.slice(0, 10);
+    const sameTeacherSameDay = assignments
+        .filter((item) =>
+            item.variable_id !== assignment.variable_id &&
+            item.teacher_id === assignment.teacher_id &&
+            item.start_time.startsWith(assignmentStartPrefix),
+        )
+        .sort((left, right) => left.start_time.localeCompare(right.start_time));
+
+    const assignmentStart = parseISO(assignment.start_time);
+    const previousCandidates = sameTeacherSameDay
+        .filter((item) => parseISO(item.start_time) < assignmentStart);
+    const previous = previousCandidates.length > 0 ? previousCandidates[previousCandidates.length - 1] : undefined;
+    const next = sameTeacherSameDay.find((item) => parseISO(item.start_time) > assignmentStart);
+
+    const contributions: ScoreContribution[] = [];
+    if (previous) {
+        const gapMinutes = Math.round((assignmentStart.getTime() - parseISO(previous.end_time).getTime()) / (1000 * 60));
+        if (gapMinutes >= 0 && gapMinutes <= 30) {
+            contributions.push({ key: `before:${previous.variable_id}`, score: 10, gapMinutes, side: 'before' });
+        } else if (gapMinutes > 120) {
+            contributions.push({
+                key: `before:${previous.variable_id}`,
+                score: -Math.floor(gapMinutes / 60) * 3,
+                gapMinutes,
+                side: 'before',
+            });
+        }
+    }
+
+    if (next) {
+        const gapMinutes = Math.round((parseISO(next.start_time).getTime() - parseISO(assignment.end_time).getTime()) / (1000 * 60));
+        if (gapMinutes >= 0 && gapMinutes <= 30) {
+            contributions.push({ key: `after:${next.variable_id}`, score: 10, gapMinutes, side: 'after' });
+        } else if (gapMinutes > 120) {
+            contributions.push({
+                key: `after:${next.variable_id}`,
+                score: -Math.floor(gapMinutes / 60) * 3,
+                gapMinutes,
+                side: 'after',
+            });
+        }
+    }
+
+    return contributions;
+};
+
+const formatGapMinutes = (gapMinutes: number) => {
+    const hours = Math.floor(gapMinutes / 60);
+    const minutes = gapMinutes % 60;
+    if (hours > 0 && minutes > 0) {
+        return `${hours} giờ ${minutes} phút`;
+    }
+    if (hours > 0) {
+        return `${hours} giờ`;
+    }
+    return `${minutes} phút`;
+};
+
+const describeContributionChange = (
+    oldItem: ScoreContribution | undefined,
+    newItem: ScoreContribution | undefined,
+    diff: number,
+) => {
+    const active = newItem || oldItem;
+    if (!active) {
+        return null;
+    }
+
+    const sideLabel = active.side === 'before' ? 'trước buổi này' : 'sau buổi này';
+    const diffLabel = diff > 0 ? `+${diff}` : `${diff}`;
+
+    if (diff > 0) {
+        if (newItem && newItem.score > 0) {
+            return {
+                tone: 'positive' as const,
+                message: `Điểm cộng ${diffLabel}: lịch giáo viên gọn hơn ${sideLabel}, chỉ nghỉ ${formatGapMinutes(newItem.gapMinutes)}.`,
+            };
+        }
+        if (oldItem && oldItem.score < 0) {
+            return {
+                tone: 'positive' as const,
+                message: `Điểm cộng ${diffLabel}: giảm khoảng trống dài ${sideLabel} từ ${formatGapMinutes(oldItem.gapMinutes)}.`,
+            };
+        }
+    }
+
+    if (diff < 0) {
+        if (newItem && newItem.score < 0) {
+            return {
+                tone: 'negative' as const,
+                message: `Điểm trừ ${diffLabel}: tạo khoảng trống dài ${sideLabel} ${formatGapMinutes(newItem.gapMinutes)} trong lịch giáo viên.`,
+            };
+        }
+        if (oldItem && oldItem.score > 0) {
+            return {
+                tone: 'negative' as const,
+                message: `Điểm trừ ${diffLabel}: mất lợi thế xếp liền ca ${sideLabel}, trước đó chỉ nghỉ ${formatGapMinutes(oldItem.gapMinutes)}.`,
+            };
+        }
+    }
+
+    return null;
+};
+
+const getOptionScoreInsight = (
+    session: SessionDraft,
+    option: SchedulingCandidateOption,
+    previewState: DerivedPreviewState,
+): ScoreDeltaInsight => {
+    const delta = getOptionScoreDelta(session, option, previewState);
+    const currentAssignment = previewState.calendarAssignments.find((item) => item.variable_id === session.variableId)
+        || session.baseAssignment
+        || null;
+    const candidateAssignment = buildAssignmentFromOption(session, option);
+    const otherAssignments = previewState.calendarAssignments.filter((item) => item.variable_id !== session.variableId);
+
+    const oldMap = new Map((currentAssignment ? getNeighborContributions(currentAssignment, otherAssignments) : []).map((item) => [item.key, item]));
+    const newMap = new Map(getNeighborContributions(candidateAssignment, otherAssignments).map((item) => [item.key, item]));
+    const keys = new Set([...oldMap.keys(), ...newMap.keys()]);
+
+    const positives: string[] = [];
+    const negatives: string[] = [];
+    keys.forEach((key) => {
+        const oldItem = oldMap.get(key);
+        const newItem = newMap.get(key);
+        const diff = (newItem?.score || 0) - (oldItem?.score || 0);
+        if (diff === 0) {
+            return;
+        }
+        const detail = describeContributionChange(oldItem, newItem, diff);
+        if (!detail) {
+            return;
+        }
+        if (detail.tone === 'positive') {
+            positives.push(detail.message);
+            return;
+        }
+        negatives.push(detail.message);
+    });
+
+    const neutral = [
+        'Phương án này đã vượt qua kiểm tra trùng lớp, trùng giáo viên và trùng phòng trong thời điểm hiện tại.',
+    ];
+    if (delta === 0 && positives.length === 0 && negatives.length === 0) {
+        neutral.push('Điểm mềm không đổi vì khoảng nghỉ giữa các ca của giáo viên gần như giữ nguyên.');
+    }
+
+    return {
+        delta,
+        positives,
+        negatives,
+        neutral,
+    };
+};
+
+const renderScoreInsightTooltip = (insight: ScoreDeltaInsight): ReactNode => (
+    <Stack spacing={0.75} sx={{ maxWidth: 320, py: 0.5 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            Ảnh hưởng điểm mềm {formatScoreDelta(insight.delta)}
+        </Typography>
+        {insight.positives.map((item) => (
+            <Typography key={`pos-${item}`} variant="caption" sx={{ color: '#bbf7d0' }}>
+                • {item}
+            </Typography>
+        ))}
+        {insight.negatives.map((item) => (
+            <Typography key={`neg-${item}`} variant="caption" sx={{ color: '#fecaca' }}>
+                • {item}
+            </Typography>
+        ))}
+        {insight.neutral.map((item) => (
+            <Typography key={`neu-${item}`} variant="caption" sx={{ color: 'rgba(255,255,255,0.86)' }}>
+                • {item}
+            </Typography>
+        ))}
+    </Stack>
+);
+
 const buildWeeks = (preview: SchedulingPreview) => {
     const dateFrom = preview.filters.date_from || fallbackDateFrom;
     const dateTo = preview.filters.date_to || dateFrom;
@@ -493,7 +740,6 @@ export const SchedulingPage = () => {
     const [manualSelections, setManualSelections] = useState<Record<string, string>>({});
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [pendingOptionKey, setPendingOptionKey] = useState('');
-    const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null);
 
     const { data: classesData, isLoading: isLoadingClasses } = useGetClassesQuery({ page: 1, limit: 200, status: 'OPEN' });
     const { data: teachersData, isLoading: isLoadingTeachers } = useGetTeachersQuery({ page: 1, limit: 200, status: 'ACTIVE' });
@@ -515,6 +761,7 @@ export const SchedulingPage = () => {
         resolver: zodResolver(schedulingSchema),
         defaultValues: {
             mode: 'class',
+            preview_strategy: 'replan_with_published_lock',
             expected_start_date: '',
             class_ids: [],
             teacher_ids: [],
@@ -522,6 +769,7 @@ export const SchedulingPage = () => {
     });
 
     const selectedMode = useWatch({ control, name: 'mode' });
+    const selectedPreviewStrategy = useWatch({ control, name: 'preview_strategy' });
     const selectedClassIds = useWatch({ control, name: 'class_ids' }) || [];
     const selectedTeacherIds = useWatch({ control, name: 'teacher_ids' }) || [];
     const expectedStartDate = useWatch({ control, name: 'expected_start_date' }) || '';
@@ -723,7 +971,7 @@ export const SchedulingPage = () => {
                 overlapTags.get(assignment.variable_id)?.add('Trùng ngày/ca');
                 existingLessonConflictTags.get(lesson.lesson_id)?.add('Trùng ngày/ca');
                 overlapMessages.get(assignment.variable_id)?.add(
-                    `${reasons.join(', ')} với lesson đã lưu ${lesson.class_code} lúc ${formatCompactDateTime(lesson.start_time)}`,
+                    `${reasons.join(', ')} với buổi đã lưu ${lesson.class_code} lúc ${formatCompactDateTime(lesson.start_time)}`,
                 );
                 reasons.forEach((reason) => {
                     const label = reason.replace(/^trùng /, 'Trùng ');
@@ -941,7 +1189,6 @@ export const SchedulingPage = () => {
         setManualSelections({});
         setActiveSessionId(null);
         setPendingOptionKey('');
-        setDraggedSessionId(null);
     };
 
     const syncPreviewState = (nextPreview: SchedulingPreview) => {
@@ -963,6 +1210,7 @@ export const SchedulingPage = () => {
             const response = await previewScheduling({
                 date_from: dateFrom,
                 date_to: deriveDefaultEndDate(schedulingClasses, dateFrom),
+                mode: values.preview_strategy,
                 class_ids: values.mode === 'class' ? values.class_ids : [],
                 teacher_ids: values.mode === 'teacher' ? values.teacher_ids : [],
             }).unwrap();
@@ -998,7 +1246,13 @@ export const SchedulingPage = () => {
         }
     };
 
-    const openEditDialog = (variableId: string) => {
+    const toggleEditMode = (variableId: string) => {
+        if (activeSessionId === variableId) {
+            setActiveSessionId(null);
+            setPendingOptionKey('');
+            return;
+        }
+
         const session = derivedPreview?.sessions.find((item) => item.variableId === variableId);
         if (!session || !derivedPreview) {
             return;
@@ -1054,17 +1308,13 @@ export const SchedulingPage = () => {
             ...current,
             [variableId]: optionKey,
         }));
-        setDraggedSessionId(null);
+        setActiveSessionId(null);
+        setPendingOptionKey('');
     };
-
-    const draggedSession = useMemo(
-        () => derivedPreview?.sessions.find((session) => session.variableId === draggedSessionId) || null,
-        [derivedPreview, draggedSessionId],
-    );
 
     const handleCommitPreview = async () => {
         if (!preview?.run_id || !derivedPreview) {
-            toast.error('Chưa có preview nào để commit');
+            toast.error('Chưa có bản xem trước nào để lưu');
             return;
         }
 
@@ -1086,7 +1336,7 @@ export const SchedulingPage = () => {
                     // Keep the current client-side state if backend preview cannot be reloaded.
                 }
             }
-            toast.error(getApiErrorMessage(error, 'Không thể xác nhận xem trước xếp lịch'));
+            toast.error(getApiErrorMessage(error, 'Không thể lưu bản xem trước xếp lịch'));
         }
     };
 
@@ -1154,6 +1404,24 @@ export const SchedulingPage = () => {
                                 )}
                             />
 
+                            <Controller
+                                control={control}
+                                name="preview_strategy"
+                                render={({ field }) => (
+                                    <TextField {...field} select label="Chế độ xem trước" fullWidth>
+                                        {previewStrategyOptions.map((option) => (
+                                            <MenuItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                )}
+                            />
+
+                            <Alert severity={selectedPreviewStrategy === 'cold_start' ? 'warning' : 'info'}>
+                                {previewStrategyOptions.find((option) => option.value === selectedPreviewStrategy)?.description}
+                            </Alert>
+
                             {selectedMode === 'class' ? (
                                 <Controller
                                     control={control}
@@ -1171,7 +1439,7 @@ export const SchedulingPage = () => {
                                                     {...params}
                                                     label="Chọn lớp"
                                                     error={!!errors.class_ids}
-                                                    helperText={errors.class_ids?.message || 'Có thể chọn một hoặc nhiều lớp OPEN cần xếp lịch.'}
+                                                    helperText={errors.class_ids?.message || 'Có thể chọn một hoặc nhiều lớp đang mở cần xếp lịch.'}
                                                 />
                                             )}
                                         />
@@ -1194,7 +1462,7 @@ export const SchedulingPage = () => {
                                                     {...params}
                                                     label="Chọn giáo viên"
                                                     error={!!errors.teacher_ids}
-                                                    helperText={errors.teacher_ids?.message || 'Hệ thống sẽ lấy các lớp OPEN mà giáo viên đang phụ trách.'}
+                                                    helperText={errors.teacher_ids?.message || 'Hệ thống sẽ lấy các lớp đang mở mà giáo viên đang phụ trách.'}
                                                 />
                                             )}
                                         />
@@ -1217,9 +1485,9 @@ export const SchedulingPage = () => {
                                 )}
                             />
 
-                            <Alert severity="info">
-                                Bộ lọc phòng và khoảng thời gian đã được bỏ khỏi màn này để tránh nhập trùng dữ liệu. Nếu muốn đổi phòng/ca, hãy sửa lịch tuần của lớp hoặc chỉnh tay trong màn preview.
-                            </Alert>
+                            {/*<Alert severity="info">*/}
+                            {/*    Bộ lọc phòng và khoảng thời gian đã được bỏ khỏi màn này để tránh nhập trùng dữ liệu. Nếu muốn đổi phòng/ca, hãy sửa lịch tuần của lớp hoặc chỉnh tay trong màn preview.*/}
+                            {/*</Alert>*/}
 
                             <Stack direction="row" justifyContent="flex-end">
                                 <Button variant="contained" onClick={() => void handleContinueConfig()}>
@@ -1270,15 +1538,31 @@ export const SchedulingPage = () => {
                                         Từ {format(parseISO(derivedDateFrom), 'dd/MM/yyyy', { locale: vi })} đến {format(parseISO(derivedDateTo), 'dd/MM/yyyy', { locale: vi })}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        Ngày bắt đầu lấy từ lựa chọn dự kiến hoặc start date của lớp; ngày kết thúc lấy từ end date của lớp.
+                                        Ngày bắt đầu lấy từ lựa chọn dự kiến hoặc ngày bắt đầu của lớp; ngày kết thúc lấy từ ngày kết thúc của lớp.
                                     </Typography>
+                                </Paper>
+
+                                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, flex: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                        Chế độ xem trước
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {previewStrategyOptions.find((item) => item.value === selectedPreviewStrategy)?.description}
+                                    </Typography>
+                                    <Chip
+                                        sx={{ mt: 1 }}
+                                        size="small"
+                                        color={selectedPreviewStrategy === 'cold_start' ? 'warning' : 'primary'}
+                                        label={previewModeLabel(selectedPreviewStrategy)}
+                                        variant="outlined"
+                                    />
                                 </Paper>
                             </Stack>
 
                             <Alert severity={schedulingClasses.length > 0 ? 'success' : 'warning'}>
                                 {schedulingClasses.length > 0
-                                    ? 'Cấu hình đã sẵn sàng. Preview sẽ dùng lịch tuần lớp để chọn ngày, ca và phòng.'
-                                    : 'Chưa tìm thấy lớp OPEN phù hợp. Bạn có thể quay lại đổi lớp hoặc giáo viên.'}
+                                    ? 'Cấu hình đã sẵn sàng. Bản xem trước sẽ dùng lịch tuần lớp để chọn ngày, ca và phòng.'
+                                    : 'Chưa tìm thấy lớp đang mở phù hợp. Bạn có thể quay lại đổi lớp hoặc giáo viên.'}
                             </Alert>
 
                             <Stack direction="row" justifyContent="space-between">
@@ -1307,10 +1591,10 @@ export const SchedulingPage = () => {
                     >
                         <RuleRounded sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            Chưa có preview nào
+                            Chưa có bản xem trước nào
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
-                            Bấm `Chạy xếp lịch` để tạo preview đầu tiên hoặc tải preview gần nhất từ backend.
+                            Bấm `Chạy xếp lịch` để tạo bản xem trước đầu tiên hoặc tải lần chạy gần nhất từ hệ thống.
                         </Typography>
                         <Stack direction="row" spacing={1} justifyContent="center">
                             <Button variant="contained" startIcon={<PlayArrowRounded />} onClick={() => void handleRunPreview()}>
@@ -1336,10 +1620,10 @@ export const SchedulingPage = () => {
                             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between">
                                 <Box>
                                     <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                                        Chạy xem trước: {preview.run_id}
+                                        Lần chạy xem trước: {preview.run_id}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Sinh lúc {formatDateTime(preview.generated_at)} • Trạng thái hiện tại {derivedPreview.status}
+                                        Sinh lúc {formatDateTime(preview.generated_at)} • Trạng thái hiện tại {previewStatusLabel(derivedPreview.status)}
                                     </Typography>
                                 </Box>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -1348,9 +1632,10 @@ export const SchedulingPage = () => {
                                     <Chip label={`${derivedPreview.summary.scheduledLessons} buổi đã xếp`} color="success" variant="outlined" />
                                     <Chip label={`${derivedPreview.summary.unscheduledLessons} buổi chưa xếp`} color="warning" variant="outlined" />
                                     <Chip label={`${derivedPreview.summary.conflictCount} trùng`} color="error" variant="outlined" />
+                                    <Chip label={previewModeLabel(preview.mode)} color="info" variant="outlined" />
                                     <Chip label={`Điểm mềm ${derivedPreview.summary.softScore}`} color="primary" variant="outlined" />
                                     <Chip
-                                        label={`Delta ${formatScoreDelta(derivedPreview.summary.scoreDelta)}`}
+                                        label={`Chênh điểm ${formatScoreDelta(derivedPreview.summary.scoreDelta)}`}
                                         color={getScoreDeltaTone(derivedPreview.summary.scoreDelta)}
                                         variant="outlined"
                                     />
@@ -1363,9 +1648,49 @@ export const SchedulingPage = () => {
                             </Stack>
                         </Paper>
 
+                        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2}>
+                            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4, flex: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.75 }}>
+                                    Tác động khi xếp lại
+                                </Typography>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                    <Chip
+                                        label={`${preview.summary.schedule_change_count} ca đổi lịch`}
+                                        color={preview.summary.schedule_change_count > 0 ? 'warning' : 'success'}
+                                        variant="outlined"
+                                    />
+                                    <Chip
+                                        label={`${preview.summary.teacher_change_count} ca đổi giáo viên`}
+                                        color={preview.summary.teacher_change_count > 0 ? 'warning' : 'success'}
+                                        variant="outlined"
+                                    />
+                                    <Chip
+                                        label={`${preview.summary.room_change_count} ca đổi phòng`}
+                                        color={preview.summary.room_change_count > 0 ? 'warning' : 'success'}
+                                        variant="outlined"
+                                    />
+                                </Stack>
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1.25, display: 'block' }}>
+                                    Nếu các chỉ số này tăng cao, bản xem trước đang phải xáo trộn nhiều hơn mức mong muốn cho vận hành thực tế.
+                                </Typography>
+                            </Paper>
+
+                            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4, flex: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.75 }}>
+                                    Mức lấp đầy trung bình
+                                </Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                                    {(preview.summary.average_capacity_utilization * 100).toFixed(0)}%
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Tỷ lệ lấp đầy trung bình của các buổi đã được xếp trong lần chạy xem trước hiện tại.
+                                </Typography>
+                            </Paper>
+                        </Stack>
+
                         <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4 }}>
                             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                                Thông tin lớp trong preview
+                                Thông tin lớp trong bản xem trước
                             </Typography>
                             <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} flexWrap="wrap" useFlexGap>
                                 {classPreviewSummaries.map((item) => (
@@ -1416,7 +1741,13 @@ export const SchedulingPage = () => {
 
                         {derivedPreview.summary.scoreDelta < 0 ? (
                             <Alert severity={derivedPreview.summary.scoreDelta < -10 ? 'warning' : 'info'}>
-                                Điểm luật mềm đang thấp hơn {Math.abs(derivedPreview.summary.scoreDelta)} điểm so với kết quả solver ban đầu ({derivedPreview.summary.baseSoftScore}). Nếu đây không phải phương án bắt buộc, nên chọn slot khác ít ảnh hưởng chất lượng lịch hơn.
+                                Điểm luật mềm đang thấp hơn {Math.abs(derivedPreview.summary.scoreDelta)} điểm so với kết quả thuật toán ban đầu ({derivedPreview.summary.baseSoftScore}). Nếu đây không phải phương án bắt buộc, nên chọn slot khác ít ảnh hưởng chất lượng lịch hơn.
+                            </Alert>
+                        ) : null}
+
+                        {preview.summary.schedule_change_count > 0 && preview.mode === 'replan_with_published_lock' ? (
+                            <Alert severity="info">
+                                Bản xem trước đang ở chế độ giữ lịch đã công bố nhưng vẫn có {preview.summary.schedule_change_count} ca bị dịch chuyển. Nên rà lại tác động trước khi lưu nếu đây là lịch gần công bố.
                             </Alert>
                         ) : null}
 
@@ -1478,7 +1809,7 @@ export const SchedulingPage = () => {
 
                             {canCommitPreview ? (
                                 <Alert severity="success" sx={{ mb: 2 }}>
-                                    Lịch hiện đã đạt trạng thái `COMPLETED`. Bạn có thể commit để tạo `lesson` thật; backend sẽ kiểm tra lần cuối trước khi ghi dữ liệu.
+                                    Lịch hiện đã đạt trạng thái `Hoàn tất`. Bạn có thể xác nhận lưu để tạo buổi học thật; hệ thống sẽ kiểm tra lần cuối trước khi ghi dữ liệu.
                                 </Alert>
                             ) : (
                                 <Alert severity="info" sx={{ mb: 2 }}>
@@ -1514,15 +1845,16 @@ export const SchedulingPage = () => {
                                                 }}
                                             >
                                                 {week.map((day, dayIndex) => {
+                                                    const dayString = format(day, 'yyyy-MM-dd');
                                                     const dayAssignments = derivedPreview.calendarAssignments.filter((assignment) =>
-                                                        isSameDay(parseISO(assignment.start_time), day),
+                                                        assignment.start_time.startsWith(dayString),
                                                     );
                                                     const dayExistingLessons = derivedPreview.existingLessons.filter((lesson) =>
-                                                        isSameDay(parseISO(lesson.start_time), day),
+                                                        lesson.start_time.startsWith(dayString),
                                                     );
-                                                    const dayDropOptions = draggedSession
-                                                        ? getAvailableOptionsForSession(draggedSession).filter((option) =>
-                                                            isSameDay(parseISO(option.start_time), day),
+                                                    const dayActiveOptions = activeSession
+                                                        ? activeSessionAvailableOptions.filter((option) =>
+                                                            option.start_time.startsWith(dayString),
                                                         )
                                                         : [];
 
@@ -1546,45 +1878,60 @@ export const SchedulingPage = () => {
                                                                     </Typography>
                                                                 </Box>
 
-                                                                {draggedSession && dayDropOptions.length > 0 ? (
-                                                                    <Paper
-                                                                        variant="outlined"
-                                                                        sx={{
-                                                                            p: 1,
-                                                                            borderRadius: 2,
-                                                                            borderStyle: 'dashed',
-                                                                            borderColor: 'secondary.main',
-                                                                            backgroundColor: 'rgba(168,85,247,0.04)',
-                                                                        }}
-                                                                        onDragOver={(event) => event.preventDefault()}
-                                                                    >
-                                                                        <Stack spacing={1}>
-                                                                            <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                                                                                Thả {draggedSession.classCode} • Buổi {draggedSession.sessionIndex}/{draggedSession.sessionTotal} vào một slot trống:
-                                                                            </Typography>
-                                                                            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                                                                                {dayDropOptions.map((option) => {
-                                                                                    const delta = getOptionScoreDelta(draggedSession, option, derivedPreview);
-                                                                                    return (
-                                                                                        <Chip
-                                                                                            key={`${draggedSession.variableId}-${option.key}`}
-                                                                                            clickable
-                                                                                            color={getScoreDeltaTone(delta)}
-                                                                                            variant="outlined"
-                                                                                            label={`${option.shift_name || option.shift_code || 'Ca'} • ${format(parseISO(option.start_time), 'HH:mm', { locale: vi })} • ${option.room_name} • Δ ${formatScoreDelta(delta)}`}
-                                                                                            onClick={() => handleApplyManualOption(draggedSession.variableId, option.key)}
-                                                                                            onDragOver={(event) => event.preventDefault()}
-                                                                                            onDrop={(event) => {
-                                                                                                event.preventDefault();
-                                                                                                handleApplyManualOption(draggedSession.variableId, option.key);
-                                                                                            }}
-                                                                                            sx={{ cursor: 'copy' }}
-                                                                                        />
-                                                                                    );
-                                                                                })}
-                                                                            </Stack>
-                                                                        </Stack>
-                                                                    </Paper>
+                                                                {activeSession && dayActiveOptions.length > 0 ? (
+                                                                    <Stack spacing={1}>
+                                                                        {dayActiveOptions.map((option) => {
+                                                                            const insight = getOptionScoreInsight(activeSession, option, derivedPreview);
+                                                                            const isSelected = pendingOptionKey === option.key;
+                                                                            return (
+                                                                                <Tooltip
+                                                                                    key={`${activeSession.variableId}-${option.key}`}
+                                                                                    title={renderScoreInsightTooltip(insight)}
+                                                                                    placement="top"
+                                                                                    arrow
+                                                                                >
+                                                                                    <Paper
+                                                                                        variant="outlined"
+                                                                                        onClick={() => handleApplyManualOption(activeSession.variableId, option.key)}
+                                                                                        sx={{
+                                                                                            p: 1.25,
+                                                                                            borderRadius: 2.5,
+                                                                                            cursor: 'pointer',
+                                                                                            borderStyle: 'dashed',
+                                                                                            borderWidth: isSelected ? 2 : 1,
+                                                                                            borderColor: isSelected ? 'primary.main' : 'secondary.main',
+                                                                                            backgroundColor: isSelected ? 'rgba(14,165,233,0.08)' : 'rgba(168,85,247,0.04)',
+                                                                                            transition: 'all 0.2s',
+                                                                                            '&:hover': {
+                                                                                                backgroundColor: 'rgba(14,165,233,0.12)',
+                                                                                                borderColor: 'primary.main',
+                                                                                            }
+                                                                                        }}
+                                                                                    >
+                                                                                        <Stack spacing={0.75}>
+                                                                                            <Typography variant="body2" sx={{ fontWeight: 700, color: isSelected ? 'primary.dark' : 'secondary.dark' }}>
+                                                                                                Chuyển tới slot này
+                                                                                            </Typography>
+                                                                                            <Typography variant="caption" color="text.secondary">
+                                                                                                {format(parseISO(option.start_time), 'HH:mm', { locale: vi })} - {format(parseISO(option.end_time), 'HH:mm', { locale: vi })}
+                                                                                            </Typography>
+                                                                                            <Typography variant="caption" color="text.secondary">
+                                                                                                {option.room_name} • {option.shift_name || 'Ca tự do'}
+                                                                                            </Typography>
+                                                                                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                                                                <Chip
+                                                                                                    size="small"
+                                                                                                    color={getScoreDeltaTone(insight.delta)}
+                                                                                                    variant={isSelected ? 'filled' : 'outlined'}
+                                                                                                    label={`Điểm mềm ${formatScoreDelta(insight.delta)}`}
+                                                                                                />
+                                                                                            </Stack>
+                                                                                        </Stack>
+                                                                                    </Paper>
+                                                                                </Tooltip>
+                                                                            );
+                                                                        })}
+                                                                    </Stack>
                                                                 ) : null}
 
                                                                 {dayExistingLessons.length > 0 ? (
@@ -1604,7 +1951,7 @@ export const SchedulingPage = () => {
                                                                             >
                                                                                 <Stack spacing={0.5}>
                                                                                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                                                                        {lesson.class_code} • Lesson đã lưu
+                                                                                        {lesson.class_code} • Buổi đã lưu
                                                                                     </Typography>
                                                                                     <Typography variant="caption" color="text.secondary">
                                                                                         {formatCompactDateTime(lesson.start_time)} - {format(parseISO(lesson.end_time), 'HH:mm', { locale: vi })}
@@ -1624,6 +1971,7 @@ export const SchedulingPage = () => {
                                                                         {dayAssignments.map((assignment) => {
                                                                             const session = derivedPreview.sessions.find((item) => item.variableId === assignment.variable_id);
                                                                             const isManual = !!manualSelections[assignment.variable_id];
+                                                                            const isEditingThis = activeSession?.variableId === assignment.variable_id;
                                                                             return (
                                                                                 <Paper
                                                                                     key={assignment.variable_id}
@@ -1631,8 +1979,9 @@ export const SchedulingPage = () => {
                                                                                     sx={{
                                                                                         p: 1.25,
                                                                                         borderRadius: 2.5,
-                                                                                        backgroundColor: isManual ? 'rgba(56,189,248,0.08)' : 'rgba(15,118,110,0.06)',
-                                                                                        borderColor: session?.derivedConflictMessages.length ? 'warning.main' : 'rgba(15,118,110,0.2)',
+                                                                                        backgroundColor: isEditingThis ? 'rgba(14,165,233,0.12)' : isManual ? 'rgba(56,189,248,0.08)' : 'rgba(15,118,110,0.06)',
+                                                                                        borderColor: isEditingThis ? 'primary.main' : session?.derivedConflictMessages.length ? 'warning.main' : 'rgba(15,118,110,0.2)',
+                                                                                        borderWidth: isEditingThis ? 2 : 1,
                                                                                     }}
                                                                                 >
                                                                                     <Stack spacing={0.75}>
@@ -1655,19 +2004,12 @@ export const SchedulingPage = () => {
                                                                                         {renderConflictChips(session?.conflictTags || [])}
                                                                                         <Button
                                                                                             size="small"
+                                                                                            color={isEditingThis ? 'error' : 'primary'}
                                                                                             startIcon={<EditCalendarRounded />}
-                                                                                            onClick={() => openEditDialog(assignment.variable_id)}
+                                                                                            onClick={() => toggleEditMode(assignment.variable_id)}
                                                                                         >
-                                                                                            Đổi chỗ
+                                                                                            {isEditingThis ? 'Hủy đổi' : 'Đổi chỗ'}
                                                                                         </Button>
-                                                                                        <Chip
-                                                                                            size="small"
-                                                                                            draggable
-                                                                                            label="Kéo thả để đổi ca"
-                                                                                            onDragStart={() => setDraggedSessionId(assignment.variable_id)}
-                                                                                            onDragEnd={() => setDraggedSessionId(null)}
-                                                                                            sx={{ alignSelf: 'flex-start', cursor: 'grab' }}
-                                                                                        />
                                                                                     </Stack>
                                                                                 </Paper>
                                                                             );
@@ -1720,7 +2062,7 @@ export const SchedulingPage = () => {
                                                                     <Chip
                                                                         size="small"
                                                                         color={session.resolvedAssignment ? 'warning' : 'error'}
-                                                                        label={session.resolvedAssignment ? 'Đã xếp nhưng còn conflict' : 'Chưa xếp được'}
+                                                                        label={session.resolvedAssignment ? 'Đã xếp nhưng còn xung đột' : 'Chưa xếp được'}
                                                                     />
                                                                     <Chip
                                                                         size="small"
@@ -1746,23 +2088,18 @@ export const SchedulingPage = () => {
                                                                 </Alert>
                                                             ))}
                                                             <Button
-                                                                variant="outlined"
+                                                                variant={activeSessionId === session.variableId ? 'contained' : 'outlined'}
+                                                                color={activeSessionId === session.variableId ? 'error' : 'primary'}
                                                                 startIcon={<EditCalendarRounded />}
-                                                                onClick={() => openEditDialog(session.variableId)}
+                                                                onClick={() => toggleEditMode(session.variableId)}
                                                                 disabled={availableOptionCount === 0}
                                                             >
-                                                                {availableOptionCount > 0 ? 'Chọn ngày/ca/phòng trống' : 'Không còn phương án trống'}
+                                                                {availableOptionCount > 0
+                                                                    ? activeSessionId === session.variableId
+                                                                        ? 'Hủy đổi'
+                                                                        : 'Chọn ngày/ca/phòng trống'
+                                                                    : 'Không còn phương án trống'}
                                                             </Button>
-                                                            {availableOptionCount > 0 ? (
-                                                                <Chip
-                                                                    size="small"
-                                                                    draggable
-                                                                    label="Kéo vào lịch tuần để đổi ca"
-                                                                    onDragStart={() => setDraggedSessionId(session.variableId)}
-                                                                    onDragEnd={() => setDraggedSessionId(null)}
-                                                                    sx={{ alignSelf: 'flex-start', cursor: 'grab' }}
-                                                                />
-                                                            ) : null}
                                                         </Stack>
                                                     </Paper>
                                                 );
@@ -1806,86 +2143,6 @@ export const SchedulingPage = () => {
                 ) : null}
             </Stack>
 
-            <Dialog open={!!activeSession} onClose={() => setActiveSessionId(null)} fullWidth maxWidth="sm">
-                <DialogTitle>Chỉnh chỗ cho ca học</DialogTitle>
-                <DialogContent dividers>
-                    {activeSession ? (
-                        <Stack spacing={2}>
-                            <Box>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                                    {activeSession.classCode} - {activeSession.className}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Buổi {activeSession.sessionIndex}/{activeSession.sessionTotal}
-                                </Typography>
-                                {activeSession.resolvedAssignment ? (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                        Hiện tại: {formatDateTime(activeSession.resolvedAssignment.start_time)} • {activeSession.resolvedAssignment.room_name} • {activeSession.resolvedAssignment.shift_name || 'Ca tự do'}
-                                    </Typography>
-                                ) : null}
-                            </Box>
-
-                            <Divider />
-
-                            <TextField
-                                select
-                                label="Chọn ngày, ca và phòng trống"
-                                value={pendingOptionKey}
-                                onChange={(event) => setPendingOptionKey(event.target.value)}
-                                fullWidth
-                                helperText={
-                                    activeSessionAvailableOptions.length > 0
-                                        ? 'Danh sách chỉ hiển thị các phương án chưa trùng lớp, giáo viên hoặc phòng trong thời điểm đó.'
-                                        : 'Tất cả phương án hiện đang trùng lịch. Hãy nới khoảng ngày hoặc bổ sung ca/phòng khác.'
-                                }
-                            >
-                                {activeSessionAvailableOptions.map((option) => {
-                                    const delta = derivedPreview ? getOptionScoreDelta(activeSession, option, derivedPreview) : 0;
-                                    return (
-                                        <MenuItem key={option.key} value={option.key}>
-                                            <Stack
-                                                direction="row"
-                                                spacing={1}
-                                                alignItems="center"
-                                                justifyContent="space-between"
-                                                sx={{ width: '100%' }}
-                                            >
-                                                <Box>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                        {formatOptionTitle(option)}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {option.shift_name || option.shift_code || 'Ca tự do'} • {format(parseISO(option.start_time), 'HH:mm', { locale: vi })} - {format(parseISO(option.end_time), 'HH:mm', { locale: vi })} • {option.room_name} trống • Sức chứa {option.room_capacity}
-                                                    </Typography>
-                                                </Box>
-                                                <Chip
-                                                    size="small"
-                                                    color={getScoreDeltaTone(delta)}
-                                                    variant="outlined"
-                                                    label={`Δ ${formatScoreDelta(delta)}`}
-                                                />
-                                            </Stack>
-                                        </MenuItem>
-                                    );
-                                })}
-                            </TextField>
-                        </Stack>
-                    ) : null}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setActiveSessionId(null)}>Đóng</Button>
-                    <Button onClick={handleClearSessionSelection} disabled={!manualSelections[activeSessionId || '']}>
-                        Bỏ chỉnh ca này
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={handleSaveManualSelection}
-                        disabled={!activeSession || !pendingOptionKey || activeSessionAvailableOptions.length === 0}
-                    >
-                        Áp dụng
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </Box>
     );
 };

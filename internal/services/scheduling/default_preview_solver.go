@@ -27,7 +27,7 @@ func (s *legacyPreviewSolver) Label() string {
 
 func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
 	problem := prepareSchedulingProblem(input)
-	solver := newBacktrackingSolver(problem.variables, problem.domains, problem.noDomainConflicts)
+	solver := newBacktrackingSolver(&problem)
 	assignments, solverConflicts := solver.Solve()
 
 	assignmentsByID := make(map[string]PreviewAssignment, len(assignments))
@@ -35,7 +35,7 @@ func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*Solv
 		assignmentsByID[assignment.VariableID] = assignment
 	}
 
-	return buildSolverOutput(input, problem.variables, assignmentsByID, problem.presetConflicts, problem.noDomainConflicts, solverConflicts), nil
+	return buildSolverOutput(input, problem.variables, assignmentsByID, problem.presetConflicts, problem.noDomainConflicts, solverConflicts, problem.targetLessons), nil
 }
 
 func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
@@ -439,8 +439,43 @@ func startOfDay(value time.Time) time.Time {
 	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, value.Location())
 }
 
-func scoreAssignments(assignments []PreviewAssignment) int {
+func scoreAssignments(assignments []PreviewAssignment, targetLessons map[string]entities.Lesson) int {
 	score := 0
+	for _, assignment := range assignments {
+		if target, ok := targetLessons[assignment.VariableID]; ok {
+			targetTeacherID := ""
+			if target.TeacherID != nil {
+				targetTeacherID = *target.TeacherID
+			}
+			targetRoomID := ""
+			if target.RoomID != nil {
+				targetRoomID = *target.RoomID
+			}
+
+			if target.Status == entities.LessonStatusPublished {
+				if !assignment.StartTime.Equal(target.DateStart) {
+					score -= 1000
+				}
+				if assignment.TeacherID != targetTeacherID {
+					score -= 500
+				}
+				if assignment.RoomID != targetRoomID {
+					score -= 500
+				}
+			} else {
+				if !assignment.StartTime.Equal(target.DateStart) {
+					score -= 100
+				}
+				if assignment.TeacherID != targetTeacherID {
+					score -= 50
+				}
+				if assignment.RoomID != targetRoomID {
+					score -= 50
+				}
+			}
+		}
+	}
+
 	for i := 0; i < len(assignments)-1; i++ {
 		current := assignments[i]
 		next := assignments[i+1]
@@ -461,25 +496,23 @@ func sameDay(left, right time.Time) bool {
 }
 
 type backtrackingSolver struct {
+	problem           *preparedSchedulingProblem
 	variables         []Variable
 	domains           map[string][]DomainValue
 	noDomainConflicts map[string]PreviewConflict
 }
 
-func newBacktrackingSolver(
-	variables []Variable,
-	domains map[string][]DomainValue,
-	noDomainConflicts map[string]PreviewConflict,
-) *backtrackingSolver {
-	clonedDomains := make(map[string][]DomainValue, len(domains))
-	for key, values := range domains {
+func newBacktrackingSolver(problem *preparedSchedulingProblem) *backtrackingSolver {
+	clonedDomains := make(map[string][]DomainValue, len(problem.domains))
+	for key, values := range problem.domains {
 		clonedDomains[key] = append([]DomainValue(nil), values...)
 	}
 
 	return &backtrackingSolver{
-		variables:         append([]Variable(nil), variables...),
+		problem:           problem,
+		variables:         append([]Variable(nil), problem.variables...),
 		domains:           clonedDomains,
-		noDomainConflicts: noDomainConflicts,
+		noDomainConflicts: problem.noDomainConflicts,
 	}
 }
 
@@ -608,7 +641,7 @@ func (s *backtrackingSolver) isConsistent(variable Variable, value DomainValue, 
 		return false
 	}
 
-	return !hasConflict(variable, value, assignments)
+	return !s.problem.hasConflict(variable, value, assignments)
 }
 
 func (s *backtrackingSolver) forwardCheck(variable Variable, assignments map[string]PreviewAssignment) (map[string][]DomainValue, bool) {

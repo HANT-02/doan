@@ -15,6 +15,8 @@ import {
 } from '@mui/material';
 import type { Class } from '@/api/classApi';
 import { useGetTeachersQuery } from '@/api/teacherApi';
+import { useGetProgramsQuery } from '@/api/programApi';
+import { useGetCoursesQuery } from '@/api/courseApi';
 
 const classSchema = z.object({
     code: z.string().min(1, 'Mã lớp không được để trống'),
@@ -48,8 +50,12 @@ interface ClassDialogProps {
 const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDialogProps) => {
     const { data: teachersData } = useGetTeachersQuery({ limit: 100 });
     const teachers = teachersData?.data?.teachers || [];
-    // Note: Program and Course APIs are missing in current repo evidence, 
-    // using placeholder selectors for now or simple text IDs.
+
+    const { data: programsData } = useGetProgramsQuery({ limit: 100 });
+    const programs = programsData?.data?.programs || [];
+
+    const { data: coursesData } = useGetCoursesQuery({ limit: 200 });
+    const courses = coursesData?.data?.courses || [];
 
     const {
         register,
@@ -192,6 +198,38 @@ const ClassDialog = ({ open, onClose, onSubmit, classData, isLoading }: ClassDia
                             <MenuItem value="OPEN">Đang mở</MenuItem>
                             <MenuItem value="CLOSED">Đã đóng</MenuItem>
                             <MenuItem value="CANCELLED">Hủy bỏ</MenuItem>
+                        </TextField>
+                    </Grid>
+                    <Grid size={6}>
+                        <TextField
+                            fullWidth
+                            select
+                            label="Chương trình học"
+                            {...register('program_id')}
+                            defaultValue=""
+                        >
+                            <MenuItem value=""><em>Chưa gán</em></MenuItem>
+                            {programs.map((p) => (
+                                <MenuItem key={p.id} value={p.id}>
+                                    {p.name} ({p.code})
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    </Grid>
+                    <Grid size={6}>
+                        <TextField
+                            fullWidth
+                            select
+                            label="Khóa học"
+                            {...register('course_id')}
+                            defaultValue=""
+                        >
+                            <MenuItem value=""><em>Chưa gán</em></MenuItem>
+                            {courses.map((c) => (
+                                <MenuItem key={c.id} value={c.id}>
+                                    {c.name} ({c.code})
+                                </MenuItem>
+                            ))}
                         </TextField>
                     </Grid>
                     <Grid size={12}>

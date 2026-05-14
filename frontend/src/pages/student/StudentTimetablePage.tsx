@@ -38,6 +38,15 @@ import ScheduleCardShell from '@/components/schedule/ScheduleCardShell';
 import WeekScheduleBoard from '@/components/schedule/WeekScheduleBoard';
 import { getApiErrorMessage } from '@/utils/apiError';
 
+function isRenderableEmptyStateError(error: unknown) {
+    if (typeof error !== 'object' || !error || !('status' in error)) {
+        return false;
+    }
+
+    const apiError = error as { status?: number | string };
+    return apiError.status === 403 || apiError.status === 404;
+}
+
 function buildWeekDays(weekStart: Date) {
     return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 }
@@ -119,6 +128,9 @@ export default function StudentTimetablePage() {
     const leaveRequests = leaveResponse?.data?.requests ?? [];
     const attendanceSummary = attendanceResponse?.data?.summary;
     const attendanceRecords = attendanceResponse?.data?.records ?? [];
+    const canRenderTimetableShell = !timetableError || isRenderableEmptyStateError(timetableError);
+    const canRenderAttendanceShell = !attendanceError || isRenderableEmptyStateError(attendanceError);
+    const canRenderLeaveShell = !leaveError || isRenderableEmptyStateError(leaveError);
 
     const availableClasses = useMemo(() => {
         const source = attendanceRecords.length ? attendanceRecords.map((record) => record.lesson) : lessons;
@@ -221,9 +233,20 @@ export default function StudentTimetablePage() {
                 </Stack>
             </Paper>
 
-            {timetableError ? <Alert severity="error">{getApiErrorMessage(timetableError, 'Không tải được thời khóa biểu của bạn.')}</Alert> : null}
-            {leaveError ? <Alert severity="warning">{getApiErrorMessage(leaveError, 'Không tải được dữ liệu đơn xin phép liên quan.')}</Alert> : null}
-            {attendanceError ? <Alert severity="error">{getApiErrorMessage(attendanceError, 'Không tải được dữ liệu điểm danh của bạn.')}</Alert> : null}
+            {!canRenderTimetableShell && timetableError ? (
+                <Alert severity="error">{getApiErrorMessage(timetableError, 'Không tải được thời khóa biểu của bạn.')}</Alert>
+            ) : null}
+            {!canRenderLeaveShell && leaveError ? (
+                <Alert severity="warning">{getApiErrorMessage(leaveError, 'Không tải được dữ liệu đơn xin phép liên quan.')}</Alert>
+            ) : null}
+            {!canRenderAttendanceShell && attendanceError ? (
+                <Alert severity="error">{getApiErrorMessage(attendanceError, 'Không tải được dữ liệu điểm danh của bạn.')}</Alert>
+            ) : null}
+            {(isRenderableEmptyStateError(timetableError) || isRenderableEmptyStateError(attendanceError)) ? (
+                <Alert severity="info">
+                    Tài khoản này hiện chưa có dữ liệu lịch học khả dụng. Giao diện vẫn được mở để bạn theo dõi tuần học, và sẽ tự có dữ liệu ngay khi học viên được gán lớp hoặc phát sinh buổi học.
+                </Alert>
+            ) : null}
             {attendanceSummary?.warning ? (
                 <Alert severity="warning">
                     {attendanceSummary.warning_message || 'Tỷ lệ vắng đã vượt ngưỡng cảnh báo. Hãy liên hệ giáo viên phụ trách để được hỗ trợ.'}
@@ -236,12 +259,12 @@ export default function StudentTimetablePage() {
                         Tổng hợp chuyên cần
                     </Typography>
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        <Chip label={`Tổng buổi ${attendanceSummary?.total_lessons ?? 0}`} variant="outlined" />
-                        <Chip label={`Có mặt ${attendanceSummary?.present_count ?? 0}`} color="success" variant="outlined" />
-                        <Chip label={`Vắng ${attendanceSummary?.absent_count ?? 0}`} color="error" variant="outlined" />
-                        <Chip label={`Muộn ${attendanceSummary?.late_count ?? 0}`} color="warning" variant="outlined" />
-                        <Chip label={`Xin phép ${attendanceSummary?.excused_count ?? 0}`} color="info" variant="outlined" />
-                        <Chip label={`Chưa chấm ${attendanceSummary?.unmarked_count ?? 0}`} variant="outlined" />
+                        <Chip label={`Tổng buổi ${canRenderAttendanceShell ? attendanceSummary?.total_lessons ?? 0 : 0}`} variant="outlined" />
+                        <Chip label={`Có mặt ${canRenderAttendanceShell ? attendanceSummary?.present_count ?? 0 : 0}`} color="success" variant="outlined" />
+                        <Chip label={`Vắng ${canRenderAttendanceShell ? attendanceSummary?.absent_count ?? 0 : 0}`} color="error" variant="outlined" />
+                        <Chip label={`Muộn ${canRenderAttendanceShell ? attendanceSummary?.late_count ?? 0 : 0}`} color="warning" variant="outlined" />
+                        <Chip label={`Xin phép ${canRenderAttendanceShell ? attendanceSummary?.excused_count ?? 0 : 0}`} color="info" variant="outlined" />
+                        <Chip label={`Chưa chấm ${canRenderAttendanceShell ? attendanceSummary?.unmarked_count ?? 0 : 0}`} variant="outlined" />
                     </Stack>
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                         <Chip

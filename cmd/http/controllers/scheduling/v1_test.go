@@ -38,6 +38,8 @@ func TestControllerV1_BenchmarkReturnsBenchmarkPayload(t *testing.T) {
 		benchmarkUseCase,
 		getPreviewUseCaseStub{},
 		commitPreviewUseCaseStub{},
+		substituteUseCaseStub{},
+		makeupUseCaseStub{},
 	)
 
 	router := gin.New()
@@ -97,6 +99,8 @@ func TestControllerV1_BenchmarkRejectsInvalidDateRange(t *testing.T) {
 		benchmarkUseCase,
 		getPreviewUseCaseStub{},
 		commitPreviewUseCaseStub{},
+		substituteUseCaseStub{},
+		makeupUseCaseStub{},
 	)
 
 	router := gin.New()
@@ -154,5 +158,21 @@ func (getPreviewUseCaseStub) GetLatest(context.Context) (*usecasescheduling.Prev
 type commitPreviewUseCaseStub struct{}
 
 func (commitPreviewUseCaseStub) Execute(context.Context, usecasescheduling.CommitPreviewInput) (*usecasescheduling.CommitPreviewOutput, error) {
+	return nil, nil
+}
+
+type substituteUseCaseStub struct{}
+
+func (substituteUseCaseStub) SuggestSubstituteTeachers(context.Context, usecasescheduling.Actor, string) ([]usecasescheduling.SubstituteSuggestion, error) {
+	return nil, nil
+}
+
+func (substituteUseCaseStub) AssignSubstitute(context.Context, usecasescheduling.Actor, string, string, string) error {
+	return nil
+}
+
+type makeupUseCaseStub struct{}
+
+func (makeupUseCaseStub) FindMakeupSpots(context.Context, usecasescheduling.FindMakeupSpotsInput) (*usecasescheduling.FindMakeupSpotsOutput, error) {
 	return nil, nil
 }
