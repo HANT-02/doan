@@ -4,7 +4,8 @@ import (
 	"doan/internal/infrastructure/database"
 	"doan/internal/infrastructure/database/postgres"
 	"doan/internal/infrastructure/database/postgres/implement"
-	_interface "doan/internal
+	_interface "doan/internal/infrastructure/queue/interface"
+	"doan/internal/infrastructure/queue/noop"
 
 	"github.com/google/wire"
 )
