@@ -53,6 +53,9 @@ logs/
 tmp/
 temp/
 .tmp/
+.gocache/
+artifacts/do_dac_xep_lich/
+artifacts/goi_seed_xep_lich/
 
 # OS specific
 Thumbs.db
@@ -74,4 +77,3 @@ storage/
 # Backup files
 *.backup
 main.go.backup
-

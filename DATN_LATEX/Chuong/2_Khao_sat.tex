@@ -1,0 +1,303 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này trình bày kết quả phân tích hệ thống EduCenter, bao gồm tổng quan chức năng, tác nhân, phân rã chức năng, đặc tả ca sử dụng, biểu đồ trình tự và mô tả thực thể nghiệp vụ.
+
+\section{Tổng quan chức năng của hệ thống}
+\label{section:2.1}
+
+EduCenter là hệ thống quản lý trung tâm dạy thêm được xây dựng nhằm hỗ trợ đồng thời hai lớp bài toán: lớp bài toán quản trị vận hành và lớp bài toán tối ưu hóa, suy luận trên dữ liệu. Dưới góc độ nghiệp vụ, hệ thống có thể được nhìn nhận như một chuỗi xử lý khép kín bắt đầu từ quản lý danh mục, đi qua tổ chức lớp học, xếp lịch và kết thúc ở việc theo dõi dữ liệu học tập sau buổi học.
+
+Các chức năng chính của hệ thống bao gồm:
+\begin{itemize}
+    \item Xác thực và quản lý tài khoản người dùng.
+    \item Quản lý học viên, giáo viên, khóa học, chương trình đào tạo.
+    \item Quản lý phòng học, ca học, lớp học và lịch tuần của lớp.
+    \item Ghi danh học viên và phân công giáo viên.
+    \item Tạo phương án xem trước xếp lịch, so sánh thuật toán và xác nhận lưu để sinh buổi học.
+    \item Theo dõi buổi học, điểm danh, tổng kết buổi học, kết quả học tập và đơn xin phép nghỉ học.
+    \item Chuẩn bị dữ liệu học vụ phục vụ các hướng phân tích học tập trong tương lai.
+\end{itemize}
+
+\section{Các tác nhân và bên liên quan}
+\label{section:2.2}
+
+\begin{table}[H]
+\centering
+\caption{Danh mục tác nhân của hệ thống}
+\label{table:bang2.1}
+\begin{tabular}{|l|l|p{7cm}|}
+\hline
+\textbf{Tác nhân} & \textbf{Vai trò chính} & \textbf{Mục tiêu} \\ \hline
+Guest & Người dùng chưa đăng nhập & Đăng ký tài khoản, đăng nhập, quên mật khẩu \\ \hline
+Admin & Quản trị viên hoặc giáo vụ & Quản lý toàn bộ dữ liệu cốt lõi, mở lớp, xếp lịch, so sánh thuật toán \\ \hline
+Teacher & Giáo viên & Xem buổi học, điểm danh, viết tổng kết, ghi nhận kết quả học tập \\ \hline
+Student & Học viên & Xem thông tin học tập, xem kết quả, gửi đơn xin phép \\ \hline
+Bộ xử lý xếp lịch & Hệ thống xử lý xếp lịch & Sinh phương án xem trước, kiểm tra xung đột, tạo buổi học \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Phân rã chức năng}
+\label{section:2.3}
+
+Về mặt chức năng, hệ thống có thể được phân rã thành sáu nhánh lớn:
+\begin{enumerate}
+    \item Quản lý truy cập và danh tính.
+    \item Quản lý danh mục đào tạo và nguồn lực.
+    \item Quản lý lớp học và ghi danh.
+    \item Xếp lịch và buổi học.
+    \item Hoạt động học tập sau buổi học.
+    \item Quản lý tài liệu giảng dạy và các nhánh mở rộng.
+\end{enumerate}
+
+\textit{[Chèn Hình 2.1: Sơ đồ trường hợp sử dụng tổng quan của hệ thống EduCenter]}
+
+\textit{[Chèn Hình 2.2: Sơ đồ phân rã chức năng nhóm xác thực và tài khoản]}
+
+\textit{[Chèn Hình 2.3: Sơ đồ phân rã chức năng nhóm quản lý đào tạo và nguồn lực]}
+
+\textit{[Chèn Hình 2.4: Sơ đồ phân rã chức năng nhóm lớp học và ghi danh]}
+
+\textit{[Chèn Hình 2.5: Sơ đồ phân rã chức năng nhóm xếp lịch và buổi học]}
+
+\textit{[Chèn Hình 2.6: Sơ đồ phân rã chức năng nhóm học vụ sau buổi học]}
+
+\section{Đặc tả ca sử dụng của hệ thống}
+\label{section:2.4}
+
+\subsection{Nhóm ca sử dụng xác thực và quản lý tài khoản}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm xác thực và quản lý tài khoản}
+\label{table:bang2.3}
+\scriptsize
+\begin{tabular}{|l|l|l|p{2.5cm}|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền điều kiện} & \textbf{Hậu điều kiện} & \textbf{Mô tả ngắn} \\ \hline
+UC-AUTH-01 & Đăng ký tài khoản & Guest & Chưa có tài khoản & Tạo user mới, sinh OTP & Nhập thông tin đăng ký \\ \hline
+UC-AUTH-02 & Xác minh email OTP & User & Có OTP hợp lệ & Tài khoản được kích hoạt & Nhập OTP xác nhận email \\ \hline
+UC-AUTH-03 & Đăng nhập & Guest & Tài khoản tồn tại & Trả access/refresh token & Đăng nhập vào hệ thống \\ \hline
+UC-AUTH-04 & Refresh token & User & Refresh token hợp lệ & Cấp access token mới & Gia hạn phiên đăng nhập \\ \hline
+UC-AUTH-05 & Quên mật khẩu & Guest/User & Email tồn tại & Sinh token reset & Yêu cầu đặt lại mật khẩu \\ \hline
+UC-AUTH-06 & Đặt lại mật khẩu & User & Token reset hợp lệ & Cập nhật mật khẩu mới & Hoàn tất reset password \\ \hline
+UC-AUTH-07 & Đổi mật khẩu & User & Đã đăng nhập & Lưu mật khẩu mới & Đổi mật khẩu khi có session \\ \hline
+UC-AUTH-08 & Xem hồ sơ cá nhân & User & Token hợp lệ & Hiển thị hồ sơ & Lấy thông tin cá nhân \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng quản lý học viên}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm quản lý học viên}
+\label{table:bang2.4}
+\begin{tabular}{|l|p{3.5cm}|l|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền điều kiện} & \textbf{Hậu điều kiện} \\ \hline
+UC-STU-01 & Tạo học viên & Admin & Đã đăng nhập & Tạo bản ghi Student mới \\ \hline
+UC-STU-02 & Tìm kiếm/xem danh sách & Admin & Đã đăng nhập & Trả danh sách theo bộ lọc \\ \hline
+UC-STU-03 & Cập nhật học viên & Admin & Học viên tồn tại & Cập nhật hồ sơ \\ \hline
+UC-STU-04 & Xóa học viên & Admin & Học viên tồn tại & Xóa mềm hồ sơ \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng quản lý giáo viên}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm quản lý giáo viên}
+\label{table:bang2.5}
+\begin{tabular}{|l|p{3cm}|l|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền điều kiện} & \textbf{Hậu điều kiện} \\ \hline
+UC-TCH-01 & Tạo giáo viên & Admin & Đã đăng nhập & Tạo mới Teacher \\ \hline
+UC-TCH-02 & Xem lịch dạy & Admin, Teacher & GV tồn tại & Hiển thị lesson theo GV \\ \hline
+UC-TCH-03 & Xem thống kê giờ dạy & Admin, Teacher & GV tồn tại & Trả tổng số giờ đã dạy \\ \hline
+UC-TCH-04 & Cập nhật giáo viên & Admin & GV tồn tại & Cập nhật hồ sơ \\ \hline
+UC-TCH-05 & Xóa giáo viên & Admin & GV tồn tại & Xóa mềm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng quản lý khóa học}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm quản lý khóa học}
+\label{table:bang2.6}
+\begin{tabular}{|l|p{3cm}|l|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền điều kiện} & \textbf{Hậu điều kiện} \\ \hline
+UC-CRS-01 & Tạo khóa học & Admin & Đã đăng nhập & Tạo Course mới \\ \hline
+UC-CRS-02 & Xem danh sách khóa học & Admin & Đã đăng nhập & Trả danh sách theo bộ lọc \\ \hline
+UC-CRS-03 & Cập nhật khóa học & Admin & Khóa học tồn tại & Cập nhật thông tin \\ \hline
+UC-CRS-04 & Xóa khóa học & Admin & Khóa học tồn tại & Xóa mềm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng quản lý chương trình đào tạo}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm quản lý chương trình đào tạo}
+\label{table:bang2.7}
+\begin{tabular}{|l|p{3cm}|l|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền điều kiện} & \textbf{Hậu điều kiện} \\ \hline
+UC-PGM-01 & Tạo chương trình & Admin & Đã đăng nhập & Tạo Program mới \\ \hline
+UC-PGM-02 & Xem danh sách & Admin & Đã đăng nhập & Trả danh sách \\ \hline
+UC-PGM-03 & Cập nhật chương trình & Admin & CT tồn tại & Cập nhật thông tin \\ \hline
+UC-PGM-04 & Xóa chương trình & Admin & CT tồn tại & Xóa mềm \\ \hline
+UC-PGM-05 & Gán khóa học vào CT & Admin & CT và khóa học tồn tại & Tạo liên kết \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng quản lý phòng học}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm quản lý phòng học}
+\label{table:bang2.8}
+\begin{tabular}{|l|p{3cm}|l|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền điều kiện} & \textbf{Hậu điều kiện} \\ \hline
+UC-ROM-01 & Tạo phòng học & Admin & Đã đăng nhập & Tạo Room mới \\ \hline
+UC-ROM-02 & Xem danh sách & Admin & Đã đăng nhập & Trả danh sách \\ \hline
+UC-ROM-03 & Cập nhật phòng học & Admin & Phòng tồn tại & Cập nhật thông tin \\ \hline
+UC-ROM-04 & Xóa phòng học & Admin & Phòng tồn tại & Xóa mềm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng quản lý ca học}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm quản lý ca học}
+\label{table:bang2.9}
+\begin{tabular}{|l|p{3cm}|l|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền điều kiện} & \textbf{Hậu điều kiện} \\ \hline
+UC-SHF-01 & Tạo ca học & Admin & Đã đăng nhập & Tạo Shift mới \\ \hline
+UC-SHF-02 & Xem danh sách & Admin & Đã đăng nhập & Trả danh sách \\ \hline
+UC-SHF-03 & Cập nhật ca học & Admin & Ca học tồn tại & Cập nhật thông tin \\ \hline
+UC-SHF-04 & Xóa ca học & Admin & Ca học tồn tại & Xóa mềm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng quản lý lớp học và ghi danh}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm quản lý lớp học và ghi danh}
+\label{table:bang2.10}
+\scriptsize
+\begin{tabular}{|l|p{2.5cm}|l|p{2.5cm}|p{2.5cm}|p{2cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền ĐK} & \textbf{Hậu ĐK} & \textbf{Ghi chú} \\ \hline
+UC-CLS-01 & Tạo lớp học & Admin & Đã đăng nhập & Tạo Class mới & status mặc định OPEN \\ \hline
+UC-CLS-02 & Cập nhật lớp & Admin & Lớp tồn tại & Cập nhật thông tin &  \\ \hline
+UC-CLS-03 & Xóa lớp & Admin & Lớp tồn tại & Xóa mềm &  \\ \hline
+UC-CLS-04 & Ghi danh HV & Admin & Lớp và HV tồn tại & Tạo Enrollment &  \\ \hline
+UC-CLS-05 & Cấu hình lịch tuần & Admin & Lớp đã tạo & Lưu ClassSchedule & Cặp day\_of\_week + shift\_id \\ \hline
+UC-CLS-06 & Gán giáo viên & Admin & Lớp và GV tồn tại & Cập nhật teacher\_id &  \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng xếp lịch và buổi học}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm xếp lịch và buổi học}
+\label{table:bang2.11}
+\scriptsize
+\begin{tabular}{|l|p{2.5cm}|l|p{2.5cm}|p{2.5cm}|p{2cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền ĐK} & \textbf{Hậu ĐK} & \textbf{Ghi chú} \\ \hline
+UC-SOL-01 & Tạo phương án xem trước & Admin & Có lớp OPEN, shift active, room khả dụng & Sinh kết quả xem trước & Không lưu thành chính thức \\ \hline
+UC-SOL-02 & Xem phương án xếp lịch & Admin & Phương án tồn tại & Hiển thị phân công, xung đột &  \\ \hline
+UC-SOL-03 & So sánh thuật toán & Admin & Có bộ dữ liệu hợp lệ & Trả kết quả so sánh &  \\ \hline
+UC-SOL-04 & Xác nhận phương án & Admin & Trạng thái COMPLETED & Sinh buổi học thực tế &  \\ \hline
+UC-LSN-01 & Xem danh sách buổi học & Admin, Teacher & Buổi học đã tạo & Hiển thị theo tác nhân &  \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhóm ca sử dụng học vụ sau buổi học}
+
+\begin{table}[H]
+\centering
+\caption{Đặc tả ca sử dụng nhóm học vụ sau buổi học}
+\label{table:bang2.12}
+\scriptsize
+\begin{tabular}{|l|p{2.5cm}|l|p{2.5cm}|p{2.5cm}|p{2cm}|}
+\hline
+\textbf{Mã} & \textbf{Tên} & \textbf{Tác nhân} & \textbf{Tiền ĐK} & \textbf{Hậu ĐK} & \textbf{Ghi chú} \\ \hline
+UC-ATD-01 & Điểm danh & Teacher & Buổi học tồn tại & Tạo/cập nhật Attendance &  \\ \hline
+UC-SUM-01 & Tạo tổng kết buổi học & Teacher & Buổi học tồn tại & Tạo LessonSummary & Mỗi buổi tối đa một bản \\ \hline
+UC-ACR-01 & Ghi nhận kết quả HT & Teacher & Tổng kết tồn tại & Tạo AcademicRecord &  \\ \hline
+UC-LVE-01 & Tạo đơn xin phép & Student & HV có buổi học liên quan & Tạo LeaveRequest & Mặc định PENDING \\ \hline
+UC-LVE-02 & Duyệt/từ chối đơn & Admin, Teacher & Đơn đang PENDING & Cập nhật trạng thái &  \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Thiết kế biểu đồ trình tự}
+\label{section:2.5}
+
+\textit{[Chèn Hình 2.7: Sơ đồ tuần tự đăng ký tài khoản]}
+
+\textit{[Chèn Hình 2.8: Sơ đồ tuần tự đăng nhập]}
+
+\textit{[Chèn Hình 2.9: Sơ đồ tuần tự tạo học viên]}
+
+\textit{[Chèn Hình 2.10: Sơ đồ tuần tự tạo giáo viên]}
+
+\textit{[Chèn Hình 2.11: Sơ đồ tuần tự tạo lớp học]}
+
+\textit{[Chèn Hình 2.12: Sơ đồ tuần tự ghi danh học viên vào lớp]}
+
+\textit{[Chèn Hình 2.13: Sơ đồ tuần tự tạo phương án xem trước xếp lịch]}
+
+\textit{[Chèn Hình 2.14: Sơ đồ tuần tự xác nhận phương án để tạo buổi học]}
+
+\textit{[Chèn Hình 2.15: Sơ đồ tuần tự điểm danh buổi học]}
+
+\textit{[Chèn Hình 2.16: Sơ đồ tuần tự tạo tổng kết buổi học]}
+
+\section{Mô tả các thực thể nghiệp vụ trọng tâm}
+\label{section:2.6}
+
+Phần này được xây dựng theo tinh thần của khung mẫu: không chỉ nêu tên bảng hoặc tên lớp, mà còn diễn giải vai trò nghiệp vụ, trường dữ liệu quan trọng và ý nghĩa của từng thực thể trong hệ thống.
+
+\textbf{User} là thực thể nền cho toàn bộ hệ thống xác thực. Mọi luồng liên quan tới đăng ký, đăng nhập, OTP, quên mật khẩu hay phân quyền đều xoay quanh thực thể này. Các trường chính: id (UUID), code, full\_name, email, password (đã băm), role, is\_active.
+
+\textbf{Student} là thực thể trung tâm của miền quản lý người học. Thực thể này liên kết tới Enrollment, Attendance, AcademicRecord và LeaveRequest. Các trường chính: id, code, full\_name, email, phone, guardian\_phone, grade\_level, status.
+
+\textbf{Teacher} vừa là nguồn lực đầu vào của xếp lịch, vừa là tác nhân chính của chuỗi học vụ sau buổi học. Các trường chính: id, code, full\_name, is\_school\_teacher, employment\_type, status.
+
+\textbf{Class} là thực thể trung tâm của vận hành học vụ. Tất cả các ca sử dụng như ghi danh, cấu hình lịch tuần, xếp lịch và tạo buổi học đều dựa trên lớp học. Các trường chính: id, code, name, start\_date, end\_date, max\_students, status, program\_id, course\_id, teacher\_id, room\_id.
+
+\textbf{Lesson} là kết quả đầu ra của quá trình xác nhận phương án xem trước xếp lịch. Khi buổi học đã được tạo, đây sẽ là hạt nhân để hệ thống tiếp tục xử lý điểm danh, tổng kết buổi học, kết quả học tập. Các trường chính: id, class\_id, teacher\_id, room\_id, date\_start, date\_end.
+
+\section{Quy tắc nghiệp vụ và ràng buộc}
+\label{section:2.7}
+
+Một số quy tắc nghiệp vụ quan trọng của hệ thống bao gồm:
+\begin{itemize}
+    \item Tính duy nhất của định danh: Mã định danh (Code) của các thực thể chính trong hệ thống phải là duy nhất, không được phép trùng lặp.
+    \item Điều kiện xếp lớp: Chỉ những lớp học đang ở trạng thái Mở (OPEN) mới đủ điều kiện để đưa vào hệ thống xếp lịch giảng dạy.
+
+    \item Cấu hình ca học: Chỉ sử dụng các ca học còn đang Hoạt động (Active) để khởi tạo các khung giờ học (Slot) cụ thể.
+
+    \item Ràng buộc lịch học: Dữ liệu lịch học (ClassSchedule) phải tham chiếu đến ca học hợp lệ, dựa trên sự kết hợp giữa Thứ trong tuần (Day of week) và Mã ca học (Shift ID).
+
+    \item Quản lý danh sách lớp: Bản ghi ghi danh (Enrollment) phải phản ánh đúng danh sách học viên thực tế của lớp.
+    Lưu ý: Hiện tại quy trình phê duyệt (Approval flow) đã được thiết lập nhưng mã nguồn đang bỏ qua bước này để tạo trạng thái Đã ghi danh (ENROLLED) trực tiếp.
+
+    \item Xác nhận phương án: Các phương án xem trước (Preview) chỉ được phép lưu chính thức vào hệ thống khi đã ở trạng thái Hoàn tất (COMPLETED) và đảm bảo không xảy ra bất kỳ xung đột lịch trình nghiêm trọng nào.
+
+    \item Quản lý bài học: Mỗi bài học (Lesson) chỉ đi kèm với duy nhất một bản tóm tắt nội dung (LessonSummary) tương ứng.
+
+    \item Xử lý đơn nghỉ phép: Các đơn xin nghỉ phép (LeaveRequest) chỉ được phép xử lý (duyệt hoặc từ chối) khi vẫn còn nằm ở trạng thái Chờ duyệt (PENDING).
+
+\end{itemize}
+
+\end{document}

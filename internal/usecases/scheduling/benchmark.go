@@ -41,11 +41,14 @@ type BenchmarkSolverResult struct {
 }
 
 type BenchmarkSolverMetrics struct {
-	FeasibilityRate    *float64        `json:"feasibility_rate,omitempty"`
-	HardViolationCount *int            `json:"hard_violation_count,omitempty"`
-	SoftScore          *int            `json:"soft_score,omitempty"`
-	RuntimeMs          *int64          `json:"runtime_ms,omitempty"`
-	Summary            *PreviewSummary `json:"summary,omitempty"`
+	FeasibilityRate    *float64                           `json:"feasibility_rate,omitempty"`
+	HardViolationCount *int                               `json:"hard_violation_count,omitempty"`
+	SoftScore          *int                               `json:"soft_score,omitempty"`
+	RuntimeMs          *int64                             `json:"runtime_ms,omitempty"`
+	StartedAt          *time.Time                         `json:"started_at,omitempty"`
+	FinishedAt         *time.Time                         `json:"finished_at,omitempty"`
+	Summary            *PreviewSummary                    `json:"summary,omitempty"`
+	Telemetry          *schedulingservice.SolverTelemetry `json:"telemetry,omitempty"`
 }
 
 type benchmarkUseCase struct {
@@ -120,7 +123,8 @@ func (uc *benchmarkUseCase) Execute(ctx context.Context, input BenchmarkInput) (
 
 		startedAt := time.Now()
 		output, solveErr := solver.Solve(ctx, solverInput)
-		runtimeMs := time.Since(startedAt).Milliseconds()
+		finishedAt := time.Now()
+		runtimeMs := finishedAt.Sub(startedAt).Milliseconds()
 		if solveErr != nil {
 			ctxLogger.Errorf("Failed to execute scheduling benchmark solver %s: %v", descriptor.Key, solveErr)
 			solvers = append(solvers, BenchmarkSolverResult{
@@ -152,6 +156,8 @@ func (uc *benchmarkUseCase) Execute(ctx context.Context, input BenchmarkInput) (
 				HardViolationCount: &hardViolationCount,
 				SoftScore:          &softScore,
 				RuntimeMs:          &runtimeMs,
+				StartedAt:          &startedAt,
+				FinishedAt:         &finishedAt,
 				Summary: &PreviewSummary{
 					RequestedClasses:   output.Summary.RequestedClasses,
 					RequestedSessions:  output.Summary.RequestedSessions,
@@ -160,6 +166,7 @@ func (uc *benchmarkUseCase) Execute(ctx context.Context, input BenchmarkInput) (
 					ConflictCount:      output.Summary.ConflictCount,
 					SoftScore:          output.Summary.SoftScore,
 				},
+				Telemetry: output.Telemetry,
 			},
 		})
 	}

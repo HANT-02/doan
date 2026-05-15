@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"doan/internal/entities"
 )
@@ -36,16 +37,20 @@ func (s *tabuSearchSolver) Key() string {
 }
 
 func (s *tabuSearchSolver) Label() string {
-	return "Tabu Search"
+	return "Tìm kiếm Tabu"
 }
 
 func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
+	startedAt := time.Now()
 	problem := prepareSchedulingProblem(input)
+	telemetry := newSolverTelemetry(s.Key(), s.Label(), input, problem)
 	initial := s.buildInitialState(&problem, problem.variables, problem.domains)
 	best := tabuState{
 		assignments: cloneAssignments(initial),
 		penalty:     s.evaluate(initial, problem.variables, problem.targetLessons),
 	}
+	telemetry.InitialPenalty = best.penalty
+	telemetry.BestPenalty = best.penalty
 	current := tabuState{
 		assignments: cloneAssignments(initial),
 		penalty:     best.penalty,
@@ -54,6 +59,7 @@ func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverO
 	tabu := make(map[string]int)
 	variableMap := buildVariableMap(problem.variables)
 	for iteration := 0; iteration < s.maxIterations; iteration++ {
+		telemetry.IterationsExecuted++
 		bestMoveFound := false
 		var nextAssignments map[string]PreviewAssignment
 		nextPenalty := 0
@@ -61,6 +67,7 @@ func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverO
 
 		for _, variable := range problem.variables {
 			for _, candidate := range limitedNeighborhood(problem.domains[variable.ID], 6) {
+				telemetry.CandidateEvaluatedCount++
 				candidateAssignments := cloneAssignments(current.assignments)
 				for _, blocking := range problem.findBlockingAssignments(variable, candidate, candidateAssignments) {
 					delete(candidateAssignments, blocking.VariableID)
@@ -71,6 +78,7 @@ func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverO
 				moveKey := formatTabuMove(variable.ID, candidate)
 				tabuExpiry, isTabu := tabu[moveKey]
 				if isTabu && tabuExpiry > iteration && penalty >= best.penalty {
+					telemetry.TabuRejectedMoveCount++
 					continue
 				}
 
@@ -90,15 +98,28 @@ func (s *tabuSearchSolver) Solve(_ context.Context, input SolverInput) (*SolverO
 		current.assignments = nextAssignments
 		current.penalty = nextPenalty
 		tabu[nextMoveKey] = iteration + s.tabuTenure
+		telemetry.AcceptedMoveCount++
 
 		if current.penalty < best.penalty {
 			best.assignments = cloneAssignments(current.assignments)
 			best.penalty = current.penalty
+			telemetry.BestPenalty = best.penalty
 		}
 	}
 
 	repaired := repairAssignments(&problem, problem.variables, variableMap, problem.domains, best.assignments)
-	return buildSolverOutput(input, problem.variables, repaired, problem.presetConflicts, problem.noDomainConflicts, nil, problem.targetLessons), nil
+	telemetry.RepairAssignmentCount = countRepairAssignments(best.assignments, repaired)
+	finishedAt := time.Now()
+	return buildSolverOutput(
+		input,
+		problem.variables,
+		repaired,
+		problem.presetConflicts,
+		problem.noDomainConflicts,
+		nil,
+		problem.targetLessons,
+		finalizeSolverTelemetry(telemetry, startedAt, finishedAt),
+	), nil
 }
 
 func (s *tabuSearchSolver) buildInitialState(
@@ -204,4 +225,19 @@ func formatTabuMove(variableID string, candidate DomainValue) string {
 	}
 
 	return fmt.Sprintf("%s|%s|%s", move.variableID, move.slotKey, move.roomID)
+}
+
+func countRepairAssignments(beforeRepair, afterRepair map[string]PreviewAssignment) int {
+	count := 0
+	for variableID, repaired := range afterRepair {
+		original, ok := beforeRepair[variableID]
+		if !ok {
+			count++
+			continue
+		}
+		if original.RoomID != repaired.RoomID || !original.StartTime.Equal(repaired.StartTime) || !original.EndTime.Equal(repaired.EndTime) {
+			count++
+		}
+	}
+	return count
 }

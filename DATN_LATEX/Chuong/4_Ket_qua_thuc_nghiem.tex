@@ -1,0 +1,467 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này trình bày thiết kế hệ thống EduCenter, bao gồm kiến trúc tổng thể, quy trình nghiệp vụ, thiết kế cơ sở dữ liệu và thiết kế giao diện.
+
+\section{Kiến trúc tổng thể hệ thống}
+\label{section:4.1}
+
+Hệ thống EduCenter được xây dựng theo hướng tách lớp rõ ràng giữa giao diện, máy chủ, tầng ca sử dụng và tầng dữ liệu. Về tổng thể, hệ thống gồm bốn khối chính:
+\begin{itemize}
+    \item Khối giao diện người dùng ở React + TypeScript.
+    \item Khối API máy chủ bằng Golang + Gin.
+    \item Khối xử lý nghiệp vụ theo hướng Clean Architecture.
+    \item Khối lưu trữ dữ liệu PostgreSQL.
+\end{itemize}
+
+Từ góc nhìn triển khai, phần giao diện có nhiệm vụ hiển thị màn hình, thu thập dữ liệu đầu vào và gọi API. Phần máy chủ chịu trách nhiệm xác thực, kiểm tra dữ liệu, điều phối ca sử dụng, làm việc với repository và truy xuất dữ liệu từ PostgreSQL. Riêng mô-đun xếp lịch được tổ chức qua lớp trừu tượng \texttt{SchedulingSolver}, cho phép thay thế hoặc so sánh thực nghiệm nhiều thuật toán trên cùng một miền dữ liệu.
+
+\textit{[Chèn Hình 4.1: Kiến trúc tổng thể hệ thống EduCenter]}
+
+\section{Quy trình nghiệp vụ}
+\label{section:4.2}
+
+Quy trình nghiệp vụ cốt lõi của hệ thống có thể mô tả theo chuỗi sau:
+\begin{enumerate}
+    \item Admin tạo các dữ liệu nền như học viên, giáo viên, khóa học, chương trình đào tạo, phòng học và ca học.
+    \item Admin mở lớp học, gán chương trình hoặc khóa học, phân công giáo viên và khai báo lịch tuần.
+    \item Admin ghi danh học viên vào lớp.
+    \item Hệ thống sử dụng thông tin lớp, shift, phòng và giáo viên để tạo phương án xem trước xếp lịch.
+    \item Admin xem phương án, đánh giá xung đột và xác nhận.
+    \item Hệ thống lưu phương án đã duyệt và sinh buổi học thực tế.
+    \item Giáo viên sử dụng buổi học để điểm danh, viết tổng kết và ghi nhận kết quả học tập.
+    \item Học viên có thể gửi đơn xin phép nghỉ; quản trị viên hoặc giáo viên xử lý theo quy trình.
+\end{enumerate}
+
+\textit{[Chèn Hình 4.2: BPMN hoặc sơ đồ hoạt động cho luồng mở lớp đến xác nhận lưu buổi học]}
+
+\section{Thiết kế cơ sở dữ liệu}
+\label{section:4.3}
+
+\subsection{Nguyên tắc đặc tả cơ sở dữ liệu}
+
+Một số quy ước thiết kế dữ liệu đang được dùng thống nhất trong EduCenter:
+\begin{itemize}
+    \item Khóa chính của hầu hết các bảng sử dụng UUID.
+    \item Cơ sở dữ liệu mục tiêu là PostgreSQL.
+    \item Các bảng giao dịch quan trọng dùng \texttt{created\_at}, \texttt{updated\_at} để truy vết thay đổi.
+    \item Một số bảng dùng \texttt{deleted\_at} để xóa mềm nhằm bảo toàn lịch sử.
+\end{itemize}
+
+\subsection{Danh mục các bảng trọng tâm}
+
+\begin{table}[H]
+\centering
+\caption{Danh mục các bảng trọng tâm của hệ thống}
+\label{table:bang4.1}
+\begin{tabular}{|l|p{4cm}|p{6cm}|}
+\hline
+\textbf{Nhóm dữ liệu} & \textbf{Bảng} & \textbf{Vai trò} \\ \hline
+Tài khoản và bảo mật & users, user\_otps, password\_resets & Quản lý đăng nhập, kích hoạt tài khoản, quên mật khẩu \\ \hline
+Danh mục đào tạo & students, teachers, courses, programs, program\_courses & Quản lý học viên, giáo viên, khóa học và chương trình \\ \hline
+Tài nguyên vận hành & rooms, shifts & Chuẩn hóa phòng học và ca học \\ \hline
+Tổ chức lớp & classes, class\_schedules, enrollments & Mở lớp, lịch tuần, roster học viên \\ \hline
+Vận hành buổi học & lessons, attendances, lesson\_summaries, academic\_records, leave\_requests & Quản lý buổi học và học vụ sau buổi học \\ \hline
+\end{tabular}
+\end{table}
+
+\textit{[Chèn Hình 4.3: Sơ đồ thực thể - liên kết mức logic của hệ thống EduCenter]}
+
+\subsection{Đặc tả các bảng lõi}
+
+Phần đặc tả dữ liệu được tổng hợp từ ba nguồn chính: các thực thể trong phần máy chủ Golang, các tệp migration PostgreSQL và các ca sử dụng đang vận hành thực tế.
+
+\subsubsection{Bảng users}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng users}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã định danh tài khoản \\ \hline
+code & varchar(50) & unique & Mã nội bộ người dùng \\ \hline
+full\_name & varchar(255) & & Họ tên hiển thị \\ \hline
+email & varchar(255) & not null, unique & Email đăng nhập chính \\ \hline
+password & text & not null & Mật khẩu đã băm \\ \hline
+role & varchar(50) & default STUDENT & Vai trò hệ thống \\ \hline
+is\_active & boolean & default true & Cờ kích hoạt tài khoản \\ \hline
+created\_at, updated\_at & timestamp & audit & Thời gian tạo/cập nhật \\ \hline
+deleted\_at & timestamp & soft delete & Phục vụ xóa mềm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng user\_otps}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng user\_otps}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã OTP record \\ \hline
+user\_id & UUID & not null, index & Tham chiếu users.id \\ \hline
+otp\_hash & text & not null & Mã OTP đã băm \\ \hline
+expired\_at & timestamp & not null & Thời điểm hết hạn \\ \hline
+used\_at & timestamp & nullable & Đánh dấu OTP đã dùng \\ \hline
+created\_at, deleted\_at & timestamp & audit & Lịch sử xác minh \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng password\_resets}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng password\_resets}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã yêu cầu reset \\ \hline
+user\_id & UUID & not null & Tham chiếu users.id \\ \hline
+token\_hash & text & not null & Token reset đã băm \\ \hline
+expires\_at & timestamp & not null & Hết hạn token \\ \hline
+used\_at & timestamp & nullable & Token đã dùng hay chưa \\ \hline
+requested\_ip & varchar(45) & & IP gửi yêu cầu \\ \hline
+user\_agent & text & & Thông tin thiết bị \\ \hline
+created\_at, updated\_at, deleted\_at & timestamp & audit & Truy vết bảo mật \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng students}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng students}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã học viên \\ \hline
+code & varchar(50) & unique & Mã học viên \\ \hline
+full\_name & varchar(255) & & Họ tên học viên \\ \hline
+email & varchar(255) & & Email liên hệ \\ \hline
+phone & varchar(20) & & Số điện thoại \\ \hline
+guardian\_phone & varchar(20) & & SĐT phụ huynh \\ \hline
+grade\_level & varchar(50) & & Khối lớp \\ \hline
+status & varchar(50) & default ACTIVE & Trạng thái học viên \\ \hline
+date\_of\_birth & timestamp & nullable & Ngày sinh \\ \hline
+gender & varchar(20) & & Giới tính \\ \hline
+address & text & & Địa chỉ \\ \hline
+created\_at, updated\_at, deleted\_at & timestamp & audit / soft delete & Vòng đời hồ sơ \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng teachers}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng teachers}
+\scriptsize
+\begin{tabular}{|l|l|p{3cm}|p{3.5cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã giáo viên \\ \hline
+code & varchar(50) & unique & Mã giáo viên \\ \hline
+full\_name & varchar(255) & & Họ tên \\ \hline
+email, phone & varchar & & Liên hệ \\ \hline
+is\_school\_teacher & boolean & default false & GV trường phổ thông hay cộng tác viên \\ \hline
+school\_name & varchar(255) & & Trường công tác \\ \hline
+employment\_type & varchar(50) & default PART\_TIME & Hình thức làm việc \\ \hline
+status & varchar(50) & default ACTIVE & Trạng thái hoạt động \\ \hline
+notes & text & & Ghi chú \\ \hline
+created\_at, updated\_at, deleted\_at & timestamp & audit / soft delete & Vòng đời hồ sơ \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng courses}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng courses}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã khóa học \\ \hline
+code & varchar(50) & unique, not null & Mã khóa học \\ \hline
+name & varchar(255) & & Tên khóa học \\ \hline
+description & text & & Mô tả nội dung \\ \hline
+grade\_level & varchar(50) & & Khối lớp áp dụng \\ \hline
+subject & varchar(255) & & Môn học \\ \hline
+session\_count & int & & Số buổi học \\ \hline
+session\_duration\_minutes & int & & Thời lượng mỗi buổi \\ \hline
+total\_hours & numeric(8,2) & & Tổng số giờ học \\ \hline
+price & numeric(10,2) & & Học phí \\ \hline
+status & varchar(50) & default ACTIVE & Trạng thái \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng programs và program\_courses}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng programs}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã chương trình \\ \hline
+code & varchar(50) & unique, not null & Mã chương trình \\ \hline
+name & varchar(255) & & Tên chương trình \\ \hline
+track & varchar(50) & SUPPORT, BASIC, ADVANCED & Nhánh chương trình \\ \hline
+effective\_from, effective\_to & timestamp & nullable & Hiệu lực \\ \hline
+created\_by\_id, approved\_by\_id & UUID & nullable & Người tạo/duyệt \\ \hline
+published\_at, archived\_at & timestamp & nullable & Xuất bản/lưu trữ \\ \hline
+\end{tabular}
+\end{table}
+
+Bảng \texttt{program\_courses} là bảng liên kết nhiều-nhiều giữa programs và courses, gồm các trường: id (UUID, PK), program\_id (UUID, not null), course\_id (UUID, not null).
+
+\subsubsection{Bảng rooms}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng rooms}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã phòng \\ \hline
+code & varchar(50) & unique, not null & Mã phòng \\ \hline
+name & varchar(255) & not null & Tên phòng \\ \hline
+capacity & int & $\geq$ 1 & Sức chứa \\ \hline
+address & text & & Địa điểm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng shifts}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng shifts}
+\scriptsize
+\begin{tabular}{|l|l|p{3cm}|p{3.5cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã ca học \\ \hline
+code & varchar(50) & unique, not null & Mã ca \\ \hline
+name & varchar(255) & not null & Tên ca \\ \hline
+start\_time & varchar(10) & not null & Giờ bắt đầu \\ \hline
+end\_time & varchar(10) & not null & Giờ kết thúc \\ \hline
+duration\_minutes & int & not null, $\geq$ 1 & Độ dài ca \\ \hline
+session\_type & varchar(50) & MORNING, AFTERNOON, EVENING, CUSTOM & Loại ca học \\ \hline
+is\_active & boolean & default true & Dùng cho xếp lịch hay không \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng classes}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng classes}
+\scriptsize
+\begin{tabular}{|l|l|p{3cm}|p{3.5cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã lớp học \\ \hline
+code & varchar(50) & unique, not null & Mã lớp \\ \hline
+name & varchar(255) & not null & Tên lớp \\ \hline
+notes & text & & Ghi chú lớp \\ \hline
+start\_date & timestamp & not null & Ngày bắt đầu \\ \hline
+end\_date & timestamp & nullable & Ngày kết thúc \\ \hline
+max\_students & int & & Sĩ số tối đa \\ \hline
+status & varchar(50) & default OPEN & Trạng thái lớp \\ \hline
+price & numeric(10,2) & & Học phí lớp \\ \hline
+program\_id, course\_id, teacher\_id, room\_id & UUID & nullable & Liên kết dữ liệu nền \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng class\_schedules}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng class\_schedules}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã lịch tuần \\ \hline
+class\_id & UUID & not null & Tham chiếu classes.id \\ \hline
+day\_of\_week & varchar(20) & not null & Thứ học (MONDAY--SUNDAY) \\ \hline
+shift\_id & UUID & not null & Tham chiếu shifts.id \\ \hline
+room\_id & UUID & nullable & Phòng cố định cho slot \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng enrollments}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng enrollments}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã ghi danh \\ \hline
+class\_id & UUID & not null & Tham chiếu lớp \\ \hline
+student\_id & UUID & not null & Tham chiếu học viên \\ \hline
+status & varchar(50) & default APPLIED & Trạng thái ghi danh \\ \hline
+approved\_at & timestamp & nullable & Thời điểm duyệt \\ \hline
+rejected\_at & timestamp & nullable & Thời điểm từ chối \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng lessons}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng lessons}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã buổi học \\ \hline
+class\_id & UUID & not null & Lớp tương ứng \\ \hline
+teacher\_id & UUID & nullable & Giáo viên lesson \\ \hline
+date\_start & timestamp & not null & Thời điểm bắt đầu \\ \hline
+date\_end & timestamp & not null & Thời điểm kết thúc \\ \hline
+room\_id & UUID & nullable & Phòng dạy \\ \hline
+notes & text & & Ghi chú \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng attendances}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng attendances}
+\scriptsize
+\begin{tabular}{|l|l|p{3cm}|p{3.5cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã điểm danh \\ \hline
+lesson\_id & UUID & not null & Tham chiếu lesson \\ \hline
+student\_id & UUID & not null & Tham chiếu học viên \\ \hline
+status & int & 1=PRESENT, 2=ABSENT, 3=EXCUSED, 4=LATE, 5=EARLY & Trạng thái chuyên cần \\ \hline
+note & text & & Ghi chú \\ \hline
+marked\_at & timestamp & nullable & Thời điểm chấm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng lesson\_summaries}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng lesson\_summaries}
+\scriptsize
+\begin{tabular}{|l|l|l|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã summary \\ \hline
+lesson\_id & UUID & unique, not null & Mỗi lesson tối đa một summary \\ \hline
+topic & text & & Chủ đề \\ \hline
+lesson\_content & text & & Nội dung đã dạy \\ \hline
+class\_feedback & text & & Phản hồi chung \\ \hline
+homework & text & & Bài tập \\ \hline
+homework\_deadline & timestamp & nullable & Hạn nộp \\ \hline
+teacher\_notes & text & & Ghi chú của giáo viên \\ \hline
+created\_by\_id & UUID & nullable & Người tạo \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng academic\_records}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng academic\_records}
+\scriptsize
+\begin{tabular}{|l|l|p{3cm}|p{3.5cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã record \\ \hline
+lesson\_summary\_id & UUID & not null & Summary cha \\ \hline
+student\_id & UUID & not null & Học viên được đánh giá \\ \hline
+homework\_completed & boolean & default false & Đã hoàn thành bài tập \\ \hline
+homework\_score & numeric(5,2) & & Điểm bài tập \\ \hline
+attitude\_rating & int & & Đánh giá thái độ \\ \hline
+participation\_score & numeric(5,2) & & Điểm tham gia \\ \hline
+personal\_comment & text & & Nhận xét cá nhân \\ \hline
+total\_score & numeric(5,2) & & Tổng điểm \\ \hline
+is\_completed & boolean & default false & Đã chốt record \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bảng leave\_requests}
+\begin{table}[H]
+\centering
+\caption{Đặc tả bảng leave\_requests}
+\scriptsize
+\begin{tabular}{|l|l|p{3cm}|p{3.5cm}|}
+\hline
+\textbf{Trường} & \textbf{Kiểu} & \textbf{Ràng buộc} & \textbf{Ý nghĩa} \\ \hline
+id & UUID & PK & Mã đơn \\ \hline
+student\_id & UUID & not null & Học viên gửi đơn \\ \hline
+leave\_type & varchar(50) & LEAVE, LATE, EARLY & Loại đơn \\ \hline
+apply\_date & timestamp & not null & Ngày áp dụng \\ \hline
+late\_minutes & int & dùng cho LATE & Số phút đi muộn \\ \hline
+early\_minutes & int & dùng cho EARLY & Số phút về sớm \\ \hline
+reason & text & not null & Lý do \\ \hline
+documents & text[] & nullable & Minh chứng đính kèm \\ \hline
+class\_id, lesson\_id & UUID & nullable & Lớp/lesson liên quan \\ \hline
+status & varchar(50) & default PENDING & Trạng thái xử lý \\ \hline
+approved\_by\_id & UUID & nullable & Người duyệt \\ \hline
+rejection\_reason & text & & Lý do từ chối \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Đặc tả các bảng hỗ trợ và mở rộng}
+
+Nhóm bảng hỗ trợ bao gồm: \texttt{consultations} (yêu cầu tư vấn đầu vào), \texttt{objectives} (mục tiêu đào tạo) và \texttt{outcomes} (chuẩn đầu ra). Ba bảng này bổ sung cho hệ thống ở hai chiều: giai đoạn trước vận hành lớp học và chiều sâu dữ liệu đào tạo.
+
+\subsection{Giá trị mặc định và domain dữ liệu}
+
+\begin{table}[H]
+\centering
+\caption{Giá trị mặc định và domain dữ liệu quan trọng}
+\label{table:bang4.2}
+\scriptsize
+\begin{tabular}{|l|p{5cm}|p{4cm}|}
+\hline
+\textbf{Trường} & \textbf{Giá trị mặc định / domain} & \textbf{Ghi chú} \\ \hline
+users.role & Mặc định STUDENT & Vai trò khi đăng ký mới \\ \hline
+students.status & Mặc định ACTIVE & Học viên hoạt động \\ \hline
+teachers.employment\_type & PART\_TIME, FULL\_TIME; mặc định PART\_TIME & Loại hình cộng tác \\ \hline
+shifts.session\_type & MORNING, AFTERNOON, EVENING, CUSTOM & Loại ca học \\ \hline
+classes.status & OPEN, CLOSED, CANCELLED; mặc định OPEN & Xếp lịch chỉ dùng OPEN \\ \hline
+leave\_requests.status & PENDING, APPROVED, REJECTED & Trạng thái xử lý \\ \hline
+attendances.status & 1=PRESENT, 2=ABSENT, 3=EXCUSED, 4=LATE, 5=EARLY & Domain nội bộ \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Thiết kế giao diện}
+\label{section:4.4}
+
+Phần giao diện của hệ thống được xây dựng theo hướng phục vụ thao tác quản trị rõ ràng, bám theo từng nhóm chức năng.
+
+\subsection{Giao diện xác thực và tài khoản}
+
+\textit{[Chèn Hình 4.4: Giao diện đăng nhập]}
+
+\subsection{Giao diện quản lý học viên và giáo viên}
+
+\textit{[Chèn Hình 4.5: Giao diện quản lý học viên]}
+
+\textit{[Chèn Hình 4.6: Giao diện quản lý giáo viên]}
+
+\subsection{Giao diện quản lý khóa học, chương trình và lớp học}
+
+\textit{[Chèn Hình 4.7: Giao diện quản lý khóa học]}
+
+\textit{[Chèn Hình 4.8: Giao diện quản lý chương trình đào tạo]}
+
+\textit{[Chèn Hình 4.9: Giao diện quản lý lớp học]}
+
+\subsection{Giao diện quản lý phòng học và ca học}
+
+\textit{[Chèn Hình 4.10: Giao diện quản lý phòng học]}
+
+\textit{[Chèn Hình 4.11: Giao diện quản lý ca học]}
+
+\subsection{Giao diện xếp lịch và buổi học}
+
+\textit{[Chèn Hình 4.12: Giao diện bước 1 chọn lớp hoặc giáo viên để xếp lịch]}
+
+\textit{[Chèn Hình 4.13: Giao diện xem trước lịch học trên lưới thời gian]}
+
+\textit{[Chèn Hình 4.14: Giao diện danh sách buổi chưa xếp được và xung đột]}
+
+\textit{[Chèn Hình 4.15: Giao diện xác nhận lưu để sinh các buổi học thực tế]}
+
+\end{document}

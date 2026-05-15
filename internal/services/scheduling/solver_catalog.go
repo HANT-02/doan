@@ -22,20 +22,20 @@ func (c *staticSolverCatalog) BenchmarkSolvers() []SolverDescriptor {
 	return []SolverDescriptor{
 		{
 			Key:         SolverKeyGraphColoring,
-			Label:       "Graph Coloring + Heuristic",
-			Description: "Baseline heuristic benchmark cho bài toán xếp lịch.",
+			Label:       "Tô màu đồ thị",
+			Description: "Thuật toán tham lam làm mốc so sánh ban đầu cho bài toán xếp lịch.",
 			Readiness:   "READY",
 		},
 		{
 			Key:         SolverKeyCPSAT,
 			Label:       "CP-SAT",
-			Description: "Constraint optimization solver dùng cho benchmark exact/exact-like.",
+			Description: "Bộ giải tối ưu hóa ràng buộc để so sánh chất lượng nghiệm và độ ổn định.",
 			Readiness:   "READY",
 		},
 		{
 			Key:         SolverKeyTabuSearch,
-			Label:       "Tabu Search",
-			Description: "Local search/metaheuristic solver dùng cho benchmark timetabling.",
+			Label:       "Tìm kiếm Tabu",
+			Description: "Thuật toán tìm kiếm cục bộ có danh sách cấm để tối ưu lịch học.",
 			Readiness:   "READY",
 		},
 	}

@@ -149,6 +149,14 @@ func TestBenchmarkUseCase_ExecuteRunsAllSolvers(t *testing.T) {
 		if solver.Metrics.Summary == nil || solver.Metrics.Summary.ScheduledLessons != 2 {
 			t.Fatalf("expected scheduled lessons summary for solver %s", solver.Key)
 		}
+
+		if solver.Metrics.Telemetry == nil {
+			t.Fatalf("expected telemetry for solver %s", solver.Key)
+		}
+
+		if solver.Metrics.StartedAt == nil || solver.Metrics.FinishedAt == nil {
+			t.Fatalf("expected run timestamps for solver %s", solver.Key)
+		}
 	}
 }
 

@@ -127,18 +127,19 @@ type SolverSummary struct {
 }
 
 type SolverInput struct {
-	DateFrom      time.Time
-	DateTo        time.Time
-	ClassIDs      []string
-	TeacherIDs    []string
-	RoomIDs       []string
-	Classes       []entities.Class
-	ClassWindows  map[string]ClassSchedulingWindow
-	Rooms         []entities.Room
-	Shifts        []entities.Shift
-	RoomsByID     map[string]entities.Room
-	TravelMap     map[string]int
-	TargetLessons []entities.Lesson
+	DateFrom         time.Time
+	DateTo           time.Time
+	ClassIDs         []string
+	TeacherIDs       []string
+	RoomIDs          []string
+	Classes          []entities.Class
+	ClassWindows     map[string]ClassSchedulingWindow
+	Rooms            []entities.Room
+	Shifts           []entities.Shift
+	RoomsByID        map[string]entities.Room
+	TravelMap        map[string]int
+	TargetLessons    []entities.Lesson
+	BenchmarkOptions *BenchmarkOptions
 }
 
 type SolverOutput struct {
@@ -146,6 +147,7 @@ type SolverOutput struct {
 	Assignments []PreviewAssignment
 	Conflicts   []PreviewConflict
 	Summary     SolverSummary
+	Telemetry   *SolverTelemetry
 }
 
 type SchedulingSolver interface {

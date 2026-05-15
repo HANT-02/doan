@@ -61,6 +61,7 @@ func buildSolverOutput(
 	noDomainConflicts map[string]PreviewConflict,
 	extraConflicts []PreviewConflict,
 	targetLessons map[string]entities.Lesson,
+	telemetry *SolverTelemetry,
 ) *SolverOutput {
 	assignmentSlice := assignmentsToSlice(assignments)
 	conflicts := append([]PreviewConflict(nil), presetConflicts...)
@@ -121,6 +122,7 @@ func buildSolverOutput(
 		Assignments: assignmentSlice,
 		Conflicts:   conflicts,
 		Summary:     summary,
+		Telemetry:   telemetry,
 	}
 }
 

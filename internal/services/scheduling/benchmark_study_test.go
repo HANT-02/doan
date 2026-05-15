@@ -2,6 +2,8 @@ package scheduling
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -14,7 +16,7 @@ func TestBuildDefaultBenchmarkScenarios_ReturnsExpectedScales(t *testing.T) {
 		t.Fatalf("expected 3 scenarios, got %d", len(scenarios))
 	}
 
-	expectedNames := []string{"small", "medium", "large"}
+	expectedNames := []string{"nho", "trung_binh", "lon"}
 	expectedClasses := []int{6, 10, 16}
 	expectedSessions := []int{2, 3, 4}
 
@@ -37,6 +39,79 @@ func TestBuildDefaultBenchmarkScenarios_ReturnsExpectedScales(t *testing.T) {
 					classEntity.Course.SessionCount,
 				)
 			}
+		}
+	}
+}
+
+func TestSelectBenchmarkScenarios_FiltersAndOverridesIterations(t *testing.T) {
+	t.Parallel()
+
+	scenarios, err := SelectBenchmarkScenarios([]string{"nho", "lon"}, 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(scenarios) != 2 {
+		t.Fatalf("expected 2 scenarios, got %d", len(scenarios))
+	}
+
+	if scenarios[0].Name != "nho" || scenarios[1].Name != "lon" {
+		t.Fatalf("unexpected scenario order: %s, %s", scenarios[0].Name, scenarios[1].Name)
+	}
+
+	for _, scenario := range scenarios {
+		if scenario.Iterations != 3 {
+			t.Fatalf("expected iteration override 3 for %s, got %d", scenario.Name, scenario.Iterations)
+		}
+	}
+}
+
+func TestSelectBenchmarkScenarios_RejectsUnknownScenario(t *testing.T) {
+	t.Parallel()
+
+	_, err := SelectBenchmarkScenarios([]string{"khong_ton_tai"}, 0)
+	if err == nil {
+		t.Fatalf("expected error for unknown scenario")
+	}
+}
+
+func TestWriteBenchmarkArtifacts_WritesExpectedFiles(t *testing.T) {
+	t.Parallel()
+
+	scenarios := BuildDefaultBenchmarkScenarios()
+	for index := range scenarios {
+		scenarios[index].Iterations = 1
+	}
+
+	catalog := NewSchedulingSolverCatalog(
+		NewGraphColoringSolver(),
+		NewCPSATSolver(),
+		NewTabuSearchSolver(),
+	)
+
+	study, err := RunBenchmarkStudy(context.Background(), catalog, scenarios)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	outputRoot := t.TempDir()
+	artifactDir, err := WriteBenchmarkArtifacts(outputRoot, study, scenarios)
+	if err != nil {
+		t.Fatalf("unexpected write error: %v", err)
+	}
+
+	for _, relativePath := range []string{
+		"tong_hop.json",
+		"tong_hop.md",
+		"bang_tong_hop_theo_thuat_toan.csv",
+		"so_lieu_tho_tung_lan_chay.csv",
+		"bang_ke_tap_tin.json",
+		filepath.Join("kich_ban_nho", "du_lieu_dau_vao.json"),
+		filepath.Join("kich_ban_nho", "thuat_toan_graph_coloring", "lan_chay_001", "so_lieu_tho.json"),
+	} {
+		fullPath := filepath.Join(artifactDir, relativePath)
+		if _, err := os.Stat(fullPath); err != nil {
+			t.Fatalf("expected artifact file %s: %v", fullPath, err)
 		}
 	}
 }
@@ -96,16 +171,30 @@ func TestRunBenchmarkStudy_DefaultScenariosProducesComparableReport(t *testing.T
 			if solver.MinRuntimeMs > solver.MaxRuntimeMs {
 				t.Fatalf("expected runtime bounds ordered for solver %s in %s", solver.Key, scenario.Name)
 			}
+			if len(solver.RunRecords) != 2 {
+				t.Fatalf("expected 2 run records for solver %s in %s, got %d", solver.Key, scenario.Name, len(solver.RunRecords))
+			}
+			if solver.StdDevRuntimeMs < 0 {
+				t.Fatalf("expected non-negative runtime stddev for solver %s in %s", solver.Key, scenario.Name)
+			}
+			for _, run := range solver.RunRecords {
+				if run.StartedAt.IsZero() || run.FinishedAt.IsZero() {
+					t.Fatalf("expected timestamps for solver %s in %s", solver.Key, scenario.Name)
+				}
+				if run.Telemetry == nil {
+					t.Fatalf("expected telemetry for solver %s in %s", solver.Key, scenario.Name)
+				}
+			}
 		}
 	}
 
 	report := RenderBenchmarkStudyMarkdown(study)
 	for _, expectedSection := range []string{
-		"# Scheduling Benchmark Study",
-		"## Scenario `small`",
-		"## Scenario `medium`",
-		"## Scenario `large`",
-		"## Recommendation",
+		"# Báo Cáo Đo Đạc Đối Sánh Xếp Lịch",
+		"## Kịch bản `nho`",
+		"## Kịch bản `trung_binh`",
+		"## Kịch bản `lon`",
+		"## Khuyến Nghị",
 	} {
 		if !strings.Contains(report, expectedSection) {
 			t.Fatalf("expected markdown report to contain %q", expectedSection)

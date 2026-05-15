@@ -3,6 +3,7 @@ package scheduling
 import (
 	"context"
 	"sort"
+	"time"
 )
 
 type graphColoringSolver struct{}
@@ -16,15 +17,27 @@ func (s *graphColoringSolver) Key() string {
 }
 
 func (s *graphColoringSolver) Label() string {
-	return "Graph Coloring + Heuristic"
+	return "Tô màu đồ thị"
 }
 
 func (s *graphColoringSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
+	startedAt := time.Now()
 	problem := prepareSchedulingProblem(input)
+	telemetry := newSolverTelemetry(s.Key(), s.Label(), input, problem)
 	adjacency := buildConflictAdjacency(problem.variables)
-	assignments := s.greedyColor(&problem, problem.variables, problem.domains, adjacency)
+	assignments := s.greedyColor(&problem, problem.variables, problem.domains, adjacency, telemetry)
 
-	return buildSolverOutput(input, problem.variables, assignments, problem.presetConflicts, problem.noDomainConflicts, nil, problem.targetLessons), nil
+	finishedAt := time.Now()
+	return buildSolverOutput(
+		input,
+		problem.variables,
+		assignments,
+		problem.presetConflicts,
+		problem.noDomainConflicts,
+		nil,
+		problem.targetLessons,
+		finalizeSolverTelemetry(telemetry, startedAt, finishedAt),
+	), nil
 }
 
 func (s *graphColoringSolver) greedyColor(
@@ -32,6 +45,7 @@ func (s *graphColoringSolver) greedyColor(
 	variables []Variable,
 	domains map[string][]DomainValue,
 	adjacency map[string]map[string]struct{},
+	telemetry *SolverTelemetry,
 ) map[string]PreviewAssignment {
 	assignments := make(map[string]PreviewAssignment)
 	slotUsage := make(map[string]int)
@@ -50,6 +64,9 @@ func (s *graphColoringSolver) greedyColor(
 		}
 		return leftDomain < rightDomain
 	})
+	if telemetry != nil {
+		telemetry.FirstPassAssignedCount = 0
+	}
 
 	for _, variable := range ordered {
 		grouped := groupDomainsBySlot(domains[variable.ID])
@@ -66,20 +83,34 @@ func (s *graphColoringSolver) greedyColor(
 			}
 			return leftScore < rightScore
 		})
+		if telemetry != nil {
+			telemetry.SlotGroupEvaluatedCount += len(slotKeys)
+		}
 
+		wasAssigned := false
 		for _, slotKey := range slotKeys {
 			for _, candidate := range grouped[slotKey] {
+				if telemetry != nil {
+					telemetry.CandidateEvaluatedCount++
+				}
 				if problem.hasConflict(variable, candidate, assignments) {
+					if telemetry != nil {
+						telemetry.CandidateRejectedConflictCount++
+					}
 					continue
 				}
 
 				assignments[variable.ID] = newPreviewAssignment(variable, candidate, "GRAPH_COLORING_OK")
 				slotUsage[slotKey]++
+				wasAssigned = true
 				goto assigned
 			}
 		}
 
 	assigned:
+		if wasAssigned && telemetry != nil {
+			telemetry.FirstPassAssignedCount++
+		}
 	}
 
 	return assignments

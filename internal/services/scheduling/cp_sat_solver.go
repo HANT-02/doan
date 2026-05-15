@@ -3,6 +3,7 @@ package scheduling
 import (
 	"context"
 	"sort"
+	"time"
 
 	"doan/internal/entities"
 )
@@ -32,7 +33,9 @@ func (s *cpSatSolver) Label() string {
 }
 
 func (s *cpSatSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
+	startedAt := time.Now()
 	problem := prepareSchedulingProblem(input)
+	telemetry := newSolverTelemetry(s.Key(), s.Label(), input, problem)
 	state := &cpSearchState{
 		bestAssignments: make(map[string]PreviewAssignment),
 		bestAssigned:    -1,
@@ -50,9 +53,20 @@ func (s *cpSatSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput
 		return leftDomain < rightDomain
 	})
 
-	s.search(&problem, ordered, problem.domains, 0, make(map[string]PreviewAssignment), state)
+	s.search(&problem, ordered, problem.domains, 0, make(map[string]PreviewAssignment), state, telemetry)
 
-	return buildSolverOutput(input, problem.variables, state.bestAssignments, problem.presetConflicts, problem.noDomainConflicts, nil, problem.targetLessons), nil
+	telemetry.NodesVisited = state.nodesVisited
+	finishedAt := time.Now()
+	return buildSolverOutput(
+		input,
+		problem.variables,
+		state.bestAssignments,
+		problem.presetConflicts,
+		problem.noDomainConflicts,
+		nil,
+		problem.targetLessons,
+		finalizeSolverTelemetry(telemetry, startedAt, finishedAt),
+	), nil
 }
 
 func (s *cpSatSolver) search(
@@ -62,19 +76,31 @@ func (s *cpSatSolver) search(
 	index int,
 	assignments map[string]PreviewAssignment,
 	state *cpSearchState,
+	telemetry *SolverTelemetry,
 ) {
 	if state.nodesVisited >= s.maxNodes {
+		if telemetry != nil {
+			telemetry.HitMaxNodeLimit = true
+		}
 		return
 	}
 	state.nodesVisited++
 
 	remaining := len(variables) - index
 	if len(assignments)+remaining < state.bestAssigned {
+		if telemetry != nil {
+			telemetry.PrunedBranchCount++
+		}
 		return
 	}
 
 	if index >= len(variables) {
-		s.maybeUpdateBest(assignments, state)
+		if telemetry != nil {
+			telemetry.LeafSolutionCount++
+		}
+		if s.maybeUpdateBest(assignments, state) && telemetry != nil {
+			telemetry.BestSolutionUpdateCount++
+		}
 		return
 	}
 
@@ -88,19 +114,25 @@ func (s *cpSatSolver) search(
 	})
 
 	for _, candidate := range candidates {
+		if telemetry != nil {
+			telemetry.CandidateEvaluatedCount++
+		}
 		if problem.hasConflict(variable, candidate, assignments) {
+			if telemetry != nil {
+				telemetry.CandidateRejectedConflictCount++
+			}
 			continue
 		}
 
 		assignments[variable.ID] = newPreviewAssignment(variable, candidate, "CP_SAT_OK")
-		s.search(problem, variables, domains, index+1, assignments, state)
+		s.search(problem, variables, domains, index+1, assignments, state, telemetry)
 		delete(assignments, variable.ID)
 	}
 
-	s.search(problem, variables, domains, index+1, assignments, state)
+	s.search(problem, variables, domains, index+1, assignments, state, telemetry)
 }
 
-func (s *cpSatSolver) maybeUpdateBest(assignments map[string]PreviewAssignment, state *cpSearchState) {
+func (s *cpSatSolver) maybeUpdateBest(assignments map[string]PreviewAssignment, state *cpSearchState) bool {
 	assignmentCount := len(assignments)
 	softScore := scoreAssignments(assignmentsToSlice(assignments), state.targetLessons)
 
@@ -108,5 +140,7 @@ func (s *cpSatSolver) maybeUpdateBest(assignments map[string]PreviewAssignment, 
 		state.bestAssigned = assignmentCount
 		state.bestSoftScore = softScore
 		state.bestAssignments = cloneAssignments(assignments)
+		return true
 	}
+	return false
 }

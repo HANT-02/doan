@@ -18,42 +18,59 @@ type BenchmarkScenario struct {
 }
 
 type BenchmarkStudy struct {
-	GeneratedAt     time.Time
-	ScenarioReports []BenchmarkScenarioReport
-	Recommendation  BenchmarkRecommendation
+	GeneratedAt     time.Time                 `json:"thoi_diem_tao"`
+	ScenarioReports []BenchmarkScenarioReport `json:"bao_cao_kich_ban"`
+	Recommendation  BenchmarkRecommendation   `json:"khuyen_nghi"`
 }
 
 type BenchmarkScenarioReport struct {
-	Name         string
-	Description  string
-	Iterations   int
-	ClassCount   int
-	TeacherCount int
-	RoomCount    int
-	ShiftCount   int
-	SessionCount int
-	Solvers      []BenchmarkScenarioSolverReport
+	Name         string                          `json:"ten_kich_ban"`
+	Description  string                          `json:"mo_ta"`
+	Iterations   int                             `json:"so_lan_chay"`
+	ClassCount   int                             `json:"so_lop"`
+	TeacherCount int                             `json:"so_giao_vien"`
+	RoomCount    int                             `json:"so_phong"`
+	ShiftCount   int                             `json:"so_ca"`
+	SessionCount int                             `json:"tong_so_buoi_yeu_cau"`
+	Solvers      []BenchmarkScenarioSolverReport `json:"ket_qua_theo_thuat_toan"`
 }
 
 type BenchmarkScenarioSolverReport struct {
-	Key                   string
-	Label                 string
-	Runs                  int
-	AvgFeasibilityRate    float64
-	AvgHardViolationCount float64
-	AvgSoftScore          float64
-	AvgRuntimeMs          float64
-	MinRuntimeMs          int64
-	MaxRuntimeMs          int64
-	StableAcrossRuns      bool
-	RepresentativeStatus  string
-	RepresentativeSummary SolverSummary
+	Key                      string               `json:"khoa_thuat_toan"`
+	Label                    string               `json:"ten_thuat_toan"`
+	Runs                     int                  `json:"so_lan_chay"`
+	AvgFeasibilityRate       float64              `json:"ty_le_xep_thanh_cong_trung_binh"`
+	AvgHardViolationCount    float64              `json:"so_vi_pham_cung_trung_binh"`
+	AvgSoftScore             float64              `json:"diem_mem_trung_binh"`
+	AvgRuntimeMs             float64              `json:"thoi_gian_chay_trung_binh_mili_giay"`
+	StdDevHardViolationCount float64              `json:"do_lech_chuan_vi_pham_cung"`
+	StdDevSoftScore          float64              `json:"do_lech_chuan_diem_mem"`
+	StdDevRuntimeMs          float64              `json:"do_lech_chuan_thoi_gian_chay_mili_giay"`
+	MinRuntimeMs             int64                `json:"thoi_gian_chay_nho_nhat_mili_giay"`
+	MaxRuntimeMs             int64                `json:"thoi_gian_chay_lon_nhat_mili_giay"`
+	StableAcrossRuns         bool                 `json:"on_dinh_qua_nhieu_lan_chay"`
+	RepresentativeStatus     string               `json:"trang_thai_dai_dien"`
+	RepresentativeSummary    SolverSummary        `json:"tom_tat_dai_dien"`
+	RunRecords               []BenchmarkRunRecord `json:"nhat_ky_tung_lan_chay"`
+}
+
+type BenchmarkRunRecord struct {
+	RunIndex           int              `json:"chi_so_lan_chay"`
+	StartedAt          time.Time        `json:"thoi_diem_bat_dau"`
+	FinishedAt         time.Time        `json:"thoi_diem_ket_thuc"`
+	RuntimeMs          int64            `json:"thoi_gian_chay_mili_giay"`
+	Status             string           `json:"trang_thai"`
+	ScheduledLessons   int              `json:"so_buoi_xep_duoc"`
+	UnscheduledLessons int              `json:"so_buoi_chua_xep_duoc"`
+	ConflictCount      int              `json:"so_xung_dot"`
+	SoftScore          int              `json:"diem_mem"`
+	Telemetry          *SolverTelemetry `json:"ghi_do_dac"`
 }
 
 type BenchmarkRecommendation struct {
-	SelectedSolverKey   string
-	SelectedSolverLabel string
-	Rationale           []string
+	SelectedSolverKey   string   `json:"khoa_thuat_toan_duoc_chon"`
+	SelectedSolverLabel string   `json:"ten_thuat_toan_duoc_chon"`
+	Rationale           []string `json:"ly_do_lua_chon"`
 }
 
 type benchmarkAggregate struct {
@@ -67,6 +84,10 @@ type benchmarkAggregate struct {
 	signatures            map[string]struct{}
 	representativeStatus  string
 	representativeSummary SolverSummary
+	hardViolationSeries   []float64
+	softScoreSeries       []float64
+	runtimeSeriesMs       []float64
+	runRecords            []BenchmarkRunRecord
 }
 
 func BuildDefaultBenchmarkScenarios() []BenchmarkScenario {
@@ -74,8 +95,8 @@ func BuildDefaultBenchmarkScenarios() []BenchmarkScenario {
 
 	return []BenchmarkScenario{
 		buildSyntheticScenario(syntheticScenarioConfig{
-			Name:             "small",
-			Description:      "6 lop, 4 giao vien, 3 phong, 2 buoi moi lop. Muc tieu la do feasibility va runtime baseline.",
+			Name:             "nho",
+			Description:      "6 lop, 4 giao vien, 3 phong, 2 buoi moi lop. Muc tieu la do ty le xep thanh cong va thoi gian chay co so.",
 			DateFrom:         baseDate,
 			Days:             14,
 			ClassCount:       6,
@@ -86,7 +107,7 @@ func BuildDefaultBenchmarkScenarios() []BenchmarkScenario {
 			PreferredRoomMod: 2,
 		}),
 		buildSyntheticScenario(syntheticScenarioConfig{
-			Name:             "medium",
+			Name:             "trung_binh",
 			Description:      "10 lop, 5 giao vien, 4 phong, 3 buoi moi lop. Muc tieu la do chat luong nghiem khi rang buoc bat dau tang.",
 			DateFrom:         baseDate,
 			Days:             14,
@@ -98,8 +119,8 @@ func BuildDefaultBenchmarkScenarios() []BenchmarkScenario {
 			PreferredRoomMod: 3,
 		}),
 		buildSyntheticScenario(syntheticScenarioConfig{
-			Name:             "large",
-			Description:      "16 lop, 7 giao vien, 5 phong, 4 buoi moi lop. Muc tieu la do scalability va do on dinh khi so bien tang.",
+			Name:             "lon",
+			Description:      "16 lop, 7 giao vien, 5 phong, 4 buoi moi lop. Muc tieu la do kha nang mo rong va do on dinh khi so bien tang.",
 			DateFrom:         baseDate,
 			Days:             14,
 			ClassCount:       16,
@@ -121,27 +142,31 @@ func RunBenchmarkStudy(ctx context.Context, catalog SolverCatalog, scenarios []B
 		for _, descriptor := range descriptors {
 			solver, ok := catalog.GetSolver(descriptor.Key)
 			if !ok {
-				return nil, fmt.Errorf("solver %s not registered in catalog", descriptor.Key)
+				return nil, fmt.Errorf("thuat toan %s chua duoc dang ky trong danh muc", descriptor.Key)
 			}
 
 			aggregate, err := runScenarioForSolver(ctx, solver, scenario)
 			if err != nil {
-				return nil, fmt.Errorf("run benchmark scenario %s with solver %s: %w", scenario.Name, descriptor.Key, err)
+				return nil, fmt.Errorf("chay kich ban %s voi thuat toan %s that bai: %w", scenario.Name, descriptor.Key, err)
 			}
 
 			solverReports = append(solverReports, BenchmarkScenarioSolverReport{
-				Key:                   descriptor.Key,
-				Label:                 descriptor.Label,
-				Runs:                  aggregate.runs,
-				AvgFeasibilityRate:    aggregate.feasibilityTotal / float64(aggregate.runs),
-				AvgHardViolationCount: aggregate.hardViolationTotal / float64(aggregate.runs),
-				AvgSoftScore:          aggregate.softScoreTotal / float64(aggregate.runs),
-				AvgRuntimeMs:          aggregate.runtimeTotalMs / float64(aggregate.runs),
-				MinRuntimeMs:          aggregate.minRuntimeMs,
-				MaxRuntimeMs:          aggregate.maxRuntimeMs,
-				StableAcrossRuns:      len(aggregate.signatures) == 1,
-				RepresentativeStatus:  aggregate.representativeStatus,
-				RepresentativeSummary: aggregate.representativeSummary,
+				Key:                      descriptor.Key,
+				Label:                    descriptor.Label,
+				Runs:                     aggregate.runs,
+				AvgFeasibilityRate:       aggregate.feasibilityTotal / float64(aggregate.runs),
+				AvgHardViolationCount:    aggregate.hardViolationTotal / float64(aggregate.runs),
+				AvgSoftScore:             aggregate.softScoreTotal / float64(aggregate.runs),
+				AvgRuntimeMs:             aggregate.runtimeTotalMs / float64(aggregate.runs),
+				StdDevHardViolationCount: stdDev(aggregate.hardViolationSeries),
+				StdDevSoftScore:          stdDev(aggregate.softScoreSeries),
+				StdDevRuntimeMs:          stdDev(aggregate.runtimeSeriesMs),
+				MinRuntimeMs:             aggregate.minRuntimeMs,
+				MaxRuntimeMs:             aggregate.maxRuntimeMs,
+				StableAcrossRuns:         len(aggregate.signatures) == 1,
+				RepresentativeStatus:     aggregate.representativeStatus,
+				RepresentativeSummary:    aggregate.representativeSummary,
+				RunRecords:               aggregate.runRecords,
 			})
 		}
 
@@ -172,36 +197,41 @@ func RunBenchmarkStudy(ctx context.Context, catalog SolverCatalog, scenarios []B
 func RenderBenchmarkStudyMarkdown(study *BenchmarkStudy) string {
 	var builder strings.Builder
 
-	builder.WriteString("# Scheduling Benchmark Study\n\n")
-	builder.WriteString(fmt.Sprintf("- Generated at: %s\n", study.GeneratedAt.Format(time.RFC3339)))
-	builder.WriteString(fmt.Sprintf("- Recommended solver: `%s` (%s)\n\n", study.Recommendation.SelectedSolverKey, study.Recommendation.SelectedSolverLabel))
+	builder.WriteString("# Báo Cáo Đo Đạc Đối Sánh Xếp Lịch\n\n")
+	builder.WriteString(fmt.Sprintf("- Thời điểm tạo báo cáo: %s\n", study.GeneratedAt.Format(time.RFC3339)))
+	builder.WriteString(fmt.Sprintf("- Thuật toán được khuyến nghị: `%s` (%s)\n\n", study.Recommendation.SelectedSolverKey, study.Recommendation.SelectedSolverLabel))
 
 	for _, scenario := range study.ScenarioReports {
-		builder.WriteString(fmt.Sprintf("## Scenario `%s`\n\n", scenario.Name))
-		builder.WriteString(fmt.Sprintf("- Description: %s\n", scenario.Description))
-		builder.WriteString(fmt.Sprintf("- Dataset: %d classes, %d teachers, %d rooms, %d shifts, %d requested sessions\n", scenario.ClassCount, scenario.TeacherCount, scenario.RoomCount, scenario.ShiftCount, scenario.SessionCount))
-		builder.WriteString(fmt.Sprintf("- Iterations: %d\n\n", scenario.Iterations))
-		builder.WriteString("| Solver | Avg feasibility | Avg hard violations | Avg soft score | Avg runtime (ms) | Runtime range (ms) | Stable | Status |\n")
-		builder.WriteString("| --- | ---: | ---: | ---: | ---: | --- | --- | --- |\n")
+		builder.WriteString(fmt.Sprintf("## Kịch bản `%s`\n\n", scenario.Name))
+		builder.WriteString(fmt.Sprintf("- Mô tả: %s\n", scenario.Description))
+		builder.WriteString(fmt.Sprintf("- Bộ dữ liệu: %d lớp, %d giáo viên, %d phòng, %d ca, %d buổi yêu cầu\n", scenario.ClassCount, scenario.TeacherCount, scenario.RoomCount, scenario.ShiftCount, scenario.SessionCount))
+		builder.WriteString(fmt.Sprintf("- Số lần chạy: %d\n\n", scenario.Iterations))
+		builder.WriteString("| Thuật toán | Tỷ lệ xếp thành công TB | Vi phạm cứng TB | Điểm mềm TB | Thời gian chạy TB (ms) | Độ lệch chuẩn thời gian (ms) | Khoảng thời gian (ms) | Ổn định | Trạng thái |\n")
+		builder.WriteString("| --- | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |\n")
 		for _, solver := range scenario.Solvers {
+			stableText := "Khong"
+			if solver.StableAcrossRuns {
+				stableText = "Co"
+			}
 			builder.WriteString(fmt.Sprintf(
-				"| %s | %.3f | %.3f | %.3f | %.3f | %d-%d | %t | %s |\n",
+				"| %s | %.3f | %.3f | %.3f | %.3f | %.3f | %d-%d | %s | %s |\n",
 				solver.Label,
 				solver.AvgFeasibilityRate,
 				solver.AvgHardViolationCount,
 				solver.AvgSoftScore,
 				solver.AvgRuntimeMs,
+				solver.StdDevRuntimeMs,
 				solver.MinRuntimeMs,
 				solver.MaxRuntimeMs,
-				solver.StableAcrossRuns,
-				solver.RepresentativeStatus,
+				stableText,
+				toVietnameseStatus(solver.RepresentativeStatus),
 			))
 		}
 		builder.WriteString("\n")
 	}
 
-	builder.WriteString("## Recommendation\n\n")
-	builder.WriteString(fmt.Sprintf("- Selected solver: `%s` (%s)\n", study.Recommendation.SelectedSolverKey, study.Recommendation.SelectedSolverLabel))
+	builder.WriteString("## Khuyến Nghị\n\n")
+	builder.WriteString(fmt.Sprintf("- Thuật toán được chọn: `%s` (%s)\n", study.Recommendation.SelectedSolverKey, study.Recommendation.SelectedSolverLabel))
 	for _, rationale := range study.Recommendation.Rationale {
 		builder.WriteString(fmt.Sprintf("- %s\n", rationale))
 	}
@@ -218,7 +248,13 @@ func runScenarioForSolver(ctx context.Context, solver SchedulingSolver, scenario
 
 	for iteration := 0; iteration < scenario.Iterations; iteration++ {
 		startedAt := time.Now()
-		output, err := solver.Solve(ctx, scenario.Input)
+		input := scenario.Input
+		input.BenchmarkOptions = &BenchmarkOptions{
+			ScenarioName: scenario.Name,
+			RunIndex:     iteration + 1,
+			TotalRuns:    scenario.Iterations,
+		}
+		output, err := solver.Solve(ctx, input)
 		runtimeMs := time.Since(startedAt).Milliseconds()
 		if err != nil {
 			return nil, err
@@ -229,6 +265,9 @@ func runScenarioForSolver(ctx context.Context, solver SchedulingSolver, scenario
 		aggregate.hardViolationTotal += float64(output.Summary.ConflictCount)
 		aggregate.softScoreTotal += float64(output.Summary.SoftScore)
 		aggregate.runtimeTotalMs += float64(runtimeMs)
+		aggregate.hardViolationSeries = append(aggregate.hardViolationSeries, float64(output.Summary.ConflictCount))
+		aggregate.softScoreSeries = append(aggregate.softScoreSeries, float64(output.Summary.SoftScore))
+		aggregate.runtimeSeriesMs = append(aggregate.runtimeSeriesMs, float64(runtimeMs))
 		if runtimeMs < aggregate.minRuntimeMs {
 			aggregate.minRuntimeMs = runtimeMs
 		}
@@ -242,9 +281,60 @@ func runScenarioForSolver(ctx context.Context, solver SchedulingSolver, scenario
 
 		signature := fmt.Sprintf("%s|%d|%d|%d|%d", output.Status, output.Summary.ScheduledLessons, output.Summary.UnscheduledLessons, output.Summary.ConflictCount, output.Summary.SoftScore)
 		aggregate.signatures[signature] = struct{}{}
+		finishedAt := startedAt.Add(time.Duration(runtimeMs) * time.Millisecond)
+		if output.Telemetry != nil {
+			if !output.Telemetry.StartedAt.IsZero() {
+				startedAt = output.Telemetry.StartedAt
+			}
+			if !output.Telemetry.FinishedAt.IsZero() {
+				finishedAt = output.Telemetry.FinishedAt
+			}
+		}
+		aggregate.runRecords = append(aggregate.runRecords, BenchmarkRunRecord{
+			RunIndex:           iteration + 1,
+			StartedAt:          startedAt,
+			FinishedAt:         finishedAt,
+			RuntimeMs:          runtimeMs,
+			Status:             output.Status,
+			ScheduledLessons:   output.Summary.ScheduledLessons,
+			UnscheduledLessons: output.Summary.UnscheduledLessons,
+			ConflictCount:      output.Summary.ConflictCount,
+			SoftScore:          output.Summary.SoftScore,
+			Telemetry:          output.Telemetry,
+		})
 	}
 
 	return aggregate, nil
+}
+
+func stdDev(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	mean := 0.0
+	for _, value := range values {
+		mean += value
+	}
+	mean /= float64(len(values))
+
+	variance := 0.0
+	for _, value := range values {
+		diff := value - mean
+		variance += diff * diff
+	}
+	variance /= float64(len(values))
+	return sqrtNewton(variance)
+}
+
+func sqrtNewton(value float64) float64 {
+	if value <= 0 {
+		return 0
+	}
+	estimate := value
+	for i := 0; i < 10; i++ {
+		estimate = (estimate + value/estimate) / 2
+	}
+	return estimate
 }
 
 func calculateScenarioFeasibilityRate(summary SolverSummary) float64 {
@@ -344,10 +434,10 @@ func selectBenchmarkRecommendation(reports []BenchmarkScenarioReport) BenchmarkR
 		SelectedSolverKey:   selected.key,
 		SelectedSolverLabel: selected.label,
 		Rationale: []string{
-			fmt.Sprintf("Uu tien solver co so scenario COMPLETED nhieu nhat: %d/%d.", selected.completedScenarioCount, len(reports)),
-			fmt.Sprintf("Tong feasibility trung binh cao nhat hoac dong hang cao nhat: %.3f.", selected.feasibilityTotal),
-			fmt.Sprintf("Tong hard violations thap nhat sau khi uu tien feasibility: %.3f.", selected.hardViolationTotal),
-			fmt.Sprintf("Tong runtime trung binh duoc dung lam tie-break sau cung: %.3f ms.", selected.runtimeTotal),
+			fmt.Sprintf("Uu tien thuat toan co so kich ban hoan thanh nhieu nhat: %d/%d.", selected.completedScenarioCount, len(reports)),
+			fmt.Sprintf("Tong ty le xep thanh cong trung binh cao nhat hoac dong hang cao nhat: %.3f.", selected.feasibilityTotal),
+			fmt.Sprintf("Tong vi pham cung thap nhat sau khi uu tien ty le xep thanh cong: %.3f.", selected.hardViolationTotal),
+			fmt.Sprintf("Tong thoi gian chay trung binh duoc dung lam tieu chi phu cuoi cung: %.3f ms.", selected.runtimeTotal),
 		},
 	}
 }

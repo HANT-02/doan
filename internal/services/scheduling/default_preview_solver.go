@@ -22,11 +22,13 @@ func (s *legacyPreviewSolver) Key() string {
 }
 
 func (s *legacyPreviewSolver) Label() string {
-	return "Legacy Preview Solver"
+	return "Bộ giải xem trước cũ"
 }
 
 func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
+	startedAt := time.Now()
 	problem := prepareSchedulingProblem(input)
+	telemetry := newSolverTelemetry(s.Key(), s.Label(), input, problem)
 	solver := newBacktrackingSolver(&problem)
 	assignments, solverConflicts := solver.Solve()
 
@@ -35,7 +37,17 @@ func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*Solv
 		assignmentsByID[assignment.VariableID] = assignment
 	}
 
-	return buildSolverOutput(input, problem.variables, assignmentsByID, problem.presetConflicts, problem.noDomainConflicts, solverConflicts, problem.targetLessons), nil
+	finishedAt := time.Now()
+	return buildSolverOutput(
+		input,
+		problem.variables,
+		assignmentsByID,
+		problem.presetConflicts,
+		problem.noDomainConflicts,
+		solverConflicts,
+		problem.targetLessons,
+		finalizeSolverTelemetry(telemetry, startedAt, finishedAt),
+	), nil
 }
 
 func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {

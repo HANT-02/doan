@@ -122,6 +122,18 @@ func TestSchedulingSolvers_BasicFeasibleInput(t *testing.T) {
 			if output.Summary.UnscheduledLessons != 0 {
 				t.Fatalf("expected no unscheduled lessons, got %d", output.Summary.UnscheduledLessons)
 			}
+
+			if output.Telemetry == nil {
+				t.Fatalf("expected telemetry for solver %s", solver.Key())
+			}
+
+			if output.Telemetry.SolverKey != solver.Key() {
+				t.Fatalf("expected telemetry solver key %s, got %s", solver.Key(), output.Telemetry.SolverKey)
+			}
+
+			if output.Telemetry.RequestedSessionCount != 2 {
+				t.Fatalf("expected telemetry requested sessions 2, got %d", output.Telemetry.RequestedSessionCount)
+			}
 		})
 	}
 }

@@ -1,0 +1,88 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này trình bày bối cảnh ra đời, mục tiêu, đối tượng, phạm vi, phương pháp tiếp cận, ý nghĩa và cấu trúc tổng thể của đồ án.
+
+\section{Đặt vấn đề}
+\label{section:1.1}
+Hoạt động của một trung tâm dạy thêm trong thực tế bao gồm rất nhiều nghiệp vụ có liên hệ chặt chẽ với nhau như quản lý học viên, quản lý giáo viên, quản lý khóa học, chương trình đào tạo, lớp học, phòng học, ca học, lịch học, theo dõi chuyên cần, kết quả học tập và trao đổi thông tin với người học. Khi quy mô trung tâm tăng lên, việc quản lý các nghiệp vụ này bằng bảng tính hoặc thao tác thủ công dễ dẫn đến sai sót, dữ liệu rời rạc, khó truy vết và đặc biệt là khó tối ưu nguồn lực.
+
+Trong các bài toán nghiệp vụ đó, xếp lịch là một bài toán có độ phức tạp cao và có giá trị thực tiễn rất rõ rệt. Một lịch học hợp lệ phải đồng thời thỏa mãn nhiều ràng buộc như không trùng giáo viên, không trùng phòng học, chỉ dùng các ca học còn hiệu lực, tôn trọng lịch tuần của lớp, phù hợp với thời gian triển khai và bảo đảm khả năng commit thành các buổi học thực tế. Vì vậy, bài toán này không chỉ mang ý nghĩa ứng dụng mà còn có giá trị nghiên cứu trong lĩnh vực tối ưu hóa.
+
+Bên cạnh nhu cầu vận hành hằng ngày, các trung tâm dạy thêm hiện nay cũng cần có khả năng theo dõi tiến trình học tập của học viên một cách sát sao hơn. Nếu dữ liệu về điểm danh, tổng kết buổi học, mức độ hoàn thành bài tập và kết quả học tập được chuẩn hóa tốt, hệ thống có thể mở rộng theo hướng phân tích học tập và cảnh báo sớm học viên có nguy cơ học kém. Đây là hướng phát triển phù hợp với xu thế ứng dụng dữ liệu và trí tuệ nhân tạo trong giáo dục.
+
+Từ những lý do trên, đề tài xây dựng hệ thống quản lý trung tâm dạy thêm EduCenter được lựa chọn nhằm giải quyết đồng thời hai mục tiêu: hỗ trợ vận hành thực tế cho trung tâm dạy thêm và tạo ra chiều sâu kỹ thuật cho đồ án tốt nghiệp thông qua bài toán xếp lịch thông minh cùng hướng phát triển phân tích học tập.
+
+\section{Mục tiêu và phạm vi đề tài}
+\label{section:1.2}
+Mục tiêu tổng quát của đề tài là xây dựng một hệ thống quản lý trung tâm dạy thêm có cấu trúc rõ ràng, bám sát nghiệp vụ thực tế, đồng thời có điểm nhấn kỹ thuật đủ sâu để phục vụ mục tiêu nghiên cứu và bảo vệ đồ án tốt nghiệp.
+
+Cụ thể, đề tài hướng tới các mục tiêu sau:
+\begin{itemize}
+    \item Xây dựng được nền tảng quản trị cốt lõi cho trung tâm dạy thêm, bao gồm quản lý tài khoản, học viên, giáo viên, khóa học, chương trình đào tạo, phòng học, ca học và lớp học.
+    \item Xây dựng được chuỗi nghiệp vụ vận hành lớp học từ mở lớp, ghi danh, phân công giáo viên, cấu hình lịch tuần, tạo phương án xem trước xếp lịch, xác nhận lưu và sinh ra các buổi học thực tế.
+    \item Chuẩn hóa dữ liệu thời gian bằng thực thể Shift, giúp toàn bộ bài toán xếp lịch vận hành trên các ca học chuẩn thay vì các khung giờ rời rạc.
+    \item Cài đặt và so sánh thực nghiệm nhiều thuật toán xếp lịch trên cùng một bộ dữ liệu đầu vào để đánh giá mức độ phù hợp trước khi chọn thuật toán mặc định.
+    \item Xây dựng mô hình dữ liệu phục vụ các nghiệp vụ học vụ sau buổi học như điểm danh, tổng kết buổi học, kết quả học tập và đơn xin phép nghỉ học.
+    \item Chuẩn bị nền dữ liệu học vụ đủ chặt chẽ để có thể mở rộng theo hướng phân tích dữ liệu học tập trong các giai đoạn tiếp theo.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Mục tiêu chức năng chính của hệ thống}
+\label{table:bang1.1}
+\begin{tabular}{|c|l|p{8cm}|}
+\hline
+\textbf{STT} & \textbf{Nhóm mục tiêu} & \textbf{Nội dung} \\ \hline
+1 & Quản trị vận hành & Quản lý học viên, giáo viên, khóa học, chương trình, phòng học, ca học, lớp học \\ \hline
+2 & Vận hành lớp học & Ghi danh, phân công giáo viên, cấu hình lịch tuần, theo dõi danh sách học sinh \\ \hline
+3 & Xếp lịch & Tạo phương án xem trước, so sánh thuật toán và xác nhận lưu để sinh buổi học \\ \hline
+4 & Học vụ sau buổi học & Điểm danh, tổng kết buổi học, ghi nhận kết quả học tập, quản lý đơn xin phép nghỉ học \\ \hline
+5 & Phân tích mở rộng & Chuẩn bị dữ liệu và kiến trúc cho hướng phân tích dữ liệu học tập \\ \hline
+\end{tabular}
+\end{table}
+
+Đối tượng mà hệ thống hướng tới là các trung tâm dạy thêm hoặc trung tâm học thêm có quy mô vừa - trung bình, cần một phần mềm thống nhất để quản lý dữ liệu đào tạo, theo dõi lớp học và hỗ trợ các nghiệp vụ vận hành hằng ngày.
+
+Trong phạm vi hiện tại của đồ án, hệ thống tập trung vào các nhóm nghiệp vụ sau:
+\begin{itemize}
+    \item Quản lý truy cập và danh tính: đăng ký, OTP, đăng nhập, đổi mật khẩu, đặt lại mật khẩu.
+    \item Quản lý dữ liệu đào tạo và nguồn lực: học viên, giáo viên, khóa học, chương trình đào tạo, phòng học, ca học.
+    \item Quản lý lớp học và ghi danh: tạo lớp, cập nhật lớp, gán giáo viên, cấu hình lịch tuần, ghi danh, rút học viên khỏi lớp.
+    \item Xếp lịch và buổi học: tạo phương án xem trước xếp lịch, xem kết quả, so sánh thuật toán, xác nhận lưu để tạo buổi học.
+    \item Học vụ sau buổi học: điểm danh, tổng kết buổi học, ghi nhận kết quả học tập, đơn xin phép nghỉ học.
+    \item Hướng mở rộng dữ liệu: chuẩn bị các bảng và luồng dữ liệu phục vụ phân tích dữ liệu học tập trong tương lai.
+\end{itemize}
+
+\section{Định hướng giải pháp}
+\label{section:1.3}
+Thay vì xây dựng báo cáo chỉ dựa trên ý tưởng ban đầu, đề tài được triển khai theo hướng bám sát mã nguồn và đối chiếu lại với tài liệu nghiệp vụ. Cách tiếp cận này giúp nội dung báo cáo phản ánh đúng trạng thái phát triển của hệ thống.
+
+Các bước thực hiện chính gồm:
+\begin{enumerate}
+    \item Khảo sát yêu cầu nghiệp vụ của bài toán quản lý trung tâm dạy thêm.
+    \item Thiết kế sơ bộ miền nghiệp vụ, tác nhân, phân rã chức năng và mô hình dữ liệu.
+    \item Xây dựng phần máy chủ theo hướng tách lớp rõ ràng bằng mô hình Clean Architecture.
+    \item Cài đặt phần giao diện cho các màn hình quản trị cốt lõi.
+    \item Hoàn thiện mô hình dữ liệu cho xếp lịch và học vụ sau buổi học.
+    \item Nghiên cứu và so sánh thực nghiệm nhiều thuật toán cho bài toán xếp lịch.
+    \item Tổng hợp tài liệu phân tích, ca sử dụng, ERD, sơ đồ tuần tự và kết quả thực nghiệm.
+\end{enumerate}
+
+Về mặt thực tiễn, đề tài góp phần số hóa các nghiệp vụ quan trọng của một trung tâm dạy thêm, giúp giảm thao tác thủ công, tăng khả năng truy vết dữ liệu và nâng cao hiệu quả vận hành. Về mặt học thuật, đề tài tạo ra giá trị ở việc mô hình hóa bài toán xếp lịch, tách lớp thuật toán theo hướng mở rộng, so sánh nhiều thuật toán trên cùng một tập ràng buộc và chuẩn bị được nền dữ liệu cho các hướng phân tích học tập trong tương lai.
+
+\section{Bố cục đồ án}
+\label{section:1.4}
+Phần còn lại của báo cáo đồ án tốt nghiệp này được tổ chức như sau.
+
+Chương 2 tập trung vào phân tích hệ thống, bao gồm xác định tác nhân, phân rã chức năng, đặc tả ca sử dụng, biểu đồ trình tự và mô tả các thực thể nghiệp vụ trọng tâm. Nội dung chương này giúp làm rõ phạm vi nghiệp vụ mà hệ thống hướng tới.
+
+Chương 3 trình bày nền tảng lý thuyết và công nghệ sử dụng trong đồ án, bao gồm Golang, Gin, GORM, PostgreSQL, Google Wire, React, TypeScript, MUI, Redux Toolkit, RTK Query, Swagger và các công cụ mô hình hóa. Mỗi công nghệ được phân tích vai trò cụ thể trong hệ thống.
+
+Chương 4 trình bày thiết kế hệ thống, bao gồm kiến trúc tổng thể, quy trình nghiệp vụ, thiết kế cơ sở dữ liệu chi tiết và thiết kế giao diện. Đây là chương thể hiện cách hệ thống được tổ chức từ kiến trúc đến dữ liệu và giao diện người dùng.
+
+Chương 5 là phần nhấn mạnh kỹ thuật về bài toán xếp lịch thông minh. Chương này trình bày mô hình bài toán, bộ luật ràng buộc, quy trình xử lý dữ liệu bảy bước, ba thuật toán đã cài đặt, bộ dữ liệu thực nghiệm và cơ sở lựa chọn thuật toán chính. Ngoài ra, chương cũng trình bày hướng phát triển phân tích dữ liệu học tập.
+
+Chương 6 tổng kết những kết quả đạt được, các hạn chế hiện tại và định hướng mở rộng trong tương lai.
+
+\end{document}

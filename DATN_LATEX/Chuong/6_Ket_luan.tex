@@ -1,0 +1,41 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này tổng kết những kết quả đạt được, các hạn chế hiện tại và định hướng phát triển trong tương lai.
+
+\section{Kết quả đạt được}
+\label{section:6.1}
+Đồ án đã xây dựng được một hệ thống quản lý trung tâm dạy thêm có cấu trúc tương đối hoàn chỉnh, bám sát nghiệp vụ và có chiều sâu kỹ thuật. Các kết quả chính đạt được bao gồm:
+
+\begin{itemize}
+    \item Hoàn thiện phần lớn các mô-đun quản trị cốt lõi bao gồm quản lý tài khoản, học viên, giáo viên, khóa học, chương trình đào tạo, phòng học, ca học và lớp học.
+    \item Tổ chức được mô hình dữ liệu đủ rộng cho cả vận hành và phân tích mở rộng, với hơn 18 bảng dữ liệu trọng tâm.
+    \item Xây dựng thành công luồng xem trước xếp lịch và tạo buổi học thực tế, bao gồm bảy bước xử lý dữ liệu từ nạp đầu vào đến xác nhận lưu.
+    \item Cài đặt và so sánh thực nghiệm ba thuật toán khác nhau cho bài toán xếp lịch: thuật toán tô màu đồ thị kết hợp luật tham lam, thuật toán lập trình ràng buộc CP-SAT và thuật toán tìm kiếm Tabu.
+    \item Chuẩn bị được nền dữ liệu và cấu trúc mở rộng cho hướng phân tích dữ liệu học tập trong giai đoạn tiếp theo.
+\end{itemize}
+
+\section{Hạn chế hiện tại}
+\label{section:6.2}
+Bên cạnh những kết quả đạt được, hệ thống vẫn còn một số hạn chế:
+
+\begin{itemize}
+    \item Bộ dữ liệu thực nghiệm so sánh thuật toán chưa đủ lớn và chưa chạy trên môi trường triển khai thực tế.
+    \item Phần phân tích dữ liệu học tập hiện chỉ dừng ở mức chuẩn bị nền dữ liệu, chưa triển khai các mô hình phân tích hoặc cảnh báo cụ thể.
+    \item Chưa triển khai phân quyền chi tiết theo vai trò (RBAC) cho tất cả các mô-đun.
+\end{itemize}
+
+\section{Hướng phát triển}
+\label{section:6.3}
+Dựa trên các kết quả đạt được và những hạn chế đã nhận diện, hệ thống có thể tiếp tục phát triển theo các hướng sau:
+
+\begin{itemize}
+    \item Chuẩn hóa toàn bộ các trường trạng thái trong hệ thống theo hướng sử dụng enum rõ ràng.
+    \item Mở rộng bộ dữ liệu thực nghiệm và chạy so sánh thuật toán trên quy mô thực tế.
+    \item Triển khai hướng phân tích dữ liệu học tập: phát hiện xu hướng vắng học, theo dõi mức độ hoàn thành bài tập, đánh giá tiến bộ theo lớp, xây dựng cảnh báo học vụ.
+    \item Tích hợp thông báo thời gian thực qua WebSocket cho các sự kiện quan trọng như tạo buổi học mới, thay đổi lịch dạy.
+    \item Triển khai phân quyền RBAC đầy đủ cho tất cả các tác nhân trong hệ thống.
+    \item Xây dựng cổng thông tin dành cho phụ huynh và học viên, cho phép tra cứu lịch học, kết quả và gửi đơn xin phép.
+\end{itemize}
+
+\end{document}

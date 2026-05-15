@@ -1,0 +1,54 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này trình bày nền tảng lý thuyết và các công nghệ được sử dụng trong quá trình xây dựng hệ thống EduCenter. Mỗi công nghệ được phân tích vai trò cụ thể trong hệ thống.
+
+\section{Tổng quan công nghệ sử dụng}
+\label{section:3.1}
+Hệ thống EduCenter được xây dựng bằng một tập hợp công nghệ full-stack nhằm bảo đảm cả ba tiêu chí: khả năng mở rộng, tính rõ ràng trong tổ chức mã nguồn và sự thuận lợi khi phát triển các chức năng quản trị.
+
+\section{Golang}
+\label{section:3.2}
+Golang, hay Go, là ngôn ngữ lập trình được phát triển bởi Google với mục tiêu cân bằng giữa hiệu năng, độ đơn giản và khả năng bảo trì mã nguồn. Go có tốc độ biên dịch nhanh, mô hình đồng thời tốt, hệ sinh thái thư viện phong phú và cú pháp tương đối gọn. Trong đề tài này, Golang được sử dụng để xây dựng toàn bộ phần máy chủ của hệ thống EduCenter. Việc lựa chọn Go giúp hệ thống đạt được hiệu năng tốt trong xử lý API, tổ chức được các lớp nghiệp vụ rõ ràng và đặc biệt phù hợp với các tác vụ xếp lịch cần tính toán nhiều ràng buộc trong thời gian ngắn.
+
+\section{Gin Framework}
+\label{section:3.3}
+Gin là một khung phát triển web phổ biến trong hệ sinh thái Golang, được tối ưu cho việc xây dựng REST API với hiệu năng cao và cấu trúc lớp trung gian linh hoạt. Trong đề tài, Gin được dùng để tổ chức các điểm cuối API, xử lý yêu cầu và phản hồi, gắn dữ liệu đầu vào, xác thực và phân quyền. Việc sử dụng Gin giúp phần máy chủ có cấu trúc rõ ràng, dễ tách mô-đun và thuận tiện khi tích hợp Swagger để mô tả API.
+
+\section{GORM}
+\label{section:3.4}
+GORM là một thư viện ORM phổ biến của Golang, cho phép ánh xạ giữa struct trong mã nguồn và bảng dữ liệu trong cơ sở dữ liệu quan hệ. Thay vì viết toàn bộ truy vấn SQL theo cách thủ công, GORM hỗ trợ định nghĩa entity, quan hệ khóa ngoại, ràng buộc, soft delete và nhiều thao tác CRUD phổ biến. Trong EduCenter, GORM được dùng để biểu diễn các thực thể như User, Student, Teacher, Class, Lesson, Attendance và nhiều bảng nghiệp vụ khác. Việc sử dụng GORM giúp rút ngắn thời gian phát triển, đồng thời giữ được tính nhất quán giữa tầng domain và tầng dữ liệu.
+
+\section{PostgreSQL}
+\label{section:3.5}
+PostgreSQL là hệ quản trị cơ sở dữ liệu quan hệ mã nguồn mở mạnh mẽ, nổi bật ở khả năng tuân thủ chuẩn SQL, hỗ trợ kiểu dữ liệu phong phú và hiệu năng tốt trong các hệ thống nghiệp vụ. Trong đề tài, PostgreSQL được dùng làm cơ sở dữ liệu trung tâm cho toàn bộ hệ thống. PostgreSQL phù hợp với EduCenter vì hỗ trợ tốt UUID, kiểu mảng, kiểu JSONB, transaction và các quan hệ giữa bảng. Đây là lựa chọn phù hợp cho những hệ thống quản lý dữ liệu có nhiều thực thể liên kết chặt chẽ như trung tâm dạy thêm.
+
+\section{Google Wire}
+\label{section:3.6}
+Google Wire là công cụ hỗ trợ tiêm phụ thuộc theo hướng biên dịch mã nguồn. Thay vì khởi tạo thủ công quá nhiều phụ thuộc trong ứng dụng, Wire cho phép định nghĩa quan hệ phụ thuộc giữa kho lưu trữ, dịch vụ, ca sử dụng và bộ điều khiển một cách rõ ràng hơn. Trong EduCenter, Wire hỗ trợ việc lắp ghép các thành phần của hệ thống theo mô hình Clean Architecture, giúp mã nguồn dễ bảo trì và hạn chế tình trạng phụ thuộc chéo giữa các mô-đun.
+
+\section{React}
+\label{section:3.7}
+React là thư viện JavaScript nổi tiếng để xây dựng giao diện người dùng theo hướng thành phần hóa. Với React, giao diện được chia thành các thành phần nhỏ, có khả năng tái sử dụng cao và dễ quản lý trạng thái hiển thị. Trong đề tài, React được sử dụng để xây dựng giao diện quản trị cho các màn hình quản lý học viên, giáo viên, khóa học, lớp học, xếp lịch và một số màn hình phục vụ buổi học. Việc sử dụng React giúp giao diện linh hoạt, hiện đại và phù hợp với mô hình ứng dụng một trang (SPA).
+
+\section{TypeScript}
+\label{section:3.8}
+TypeScript là phần mở rộng của JavaScript có bổ sung hệ thống kiểu tĩnh. Khi phát triển các dự án giao diện quy mô vừa hoặc lớn, TypeScript giúp giảm lỗi do sai kiểu dữ liệu, tăng khả năng tự mô tả của mã nguồn và hỗ trợ tốt hơn khi làm việc với API. Trong hệ thống EduCenter, TypeScript được dùng cùng React để bảo đảm dữ liệu trao đổi giữa giao diện và máy chủ có cấu trúc rõ ràng, đặc biệt hữu ích khi xử lý các đối tượng truyền dữ liệu (DTO) phức tạp như phương án xem trước xếp lịch, chi tiết buổi học hoặc kết quả học tập.
+
+\section{MUI (Material-UI)}
+\label{section:3.9}
+MUI là một thư viện giao diện người dùng cho React, cung cấp nhiều thành phần sẵn có như bảng dữ liệu, biểu mẫu, hộp thoại, nút bấm, thẻ thông tin, thẻ chuyển trang và các thành phần quản lý bố cục. Trong EduCenter, MUI giúp chuẩn hóa giao diện quản trị, rút ngắn thời gian xây dựng các màn hình CRUD và giữ được tính nhất quán về thẩm mỹ cũng như trải nghiệm người dùng giữa các mô-đun.
+
+\section{Redux Toolkit và RTK Query}
+\label{section:3.10}
+Redux Toolkit là bộ công cụ hiện đại giúp quản lý trạng thái trong ứng dụng React theo cách đơn giản và an toàn hơn so với Redux truyền thống. RTK Query là phần mở rộng tập trung vào việc gọi API, lưu đệm dữ liệu và đồng bộ trạng thái giữa giao diện và máy chủ. Trong EduCenter, Redux Toolkit và RTK Query hỗ trợ lưu trữ trạng thái đăng nhập, gọi API danh sách dữ liệu, đồng bộ các thao tác CRUD và giảm số lượng logic lặp lại ở phần giao diện.
+
+\section{Swagger/OpenAPI}
+\label{section:3.11}
+Swagger là tập hợp công cụ dựa trên chuẩn OpenAPI dùng để mô tả, tài liệu hóa và kiểm thử API. Trong hệ thống EduCenter, Swagger giúp đội phát triển dễ kiểm tra điểm cuối, đối chiếu dữ liệu vào và ra của API và phục vụ quá trình phát triển giao diện song song với phần máy chủ. Ngoài ra, Swagger còn giúp báo cáo có cơ sở rõ ràng khi mô tả các chức năng đã được triển khai thật trong hệ thống.
+
+\section{PlantUML và draw.io}
+\label{section:3.12}
+PlantUML và draw.io là hai công cụ quan trọng dùng trong quá trình mô hình hóa hệ thống. PlantUML thuận tiện cho việc quản lý sơ đồ dưới dạng mã nguồn, trong khi draw.io cho phép xây dựng các sơ đồ trực quan như sơ đồ trường hợp sử dụng, sơ đồ hoạt động theo chuẩn BPMN và sơ đồ thực thể -- liên kết mức logic. Trong đề tài, hai công cụ này được sử dụng để chuẩn bị các sơ đồ phục vụ phân tích và thiết kế hệ thống, đồng thời tạo ra các hình minh họa sẽ được chèn vào báo cáo hoàn chỉnh.
+
+\end{document}

@@ -1,0 +1,457 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này trình bày chi tiết bài toán xếp lịch thông minh -- trục kỹ thuật quan trọng nhất của hệ thống EduCenter, cùng với hướng phát triển phân tích dữ liệu học tập.
+
+\section{Giới thiệu bài toán}
+\label{section:5.1}
+Trong hệ thống EduCenter, bài toán khó nhất về mặt vận hành là tạo ra lịch học cho các lớp đang mở sao cho trung tâm có thể sinh ra được các buổi học thực tế mà không phải chỉnh sửa quá nhiều bằng tay. Bài toán này không chỉ liên quan tới một lớp đơn lẻ, mà là sự phối hợp đồng thời giữa lớp học, giáo viên, khóa học, lịch tuần, ca học, phòng học, học viên đã ghi danh và cả các buổi học đã tồn tại trong hệ thống.
+
+Nếu xếp lịch chỉ dựa trên thao tác thủ công, người quản trị rất dễ gặp các tình huống trùng giáo viên, trùng phòng, thiếu slot theo lịch tuần hoặc tạo ra lịch dạy có quá nhiều khoảng trống. Vì vậy bài toán được mô hình hóa thành bài toán thỏa mãn ràng buộc, trong đó mỗi buổi học cần được gán vào một phương án thời gian và phòng học phù hợp, đồng thời nghiệm cuối cùng phải vừa đúng về mặt nghiệp vụ vừa đủ tốt để sử dụng trong thực tế.
+
+Hiện tại hệ thống triển khai bài toán này theo hướng xem trước trước khi lưu thật. Người dùng không sinh ngay các buổi học vào cơ sở dữ liệu, mà trước hết chạy luồng xem trước để hệ thống nạp dữ liệu, kiểm tra điều kiện, sinh các phương án khả thi, chạy thuật toán xếp lịch, đối chiếu với các buổi học đã tồn tại rồi trả về kết quả để người dùng đánh giá. Chỉ khi lịch đạt yêu cầu thì người dùng mới xác nhận lưu để tạo các buổi học thực tế.
+
+\noindent
+Luồng xử lý tổng quan của bài toán được trình bày cụ thể ở Hình \ref{fig:quy-trinh-7-buoc}. Đây cũng là cơ sở để tổ chức phần đo đạc theo từng bước thay vì chỉ đo thời gian chạy cuối cùng.
+
+\section{Dữ liệu đầu vào, dữ liệu trung gian và dữ liệu đầu ra}
+\label{section:5.2}
+
+\subsection{Dữ liệu đầu vào}
+Hệ thống hiện sử dụng ba nhóm dữ liệu đầu vào chính: dữ liệu nghiệp vụ, dữ liệu điều khiển chạy thuật toán và dữ liệu khóa lịch đã tồn tại.
+
+\begin{table}[H]
+\centering
+\caption{Các nhóm dữ liệu đầu vào của bài toán xếp lịch}
+\label{table:bang5.1}
+\scriptsize
+\begin{tabular}{|p{3cm}|p{4cm}|p{5cm}|}
+\hline
+\textbf{Nhóm dữ liệu} & \textbf{Thành phần} & \textbf{Vai trò trong bài toán} \\ \hline
+Dữ liệu lớp học & Lớp đang mở, GV phụ trách, khóa học, sĩ số tối đa, phòng gán sẵn của lớp & Xác định đối tượng cần xếp lịch và số buổi phải xếp \\ \hline
+Dữ liệu cấu hình thời gian & Lịch tuần của lớp, ca học đang hoạt động, ngày bắt đầu/kết thúc & Sinh các khung giờ có thể dùng để xếp lịch \\ \hline
+Dữ liệu tài nguyên & Danh sách phòng, sức chứa phòng, thông tin cơ sở của phòng & Dùng để ghép phòng học phù hợp cho từng buổi \\ \hline
+Dữ liệu người học & Ghi danh của từng lớp & Kiểm tra điều kiện mở lớp và phát hiện trùng học sinh \\ \hline
+Dữ liệu ràng buộc mở rộng & Kỹ năng bắt buộc của khóa học, kỹ năng của GV, thời gian di chuyển giữa các cơ sở & Kiểm tra GV phù hợp và tránh xếp không kịp di chuyển \\ \hline
+Dữ liệu khóa lịch đã có & Các buổi học đã được tạo trước đó & Dùng để phát hiện xung đột khi sắp lại hoặc cập nhật lịch \\ \hline
+Dữ liệu điều khiển & Bộ lọc lớp, GV, phòng; chế độ xem trước & Xác định phạm vi lớp được đưa vào bài toán \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Dữ liệu trung gian do hệ thống sinh ra}
+Sau khi nhận đầu vào, hệ thống không đưa dữ liệu thô trực tiếp vào thuật toán mà sinh ra một số cấu trúc trung gian để chuẩn hóa bài toán.
+\begin{itemize}
+    \item \textbf{Cửa sổ xếp lịch của từng lớp}: Khoảng ngày thực sự được dùng để xếp dựa trên ngày bắt đầu, số buổi của khóa học và lịch tuần.
+    \item \textbf{Biến quyết định}: Mỗi buổi học cần xếp của một lớp được coi là một biến.
+    \item \textbf{Miền giá trị}: Tập các phương án hợp lệ của từng biến, mỗi phương án gồm thời gian bắt đầu, thời gian kết thúc, ca học và phòng học.
+    \item \textbf{Xung đột tiền xử lý}: Các lỗi phát hiện sớm trước khi chạy thuật toán, ví dụ thiếu GV hoặc thiếu lịch tuần.
+    \item \textbf{Danh sách buổi học đã tồn tại}: Tập buổi học có thể chặn lịch mới trong chế độ sắp lại.
+    \item \textbf{Tập phương án chỉnh tay}: Các phương án thay thế mà người dùng có thể chọn khi một buổi còn xung đột.
+\end{itemize}
+
+\subsection{Dữ liệu đầu ra}
+Đầu ra của bài toán không chỉ là lịch học đã xếp mà còn là toàn bộ thông tin giúp người dùng hiểu vì sao một số buổi chưa thể lưu.
+\begin{itemize}
+    \item \textbf{Danh sách buổi đã xếp}: Lớp, buổi thứ mấy, GV, phòng, ca học, thời gian bắt đầu, thời gian kết thúc.
+    \item \textbf{Danh sách buổi chưa xếp}: Các buổi chưa tìm được phương án hợp lệ.
+    \item \textbf{Danh sách xung đột}: Trùng lớp, trùng GV, trùng phòng, trùng học sinh, thiếu slot, thiếu sĩ số, GV không đủ điều kiện, di chuyển không kịp.
+    \item \textbf{Các buổi học đã tồn tại liên quan}: Dùng để chỉ ra đối tượng đang chặn lịch mới.
+    \item \textbf{Danh sách phương án gợi ý}: Phục vụ chỉnh tay cho từng buổi.
+    \item \textbf{Thống kê tổng hợp}: Số lớp đầu vào, số buổi cần xếp, số buổi xếp được, số buổi chưa xếp, số xung đột, điểm mềm, mức sử dụng sức chứa phòng.
+\end{itemize}
+
+\section{Bộ luật của bài toán xếp lịch}
+\label{section:5.3}
+
+\subsection{Nhóm ràng buộc cứng}
+Ràng buộc cứng là các điều kiện bắt buộc phải thỏa mãn. Chỉ cần vi phạm một trong các điều kiện này thì lịch tạo ra không được chấp nhận.
+
+\begin{table}[H]
+\centering
+\caption{Danh sách ràng buộc cứng}
+\label{table:bang5.2}
+\scriptsize
+\begin{tabular}{|l|p{4cm}|p{6.5cm}|}
+\hline
+\textbf{Mã} & \textbf{Ràng buộc cứng} & \textbf{Giải thích} \\ \hline
+C1 & Khoảng ngày hợp lệ & Ngày kết thúc không được nhỏ hơn ngày bắt đầu \\ \hline
+C2 & Lớp hợp lệ để đưa vào bài toán & Lớp phải ở trạng thái đang mở và nằm trong phạm vi lọc hiện hành \\ \hline
+C3 & Lớp đủ điều kiện mở & Số học viên ghi danh hợp lệ phải đạt ít nhất 80\% sĩ số tối đa của lớp \\ \hline
+C4 & Giáo viên phụ trách tồn tại & Lớp phải có giáo viên phụ trách \\ \hline
+C5 & Khóa học hợp lệ & Lớp phải gắn khóa học, số buổi và thời lượng mỗi buổi lớn hơn 0 \\ \hline
+C6 & Giáo viên đáp ứng yêu cầu & Giáo viên phải có đủ kỹ năng hoặc chứng chỉ mà khóa học yêu cầu \\ \hline
+C7 & Lịch tuần hợp lệ & Lớp phải có ít nhất một cấu hình lịch tuần gồm ngày học và ca học \\ \hline
+C8 & Có đủ slot trong khoảng ngày xét & Số slot sinh ra từ lịch tuần phải đủ để phủ số buổi của khóa học \\ \hline
+C9 & Ca học hợp lệ & Ca học phải đang hoạt động và đủ dài cho thời lượng một buổi học \\ \hline
+C10 & Phòng hợp lệ & Phòng phải nằm trong tập phòng được phép dùng, đủ sức chứa và thỏa các phòng gán sẵn nếu có \\ \hline
+C11 & Không vượt quá giờ giới hạn & Buổi học kết thúc không được muộn hơn 22 giờ \\ \hline
+C12 & Không trùng lớp & Hai buổi của cùng một lớp không được chồng thời gian \\ \hline
+C13 & Không trùng giáo viên & Một giáo viên không được dạy hai buổi chồng thời gian \\ \hline
+C14 & Không trùng phòng & Một phòng không được dùng cho hai buổi chồng thời gian \\ \hline
+C15 & Không trùng học sinh & Học viên không được bị xếp vào hai buổi chồng nhau ở hai lớp khác nhau \\ \hline
+C16 & Không xung đột với buổi đã có & Trong chế độ sắp lại, lịch mới không được đè lên buổi học đã tồn tại theo lớp, GV, phòng hoặc học sinh \\ \hline
+C17 & Giáo viên di chuyển kịp & Nếu hai buổi liên tiếp ở hai cơ sở khác nhau thì phải có đủ thời gian di chuyển giữa hai cơ sở \\ \hline
+\end{tabular}
+\end{table}
+
+Có thể chia ràng buộc cứng thành bốn lớp nghiệp vụ:
+\begin{itemize}
+    \item \textbf{Lớp dữ liệu đầu vào}: C1 đến C7, bảo đảm dữ liệu đủ điều kiện để sinh bài toán.
+    \item \textbf{Lớp sinh miền giá trị}: C8 đến C11, bảo đảm mỗi buổi có tập phương án hợp lệ.
+    \item \textbf{Lớp tránh xung đột nội bộ}: C12 đến C14, bảo đảm các buổi mới không đè lên nhau.
+    \item \textbf{Lớp tránh xung đột vận hành thực tế}: C15 đến C17, bảo đảm lịch mới có thể dùng được khi đối chiếu với dữ liệu thật.
+\end{itemize}
+
+\subsection{Nhóm ràng buộc mềm}
+Ràng buộc mềm không làm cho nghiệm bị loại bỏ ngay, nhưng được dùng để đánh giá lịch nào tốt hơn khi có nhiều nghiệm cùng thỏa ràng buộc cứng.
+
+\begin{table}[H]
+\centering
+\caption{Danh sách ràng buộc mềm}
+\label{table:bang5.3}
+\scriptsize
+\begin{tabular}{|l|p{4.5cm}|p{6cm}|}
+\hline
+\textbf{Mã} & \textbf{Ràng buộc mềm} & \textbf{Cách chấm} \\ \hline
+M1 & Ưu tiên các buổi của cùng giáo viên xếp liền nhau & Nếu khoảng nghỉ giữa hai buổi liên tiếp của cùng giáo viên trong cùng ngày từ 0 đến 30 phút thì cộng điểm \\ \hline
+M2 & Hạn chế khoảng trống lớn trong ngày & Nếu giáo viên có khoảng nghỉ lớn hơn 2 giờ trong cùng ngày thì bị trừ điểm theo độ dài khoảng trống \\ \hline
+M3 & Hạn chế thay đổi lịch đã ổn định & Khi sắp lại, nếu buổi mới lệch thời gian so với buổi cũ thì bị trừ điểm mạnh hơn so với thay đổi trên buổi chưa công bố \\ \hline
+M4 & Hạn chế đổi giáo viên hoặc đổi phòng không cần thiết & Nếu buổi mới khác giáo viên hoặc khác phòng so với lịch cũ thì tiếp tục bị trừ điểm \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Tiêu chí đánh giá bộ luật}
+Bộ luật của bài toán được đánh giá theo ba tiêu chí chính:
+\begin{itemize}
+    \item \textbf{Tính đúng}: Lịch phải thỏa toàn bộ ràng buộc cứng trước khi xét tới chất lượng.
+    \item \textbf{Tính khả dụng}: Lịch phải có thể lưu thành các buổi học thật mà không tạo thêm xung đột ngoài hệ thống.
+    \item \textbf{Tính thuận tiện vận hành}: Trong số các nghiệm đúng, ưu tiên nghiệm có ít chỉnh tay, ít thay đổi và ít khoảng trống hơn.
+\end{itemize}
+
+Ngoài hai nhóm ràng buộc trên, hệ thống còn dùng thêm một ngưỡng vận hành để quyết định có nên cho phép người dùng vá tay tiếp hay không. Cụ thể, nếu số buổi cần chỉnh tay vượt quá 35\% tổng số buổi cần xếp và tối thiểu từ 3 buổi trở lên, hệ thống xem đây là mật độ xung đột quá cao và khuyến nghị người dùng quay lại nới khoảng ngày, bổ sung ca học, bổ sung phòng học hoặc điều chỉnh lịch tuần lớp trước khi chạy lại.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\linewidth]{Hinhve/so_do_phan_tang_bo_luat_xep_lich.png}
+\caption{Phân tầng bộ luật của bài toán xếp lịch}
+\label{fig:phan-tang-bo-luat}
+\end{figure}
+
+\section{Kịch bản xử lý bài toán trong hệ thống}
+\label{section:5.4}
+Để dễ trình bày kết quả thực nghiệm sau này, có thể mô tả quy trình xử lý của hệ thống theo chuỗi dữ liệu vào, dữ liệu ra ở từng bước. Trong phần dưới đây, ký hiệu được dùng như sau:
+\begin{itemize}
+    \item \texttt{L0}: số lớp ban đầu đọc được từ CSDL theo bộ lọc.
+    \item \texttt{L1}: số lớp còn lại sau khi lọc điều kiện mở lớp.
+    \item \texttt{L2}: số lớp còn lại sau khi kiểm tra đủ giáo viên, khóa học, lịch tuần và kỹ năng.
+    \item \texttt{V}: tổng số buổi cần xếp, tức tổng số biến quyết định.
+    \item \texttt{D\_i}: số phương án hợp lệ của buổi thứ $i$.
+    \item \texttt{A}: số buổi được xếp thành công.
+    \item \texttt{U}: số buổi chưa xếp được, với $U = V - A$.
+    \item \texttt{X}: tổng số xung đột sau khi đối chiếu toàn bộ.
+\end{itemize}
+
+\subsection{Bước 1. Nạp dữ liệu đầu vào}
+Ở bước đầu tiên, hệ thống đọc toàn bộ lớp đang mở theo bộ lọc lớp hoặc giáo viên, đồng thời nạp danh sách phòng học, ca học đang hoạt động, ghi danh của từng lớp, các buổi học đã tồn tại và dữ liệu thời gian di chuyển giữa các cơ sở nếu có.
+
+\textbf{Dữ liệu vào}: Bộ lọc lớp, GV, phòng; Khoảng ngày người dùng chọn để xem trước; Chế độ chạy của bài toán.
+\textbf{Xử lý chính}: Lấy các lớp đang mở; Lấy dữ liệu liên quan của từng lớp (GV, khóa học, lịch tuần); Lấy danh sách phòng và ca học đang hoạt động; Lấy các buổi học đã tồn tại.
+\textbf{Dữ liệu ra cần ghi nhận}: \texttt{L0}: tổng số lớp lấy được; Số phòng học khả dụng; Số ca học đang hoạt động; Số buổi học đã tồn tại trong khoảng thời gian cần đối chiếu.
+
+\subsection{Bước 2. Kiểm tra điều kiện tiền xử lý}
+Đây là bước quan trọng để loại sớm các lớp không đủ điều kiện trước khi chạy thuật toán.
+
+\textbf{Xử lý chính}: Kiểm tra lớp có đủ sĩ số tối thiểu; Kiểm tra lớp đã gắn GV, khóa học, tổng số buổi và thời lượng hợp lệ; Kiểm tra GV đáp ứng yêu cầu kỹ năng; Kiểm tra lớp có lịch tuần hợp lệ.
+\textbf{Dữ liệu ra cần ghi nhận}: \texttt{L1}: số lớp còn lại sau khi lọc điều kiện mở lớp; \texttt{L2}: số lớp còn lại sau khi kiểm tra đủ dữ liệu; Danh sách xung đột tiền xử lý theo từng loại.
+
+\subsection{Bước 3. Xác định cửa sổ xếp lịch của từng lớp}
+Sau khi chỉ còn các lớp hợp lệ, hệ thống suy ra cửa sổ xếp lịch riêng cho từng lớp từ ngày bắt đầu dự kiến, số buổi của khóa học và số slot hằng tuần theo lịch tuần lớp.
+
+\textbf{Xử lý chính}: Chuẩn hóa ngày bắt đầu của lớp (không nằm trước ngày hiện tại); Ước lượng số tuần cần thiết; Sinh cửa sổ ngày bắt đầu và ngày kết thúc dự kiến cho từng lớp.
+\textbf{Dữ liệu ra cần ghi nhận}: Khoảng ngày bắt đầu và kết thúc của từng lớp; Số buổi lý thuyết cần phủ; Danh sách lớp không suy ra được cửa sổ hợp lệ (nếu có).
+
+\subsection{Bước 4. Sinh biến quyết định và miền giá trị}
+Đây là bước chuyển bài toán từ dữ liệu nghiệp vụ sang dữ liệu giải thuật.
+
+\textbf{Xử lý chính}:
+\begin{itemize}
+    \item Với mỗi lớp hợp lệ, sinh ra một biến cho từng buổi phải học.
+    \item Từ lịch tuần lớp và ca học, sinh các slot thời gian hợp lệ trong cửa sổ xếp lịch.
+    \item Ghép từng slot với từng phòng thỏa sức chứa, phòng gán sẵn của lớp và của lịch tuần nếu có.
+    \item Loại bỏ các phương án kết thúc muộn hơn 22 giờ hoặc vi phạm ràng buộc cơ bản.
+\end{itemize}
+\textbf{Dữ liệu ra cần ghi nhận}: \texttt{V}: tổng số biến quyết định; Số slot hợp lệ của từng lớp; \texttt{D\_i}: kích thước miền giá trị của từng buổi; Số buổi có miền rỗng; Các loại lỗi miền rỗng.
+
+\subsection{Bước 5. Chạy thuật toán xếp lịch}
+Hệ thống chạy một trong các thuật toán xếp lịch đã cài đặt. Mục tiêu ưu tiên là xếp được nhiều buổi nhất mà không vi phạm ràng buộc cứng; sau đó mới tối ưu điểm mềm.
+
+\textbf{Xử lý chính}: Sắp thứ tự các biến theo mức độ khó; Duyệt các phương án ứng viên; Loại ngay phương án gây trùng lớp, GV, phòng hoặc không đủ thời gian di chuyển; Lưu nghiệm tốt nhất theo hai tiêu chí (nhiều buổi nhất, điểm mềm cao nhất).
+\textbf{Dữ liệu ra cần ghi nhận}: \texttt{A}: số buổi xếp được ngay sau bước giải; \texttt{U}: số buổi chưa xếp được; Điểm mềm của nghiệm; Thời gian chạy của thuật toán; Số nút duyệt (hoặc vòng lặp).
+
+\subsection{Bước 6. Đối chiếu với các buổi học đã tồn tại}
+Sau khi thuật toán sinh nghiệm, hệ thống tiếp tục đối chiếu với các buổi học đã tồn tại trong phạm vi liên quan để tránh đè lên dữ liệu thật.
+
+\textbf{Xử lý chính}: Tìm các buổi học đã có theo lớp, GV, phòng; So sánh từng buổi mới với từng buổi đã có để phát hiện trùng lặp; Kiểm tra thời gian di chuyển.
+\textbf{Dữ liệu ra cần ghi nhận}: Số buổi học đã tồn tại được đối chiếu; Số xung đột phát sinh với dữ liệu đã lưu; Cơ cấu xung đột theo nguyên nhân.
+
+\subsection{Bước 7. Chỉnh tay và xác nhận lưu}
+Nếu còn ít xung đột hoặc còn buổi chưa xếp được, người dùng có thể chọn lại phương án cho từng buổi từ danh sách gợi ý.
+
+\textbf{Xử lý chính}: Hiển thị các phương án thay thế; Kiểm tra lại xung đột sau mỗi lần đổi phương án; Tính số buổi phải chỉnh tay và so với ngưỡng cho phép; Chỉ cho phép xác nhận lưu khi sạch xung đột và số buổi chưa xếp bằng 0.
+\textbf{Dữ liệu ra cần ghi nhận}: Số buổi cần chỉnh tay; Số buổi vẫn còn xung đột; Trạng thái cuối cùng; Số buổi được tạo thật sau khi lưu.
+
+\begin{table}[H]
+\centering
+\caption{Tóm tắt dữ liệu vào và dữ liệu ra theo từng bước}
+\label{table:bang5.4}
+\scriptsize
+\begin{tabular}{|l|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+\hline
+\textbf{Bước} & \textbf{Dữ liệu vào} & \textbf{Xử lý} & \textbf{Dữ liệu ra cần đo} \\ \hline
+1 & Bộ lọc, khoảng ngày, chế độ chạy & Nạp lớp, phòng, ca, buổi học đã có & \texttt{L0}, số phòng, số ca, số buổi khóa lịch \\ \hline
+2 & \texttt{L0} và dữ liệu liên quan & Lọc sĩ số, kiểm tra GV, khóa học, lịch tuần, kỹ năng & \texttt{L1}, \texttt{L2}, số xung đột tiền xử lý \\ \hline
+3 & \texttt{L2} & Suy ra cửa sổ xếp lịch & Ngày bắt đầu, kết thúc, số buổi \\ \hline
+4 & Lớp hợp lệ và cửa sổ xếp lịch & Sinh biến và miền giá trị & \texttt{V}, \texttt{D\_i}, số buổi miền rỗng \\ \hline
+5 & \texttt{V} và các miền giá trị & Chạy thuật toán xếp lịch & \texttt{A}, \texttt{U}, điểm mềm, thời gian chạy \\ \hline
+6 & Nghiệm B5 và buổi học đã có & Đối chiếu xung đột vận hành & Số xung đột, nguyên nhân \\ \hline
+7 & Nghiệm sau đối chiếu & Chỉnh tay, lưu thật & Số chỉnh tay, số buổi tạo thật \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\linewidth]{Hinhve/so_do_quy_trinh_xep_lich_7_buoc.png}
+\caption{Quy trình xử lý bài toán xếp lịch theo bảy bước}
+\label{fig:quy-trinh-7-buoc}
+\end{figure}
+
+\section{Các thuật toán đã cài đặt}
+\label{section:5.5}
+
+\subsection{Thuật toán tô màu đồ thị kết hợp luật tham lam}
+Ở hướng tiếp cận này, mỗi buổi học được xem như một đỉnh của đồ thị. Hai đỉnh được nối cạnh nếu chúng có khả năng xung đột mạnh, điển hình là cùng lớp hoặc cùng giáo viên. Sau đó hệ thống sắp các buổi theo mức độ khó, ưu tiên buổi có ít phương án hơn hoặc có nhiều cạnh xung đột hơn, rồi chọn dần phương án có mức phạt thấp nhất.
+
+Ưu điểm của hướng này là rất nhanh, dễ giải thích và phù hợp làm mốc so sánh ban đầu. Hạn chế là tính tham lam khá cao, nghĩa là quyết định sớm có thể làm giảm chất lượng nghiệm về sau.
+
+\subsection{Thuật toán lập trình ràng buộc CP-SAT}
+Thuật toán CP-SAT là thuật toán chính của hệ thống ở thời điểm hiện tại. Nó được triển khai theo hướng tìm kiếm có cắt nhánh: ưu tiên xét các buổi khó trước, thử các phương án theo thứ tự thời gian, liên tục giữ lại nghiệm tốt nhất và loại sớm các nhánh không còn khả năng vượt nghiệm hiện tại.
+
+Mã giả của hướng này có thể mô tả ngắn như sau:
+\begin{verbatim}
+Khởi tạo nghiệm tốt nhất rỗng
+Sắp các biến theo số phương án tăng dần
+
+Hàm tìm kiếm(vị trí, nghiệm hiện tại):
+    nếu đã vượt giới hạn số nút thì dừng
+    nếu số buổi đang xếp cộng số buổi còn lại vẫn không vượt nghiệm tốt nhất thì cắt nhánh
+    nếu đã xét hết biến thì cập nhật nghiệm tốt nhất và quay lui
+
+    lấy biến hiện tại
+    duyệt từng phương án hợp lệ của biến
+        nếu không xung đột thì gán tạm
+        gọi đệ quy cho biến tiếp theo
+        hủy gán
+
+    xét thêm trường hợp chưa xếp được biến này
+\end{verbatim}
+
+Ưu điểm của CP-SAT là chất lượng nghiệm ổn định hơn, đặc biệt khi bài toán bắt đầu có nhiều ràng buộc đồng thời. Hạn chế là thời gian chạy lớn hơn phương pháp tham lam khi quy mô dữ liệu tăng lên.
+
+\subsection{Thuật toán tìm kiếm Tabu}
+Thuật toán tìm kiếm Tabu thuộc nhóm tìm kiếm lân cận. Bắt đầu từ một nghiệm khởi tạo tương đối tốt, sau đó liên tục thử đổi khung giờ hoặc phòng học của từng buổi để giảm mức phạt tổng thể. Những bước chuyển vừa dùng sẽ bị đưa vào một danh sách cấm tạm thời để tránh quay lại trạng thái cũ quá sớm.
+
+Ưu điểm của hướng này là có khả năng thoát khỏi nghiệm cục bộ tốt hơn phương pháp tham lam. Hạn chế là nhạy với nghiệm khởi tạo, số vòng lặp và chi phí thời gian thường cao hơn.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{Hinhve/bang_tom_tat_ba_thuat_toan_xep_lich.png}
+\caption{Tóm tắt nguyên lý và đặc điểm của ba thuật toán xếp lịch}
+\label{fig:tom-tat-ba-thuat-toan}
+\end{figure}
+
+\section{Bộ dữ liệu thực nghiệm và khuôn mẫu trình bày kết quả}
+\label{section:5.6}
+
+\subsection{Thành phần bộ dữ liệu thực nghiệm}
+\noindent
+Việc đo đạc đối sánh trong phiên bản hiện tại được thực hiện trên ba kịch bản dữ liệu tổng hợp đã được khởi tạo sẵn trong thư mục \path{internal/infrastructure/database/postgres/sql_seed/xep_lich_benchmark}. Đây là bộ dữ liệu phục vụ trực tiếp cho quá trình triển khai, kiểm thử và đánh giá thực nghiệm của mô-đun xếp lịch.
+
+\begin{table}[H]
+\centering
+\caption{Mô tả ba kịch bản dữ liệu thực nghiệm}
+\label{table:bang5.5}
+\scriptsize
+\begin{tabular}{|l|c|c|c|c|c|c|p{3.7cm}|}
+\hline
+\textbf{Kịch bản} & \textbf{Số lớp} & \textbf{Số GV} & \textbf{Số phòng} & \textbf{Số ca} & \textbf{Tổng buổi} & \textbf{Logarit không gian tìm kiếm ước lượng} & \textbf{Ghi chú} \\ \hline
+Nhỏ & 6 & 4 & 3 & 3 & 12 & 9{,}89 & Kịch bản dùng để kiểm tra logic, rà luồng ghi số liệu thô và quan sát chi tiết từng lần chạy \\ \hline
+Trung bình & 10 & 5 & 4 & 3 & 30 & 30{,}00 & Kịch bản phản ánh tải xử lý vừa phải, bắt đầu có độ cạnh tranh tài nguyên giữa lớp, giáo viên và phòng \\ \hline
+Lớn & 16 & 7 & 5 & 3 & 64 & 71{,}29 & Kịch bản dùng để quan sát tốc độ tăng của thời gian chạy và mức độ ổn định khi số buổi cần xếp tăng mạnh \\ \hline
+\end{tabular}
+\end{table}
+
+\noindent
+Giá trị ``logarit không gian tìm kiếm ước lượng'' trong Bảng \ref{table:bang5.5} được tính theo công thức:
+\[
+\log_{10}(\text{Không gian tìm kiếm ước lượng}) \approx V \times \log_{10}(\overline{D})
+\]
+Trong đó, $V$ là số biến quyết định và $\overline{D}$ là kích thước miền giá trị trung bình của mỗi buổi học sau bước sinh miền. Cách tính này phù hợp với giai đoạn đo đạc triển khai vì phản ánh trực tiếp độ khó quan sát được sau tiền xử lý, thay vì dùng một ước lượng lý thuyết tách rời dữ liệu thực.
+
+\subsection{Bộ gói kiểm thử luật K1 đến K9}
+Bên cạnh ba kịch bản dữ liệu tổng quát, hệ thống còn có chín gói kiểm thử luật nhằm ép từng nhóm ràng buộc xuất hiện một cách rõ ràng. Các gói này không dùng để so sánh tốc độ giữa thuật toán, mà dùng để xác nhận hệ thống nhận diện đúng sai phạm ngay từ khâu tiền xử lý hoặc trong giai đoạn giải bài toán.
+
+\begin{table}[H]
+\centering
+\caption{Các gói kiểm thử luật K1 đến K9}
+\label{table:bang5.6}
+\scriptsize
+\begin{tabular}{|l|p{4cm}|p{7cm}|}
+\hline
+\textbf{Mã gói} & \textbf{Tệp SQL} & \textbf{Mục tiêu kiểm thử} \\ \hline
+K1 & \texttt{11\_kiem\_thu\_luat\_k1\_si\_so\_khong\_dat.sql} & Tạo lớp không đạt ngưỡng sĩ số tối thiểu để xác nhận hệ thống loại lớp ngay từ bước lọc điều kiện mở lớp \\ \hline
+K2 & \texttt{12\_kiem\_thu\_luat\_k2\_thieu\_giao\_vien.sql} & Tạo lớp thiếu giáo viên phụ trách để xác nhận lỗi dữ liệu đầu vào bắt buộc \\ \hline
+K3 & \texttt{13\_kiem\_thu\_luat\_k3\_sai\_ky\_nang.sql} & Tạo trường hợp giáo viên không đáp ứng kỹ năng hoặc điều kiện của khóa học \\ \hline
+K4 & \texttt{14\_kiem\_thu\_luat\_k4\_thieu\_lich\_tuan.sql} & Tạo lớp thiếu lịch tuần để xác nhận hệ thống không thể sinh slot xếp lịch \\ \hline
+K5 & \texttt{15\_kiem\_thu\_luat\_k5\_khong\_du\_ca\_xep.sql} & Tạo lớp có số buổi yêu cầu lớn hơn số slot khả dụng trong cửa sổ thời gian đang xét \\ \hline
+K6 & \texttt{16\_kiem\_thu\_luat\_k6\_ap\_luc\_suc\_chua\_phong.sql} & Tạo áp lực sức chứa phòng để quan sát việc thu hẹp miền giá trị của từng buổi \\ \hline
+K7 & \texttt{17\_kiem\_thu\_luat\_k7\_xung\_dot\_di\_chuyen.sql} & Tạo chuỗi buổi học ở hai cơ sở khác nhau để kiểm tra ràng buộc thời gian di chuyển giữa các cơ sở \\ \hline
+K8 & \texttt{18\_kiem\_thu\_luat\_k8\_dieu\_chinh\_buoi\_khoa.sql} & Tạo kịch bản sắp lại buổi đã khóa hoặc đã ổn định để kiểm tra mức phạt thay đổi lịch \\ \hline
+K9 & \texttt{19\_kiem\_thu\_luat\_k9\_dieu\_chinh\_buoi\_nhap.sql} & Tạo kịch bản điều chỉnh buổi nhập vào để kiểm tra tương tác giữa xếp lại và dữ liệu hiện hữu \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Cách đo ở từng bước xử lý}
+\noindent
+Ba kịch bản thực nghiệm hiện hành đều là bộ dữ liệu sạch, do đó các bước tiền xử lý không phát sinh lỗi loại bỏ lớp. Điều này giúp số liệu đo đạc tập trung rõ vào phần sinh miền giá trị và hành vi của từng thuật toán ở bước giải.
+
+\begin{table}[H]
+\centering
+\caption{Số liệu đo theo từng bước xử lý, dùng nghiệm đại diện của CP-SAT}
+\label{table:bang5.7}
+\scriptsize
+\begin{tabular}{|l|p{3.3cm}|p{3.1cm}|p{3.1cm}|p{3.1cm}|}
+\hline
+\textbf{Bước} & \textbf{Chỉ số đo} & \textbf{Nhỏ} & \textbf{Trung bình} & \textbf{Lớn} \\ \hline
+1. Nạp dữ liệu & \texttt{L0}, số phòng, số ca, số buổi đã có & \texttt{L0=6}, 3 phòng, 3 ca, 0 buổi đã có & \texttt{L0=10}, 4 phòng, 3 ca, 0 buổi đã có & \texttt{L0=16}, 5 phòng, 3 ca, 0 buổi đã có \\ \hline
+2. Lọc điều kiện và tiền xử lý & \texttt{L1}, \texttt{L2}, số lỗi tiền xử lý & \texttt{L1=6}, \texttt{L2=6}, 0 lỗi & \texttt{L1=10}, \texttt{L2=10}, 0 lỗi & \texttt{L1=16}, \texttt{L2=16}, 0 lỗi \\ \hline
+3. Xác định cửa sổ xếp lịch & Khoảng ngày dùng để sinh slot & 13/04/2026 -- 26/04/2026 & 13/04/2026 -- 26/04/2026 & 13/04/2026 -- 26/04/2026 \\ \hline
+4. Sinh biến và miền giá trị & \texttt{V}, tổng giá trị miền, miền rỗng, miền min/tb/max & \texttt{V=12}, 80, 0, 4/6{,}67/12 & \texttt{V=30}, 300, 0, 4/10/16 & \texttt{V=64}, 832, 0, 4/13/20 \\ \hline
+5. Chạy CP-SAT & \texttt{A}, \texttt{U}, điểm mềm, thời gian chạy TB & \texttt{A=12}, \texttt{U=0}, 0 điểm, 149{,}4 ms & \texttt{A=30}, \texttt{U=0}, 0 điểm, 432{,}5 ms & \texttt{A=64}, \texttt{U=0}, 0 điểm, 1054{,}5 ms \\ \hline
+6. Đối chiếu buổi đã có & Số xung đột với dữ liệu đang lưu & 0 & 0 & 0 \\ \hline
+7. Chỉnh tay và lưu & Số buổi phải chỉnh tay, số buổi có thể tạo thật & 0 chỉnh tay, 12 buổi có thể lưu & 0 chỉnh tay, 30 buổi có thể lưu & 0 chỉnh tay, 64 buổi có thể lưu \\ \hline
+\end{tabular}
+\end{table}
+
+\noindent
+Bảng \ref{table:bang5.7} cho thấy ba kịch bản thử nghiệm hiện tại đều đi trọn vẹn qua bảy bước mà không phát sinh lỗi tiền xử lý hay xung đột hậu kiểm. Đây là điều kiện tốt để so sánh công bằng ba thuật toán ở bước giải, vì dữ liệu đầu vào đã được chuẩn hóa như nhau.
+
+\subsection{Khuôn mẫu bảng so sánh giữa các thuật toán}
+\begin{table}[H]
+\centering
+\caption{So sánh kết quả trung bình giữa các thuật toán sau 10 lần chạy}
+\label{table:bang5.8}
+\scriptsize
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|l|c|c|c|c|c|c|p{4cm}|}
+\hline
+\textbf{Kịch bản} & \textbf{Thuật toán} & \textbf{Tỷ lệ xếp} & \textbf{VP cứng} & \textbf{Điểm mềm} & \textbf{T/g chạy TB (ms)} & \textbf{Tốc độ đánh giá TB} & \textbf{Ổn định} & \textbf{Nhận xét} \\ \hline
+Nhỏ & Tô màu đồ thị & 1{,}000 & 0 & -45 & 0{,}0 & không đo được do làm tròn mili giây & Có & Nhanh nhất nhưng điểm mềm thấp nhất do quyết định tham lam quá sớm \\ \hline
+Nhỏ & CP-SAT & 1{,}000 & 0 & 0 & 149{,}4 & 394.035 phương án/giây & Có & Cho điểm mềm tốt nhất và nghiệm sạch hoàn toàn \\ \hline
+Nhỏ & Tìm kiếm Tabu & 1{,}000 & 0 & -30 & 37{,}7 & 179.488 phương án/giây & Có & Cải thiện được nghiệm nhưng vẫn kém CP-SAT về điểm mềm \\ \hline
+Trung bình & Tô màu đồ thị & 1{,}000 & 0 & 0 & 0{,}0 & không đo được do làm tròn mili giây & Có & Nhanh nhất khi dữ liệu chưa có xung đột sâu \\ \hline
+Trung bình & CP-SAT & 1{,}000 & 0 & 0 & 432{,}5 & 210.032 phương án/giây & Có & Giữ nghiệm sạch, thời gian chạy tăng nhưng vẫn trong mức chấp nhận được \\ \hline
+Trung bình & Tìm kiếm Tabu & 1{,}000 & 0 & 0 & 271{,}4 & 68.988 phương án/giây & Có & Nhanh hơn CP-SAT ở kịch bản này nhưng tốc độ đánh giá thấp hơn rõ rệt \\ \hline
+Lớn & Tô màu đồ thị & 1{,}000 & 0 & 0 & 1{,}4 & 65.600 phương án/giây & Có & Vẫn rất nhanh, phù hợp vai trò mốc đối chiếu tốc độ \\ \hline
+Lớn & CP-SAT & 1{,}000 & 0 & 0 & 1054{,}5 & 146.193 phương án/giây & Có & Duy trì nghiệm sạch khi số buổi tăng lên 64, chất lượng ổn định qua 10 lần chạy \\ \hline
+Lớn & Tìm kiếm Tabu & 1{,}000 & 0 & 0 & 1858{,}5 & 22.744 phương án/giây & Có & Thời gian chạy tăng mạnh nhất, phù hợp hơn cho vai trò thuật toán tham chiếu \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Số liệu thô 10 lần chạy của kịch bản nhỏ}
+\label{table:bang5.9}
+\scriptsize
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Lần chạy} & \textbf{Tô màu đồ thị (ms)} & \textbf{CP-SAT (ms)} & \textbf{Tìm kiếm Tabu (ms)} \\ \hline
+1 & 0 & 164 & 35 \\ \hline
+2 & 0 & 149 & 35 \\ \hline
+3 & 0 & 144 & 35 \\ \hline
+4 & 0 & 162 & 35 \\ \hline
+5 & 0 & 159 & 40 \\ \hline
+6 & 0 & 146 & 45 \\ \hline
+7 & 0 & 142 & 41 \\ \hline
+8 & 0 & 142 & 36 \\ \hline
+9 & 0 & 142 & 36 \\ \hline
+10 & 0 & 144 & 39 \\ \hline
+\end{tabular}
+\end{table}
+
+\noindent
+Toàn bộ 90 dòng số liệu thô của ba kịch bản và ba thuật toán đã được lưu riêng trong tệp \path{artifacts/do_dac_xep_lich/20260515_204909/so_lieu_tho_tung_lan_chay.csv}. Điều này cho phép đối chiếu lại trực tiếp thời điểm bắt đầu, thời điểm kết thúc và thời gian chạy của từng lượt đo.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\linewidth]{Hinhve/minh_chung_10_lan_chay_kich_ban_nho.png}
+\caption{Đường biểu diễn số liệu thô của 10 lần chạy ở kịch bản nhỏ}
+\label{fig:minh-chung-10-lan-chay}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\linewidth]{Hinhve/bieu_do_thoi_gian_chay_xep_lich.png}
+\caption{Biểu đồ so sánh thời gian chạy trung bình giữa các thuật toán}
+\label{fig:bieu-do-thoi-gian}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\linewidth]{Hinhve/bieu_do_toc_do_danh_gia_xep_lich.png}
+\caption{Biểu đồ so sánh tốc độ đánh giá phương án trung bình giữa các thuật toán}
+\label{fig:bieu-do-toc-do-danh-gia}
+\end{figure}
+
+\section{Cơ sở lựa chọn thuật toán chính}
+\label{section:5.7}
+
+Thuật toán chính của hệ thống cần được lựa chọn theo thứ tự ưu tiên:
+\begin{enumerate}
+    \item Tạo nghiệm sạch theo ràng buộc cứng hoặc nhận diện rõ buổi chưa xếp được.
+    \item Chất lượng lịch tốt hơn: ít khoảng trống, ít thay đổi không cần thiết.
+    \item Thời gian chạy chấp nhận được cho bài toán xem trước.
+    \item Kết quả ổn định giữa các lần chạy.
+\end{enumerate}
+
+Với các tiêu chí trên, CP-SAT là lựa chọn phù hợp nhất vì cân bằng được cả ba mặt: mức độ đúng, chất lượng lịch và khả năng mở rộng tiêu chí chấm điểm. Khi bổ sung số đo thực nghiệm, CP-SAT sẽ chứng minh được sự ổn định so với hai thuật toán còn lại.
+
+\noindent
+Kết quả đo ở Bảng \ref{table:bang5.8} cho thấy cả ba thuật toán đều đạt tỷ lệ xếp thành công 100\% và không vi phạm ràng buộc cứng ở cả ba kịch bản. Tuy nhiên, khi dùng điểm mềm làm tiêu chí tách bậc, CP-SAT vượt lên trong kịch bản nhỏ với tổng điểm mềm bằng 0, trong khi tìm kiếm Tabu đạt -30 và tô màu đồ thị chỉ đạt -45. Chính khác biệt này làm cho CP-SAT được chọn làm thuật toán chính trong phiên bản hiện tại, mặc dù tô màu đồ thị vẫn là thuật toán nhanh nhất về thời gian chạy tuyệt đối.
+
+\noindent
+Nói cách khác, quá trình lựa chọn thuật toán chính không chỉ tối ưu theo tốc độ, mà theo thứ tự ưu tiên đã định nghĩa ngay từ đầu: nghiệm sạch trước, điểm mềm tốt sau, rồi mới xét thời gian chạy. Đây cũng là tiêu chí gần với nhu cầu vận hành của trung tâm, nơi một lịch học ít thay đổi, dễ chấp nhận và ít phải chỉnh tay có giá trị thực tế cao hơn một lịch cực nhanh nhưng chất lượng thấp hơn.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.76\linewidth]{Hinhve/can_doi_diem_mem_va_thoi_gian.png}
+\caption{Cân đối giữa điểm mềm và thời gian chạy trung bình của ba thuật toán}
+\label{fig:can-doi-diem-mem-thoi-gian}
+\end{figure}
+
+\noindent
+Từ góc nhìn triển khai hệ thống, có thể rút ra vai trò phù hợp của từng thuật toán như sau:
+\begin{itemize}
+    \item \textbf{Tô màu đồ thị} phù hợp làm đường cơ sở để so tốc độ và hỗ trợ kiểm thử nhanh trong quá trình phát triển.
+    \item \textbf{Tìm kiếm Tabu} phù hợp làm bộ giải đối chiếu thứ hai khi muốn quan sát khả năng cải thiện nghiệm từ lân cận.
+    \item \textbf{CP-SAT} phù hợp làm thuật toán chính cho luồng xem trước xếp lịch, vì giữ được cân bằng tốt nhất giữa tính đúng, điểm mềm và độ ổn định.
+\end{itemize}
+
+\section{Hướng phát triển phân tích dữ liệu học tập}
+\label{section:5.8}
+
+Trong phạm vi phiên bản hiện tại, trọng tâm kỹ thuật là bài toán xếp lịch. Tuy nhiên mô hình dữ liệu đã được chuẩn bị theo hướng mở rộng sang phân tích dữ liệu học tập ở giai đoạn tiếp theo. Các bảng điểm danh, tổng kết buổi học, kết quả học tập và đơn xin phép đã tạo ra nền dữ liệu đủ tốt để sau này xây dựng các báo cáo phân tích, chỉ số theo dõi tiến độ hoặc hỗ trợ ra quyết định.
+
+Hướng phát triển này có thể tiếp tục nghiên cứu các bài toán như phát hiện xu hướng vắng học, theo dõi mức độ hoàn thành bài tập, đánh giá mức độ tiến bộ theo lớp hoặc xây dựng các cảnh báo học vụ.
+
+\end{document}
