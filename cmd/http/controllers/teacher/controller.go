@@ -13,6 +13,7 @@ type Controller interface {
 	UpdateTeacher(ctx *gin.Context)
 	DeleteTeacher(ctx *gin.Context)
 	ListTeachers(ctx *gin.Context)
+	ListSkillCatalog(ctx *gin.Context)
 	GetTeacherTimetable(ctx *gin.Context)
 	GetTeachingHoursStats(ctx *gin.Context)
 }
@@ -32,6 +33,7 @@ func RegisterRoutesV1(router *gin.RouterGroup, controller Controller, configMana
 
 	// Public/authenticated routes (read operations)
 	v1.GET("", controller.ListTeachers)
+	v1.GET("/skills/catalog", controller.ListSkillCatalog)
 	v1.GET("/:id", controller.GetTeacher)
 	v1.GET("/:id/timetable", controller.GetTeacherTimetable)
 	v1.GET("/:id/stats/teaching-hours", controller.GetTeachingHoursStats)

@@ -13,6 +13,7 @@ export interface Course {
     total_hours?: number;
     price?: number;
     status: string;
+    required_skills?: string[];
     created_at: string;
     updated_at: string;
 }
@@ -111,7 +112,7 @@ export const courseApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body,
             }),
-            invalidatesTags: ['Course'],
+            invalidatesTags: ['Course', { type: 'Teacher', id: 'SKILL-CATALOG' }],
         }),
         updateCourse: builder.mutation<CourseResponse, Partial<Course> & { id: string }>({
             query: ({ id, ...body }) => ({
@@ -119,7 +120,7 @@ export const courseApi = baseApi.injectEndpoints({
                 method: 'PUT',
                 body,
             }),
-            invalidatesTags: (_result, _error, { id }) => [{ type: 'Course', id }, 'Course'],
+            invalidatesTags: (_result, _error, { id }) => [{ type: 'Course', id }, 'Course', { type: 'Teacher', id: 'SKILL-CATALOG' }],
         }),
         deleteCourse: builder.mutation<{ success: boolean; message: string }, string>({
             query: (id) => ({

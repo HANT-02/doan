@@ -4,21 +4,25 @@ import (
 	"context"
 	"doan/internal/entities"
 	repointerface "doan/internal/repositories/interface"
+	skillservice "doan/internal/services/skills"
 	"doan/pkg/logger"
 	"errors"
+
+	"github.com/lib/pq"
 )
 
 // CreateTeacherInput represents the input for creating a teacher
 type CreateTeacherInput struct {
-	Code            string `json:"code"`
-	FullName        string `json:"full_name"`
-	Email           string `json:"email"`
-	Phone           string `json:"phone"`
-	IsSchoolTeacher bool   `json:"is_school_teacher"`
-	SchoolName      string `json:"school_name"`
-	EmploymentType  string `json:"employment_type"`
-	Status          string `json:"status"`
-	Notes           string `json:"notes"`
+	Code            string   `json:"code"`
+	FullName        string   `json:"full_name"`
+	Email           string   `json:"email"`
+	Phone           string   `json:"phone"`
+	IsSchoolTeacher bool     `json:"is_school_teacher"`
+	SchoolName      string   `json:"school_name"`
+	EmploymentType  string   `json:"employment_type"`
+	Status          string   `json:"status"`
+	Skills          []string `json:"skills"`
+	Notes           string   `json:"notes"`
 }
 
 // CreateTeacherOutput represents the output after creating a teacher
@@ -33,12 +37,17 @@ type CreateTeacherUseCase interface {
 
 type createTeacherUseCase struct {
 	teacherRepo repointerface.TeacherRepository
+	skillRepo   repointerface.SkillRepository
 }
 
 // NewCreateTeacherUseCase creates a new instance of CreateTeacherUseCase
-func NewCreateTeacherUseCase(teacherRepo repointerface.TeacherRepository) CreateTeacherUseCase {
+func NewCreateTeacherUseCase(
+	teacherRepo repointerface.TeacherRepository,
+	skillRepo repointerface.SkillRepository,
+) CreateTeacherUseCase {
 	return &createTeacherUseCase{
 		teacherRepo: teacherRepo,
+		skillRepo:   skillRepo,
 	}
 }
 
@@ -81,6 +90,7 @@ func (uc *createTeacherUseCase) Execute(ctx context.Context, input CreateTeacher
 	if input.Status == "" {
 		input.Status = "ACTIVE"
 	}
+	normalizedSkills := skillservice.NormalizeCodes(input.Skills)
 
 	// Create teacher entity
 	teacher := &entities.Teacher{
@@ -92,6 +102,7 @@ func (uc *createTeacherUseCase) Execute(ctx context.Context, input CreateTeacher
 		SchoolName:      input.SchoolName,
 		EmploymentType:  input.EmploymentType,
 		Status:          input.Status,
+		Skills:          pq.StringArray(normalizedSkills),
 		Notes:           input.Notes,
 	}
 
@@ -99,6 +110,11 @@ func (uc *createTeacherUseCase) Execute(ctx context.Context, input CreateTeacher
 	createdTeacher, err := uc.teacherRepo.Create(ctx, teacher)
 	if err != nil {
 		ctxLogger.Errorf("Failed to create teacher: %v", err)
+		return nil, err
+	}
+
+	if err := uc.skillRepo.SyncTeacherSkills(ctx, createdTeacher.ID, normalizedSkills); err != nil {
+		ctxLogger.Errorf("Failed to sync teacher skills: %v", err)
 		return nil, err
 	}
 

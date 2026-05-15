@@ -13,11 +13,12 @@ type GetClassRosterInput struct {
 }
 
 type GetClassRosterOutput struct {
-	ClassID       string             `json:"class_id"`
-	MaxStudents   int                `json:"max_students"`
-	CapacityLimit int                `json:"capacity_limit"`
-	CurrentCount  int                `json:"current_count"`
-	Students      []entities.Student `json:"students"`
+	ClassID          string             `json:"class_id"`
+	MaxStudents      int                `json:"max_students"`
+	CapacityLimit    int                `json:"capacity_limit"`
+	CurrentCount     int                `json:"current_count"`
+	Students         []entities.Student `json:"students"`
+	ReservedStudents []entities.Student `json:"reserved_students"`
 }
 
 type GetClassRosterUseCase interface {
@@ -58,8 +59,15 @@ func (uc *getClassRosterUseCase) Execute(ctx context.Context, input GetClassRost
 	}
 
 	students := make([]entities.Student, 0, len(enrollments))
+	reservedStudents := make([]entities.Student, 0)
 	for _, enrollment := range enrollments {
-		students = append(students, enrollment.Student)
+		if isActiveEnrollmentStatus(enrollment.Status) {
+			students = append(students, enrollment.Student)
+			continue
+		}
+		if enrollment.Status == entities.EnrollmentStatusSuspended {
+			reservedStudents = append(reservedStudents, enrollment.Student)
+		}
 	}
 
 	capacityLimit := classEntity.MaxStudents
@@ -71,10 +79,11 @@ func (uc *getClassRosterUseCase) Execute(ctx context.Context, input GetClassRost
 	}
 
 	return &GetClassRosterOutput{
-		ClassID:       classEntity.ID,
-		MaxStudents:   classEntity.MaxStudents,
-		CapacityLimit: capacityLimit,
-		CurrentCount:  len(students),
-		Students:      students,
+		ClassID:          classEntity.ID,
+		MaxStudents:      classEntity.MaxStudents,
+		CapacityLimit:    capacityLimit,
+		CurrentCount:     len(students),
+		Students:         students,
+		ReservedStudents: reservedStudents,
 	}, nil
 }

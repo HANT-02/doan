@@ -2,8 +2,10 @@ package room
 
 import (
 	"context"
+	"errors"
 
 	"doan/internal/entities"
+	"doan/internal/repositories"
 	repointerface "doan/internal/repositories/interface"
 	"doan/pkg/logger"
 )
@@ -33,11 +35,18 @@ func NewGetRoomUseCase(roomRepo repointerface.RoomRepository) GetRoomUseCase {
 func (uc *getRoomUseCase) Execute(ctx context.Context, input GetRoomInput) (*GetRoomOutput, error) {
 	ctxLogger := logger.NewLogger(ctx)
 
-	room, err := uc.roomRepo.GetByID(ctx, input.ID)
+	commonCond := repositories.NewCommonCondition()
+	commonCond.AddCondition("id", input.ID, repositories.Equal)
+	commonCond.SetPreload([]string{"Campus"})
+
+	result, err := uc.roomRepo.GetByCondition(ctx, commonCond)
 	if err != nil {
 		ctxLogger.Errorf("Failed to get room: %v", err)
 		return nil, err
 	}
+	if result == nil || len(result.Data) == 0 || result.Data[0] == nil {
+		return nil, errors.New("room not found")
+	}
 
-	return &GetRoomOutput{Room: room}, nil
+	return &GetRoomOutput{Room: result.Data[0]}, nil
 }

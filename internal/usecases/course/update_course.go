@@ -4,21 +4,25 @@ import (
 	"context"
 	"doan/internal/entities"
 	repointerface "doan/internal/repositories/interface"
+	skillservice "doan/internal/services/skills"
 	"doan/pkg/logger"
+
+	"github.com/lib/pq"
 )
 
 type UpdateCourseInput struct {
-	ID                     string   `json:"id"`
-	Code                   *string  `json:"code"`
-	Name                   *string  `json:"name"`
-	Description            *string  `json:"description"`
-	GradeLevel             *string  `json:"grade_level"`
-	Subject                *string  `json:"subject"`
-	SessionCount           *int     `json:"session_count"`
-	SessionDurationMinutes *int     `json:"session_duration_minutes"`
-	TotalHours             *float64 `json:"total_hours"`
-	Price                  *float64 `json:"price"`
-	Status                 *string  `json:"status"`
+	ID                     string    `json:"id"`
+	Code                   *string   `json:"code"`
+	Name                   *string   `json:"name"`
+	Description            *string   `json:"description"`
+	GradeLevel             *string   `json:"grade_level"`
+	Subject                *string   `json:"subject"`
+	SessionCount           *int      `json:"session_count"`
+	SessionDurationMinutes *int      `json:"session_duration_minutes"`
+	TotalHours             *float64  `json:"total_hours"`
+	Price                  *float64  `json:"price"`
+	Status                 *string   `json:"status"`
+	RequiredSkills         *[]string `json:"required_skills"`
 }
 
 type UpdateCourseOutput struct {
@@ -30,11 +34,15 @@ type UpdateCourseUseCase interface {
 }
 
 type updateCourseUseCaseImpl struct {
-	repo repointerface.CourseRepository
+	repo      repointerface.CourseRepository
+	skillRepo repointerface.SkillRepository
 }
 
-func NewUpdateCourseUseCase(repo repointerface.CourseRepository) UpdateCourseUseCase {
-	return &updateCourseUseCaseImpl{repo: repo}
+func NewUpdateCourseUseCase(
+	repo repointerface.CourseRepository,
+	skillRepo repointerface.SkillRepository,
+) UpdateCourseUseCase {
+	return &updateCourseUseCaseImpl{repo: repo, skillRepo: skillRepo}
 }
 
 func (uc *updateCourseUseCaseImpl) Execute(ctx context.Context, input UpdateCourseInput) (*UpdateCourseOutput, error) {
@@ -87,11 +95,22 @@ func (uc *updateCourseUseCaseImpl) Execute(ctx context.Context, input UpdateCour
 		course.Status = *input.Status
 		updateData["status"] = *input.Status
 	}
+	if input.RequiredSkills != nil {
+		normalizedRequiredSkills := skillservice.NormalizeCodes(*input.RequiredSkills)
+		course.RequiredSkills = pq.StringArray(normalizedRequiredSkills)
+		updateData["required_skills"] = course.RequiredSkills
+	}
 
 	err = uc.repo.Update(ctx, course.ID, updateData)
 	if err != nil {
 		ctxLogger.Errorf("Error updating course: %v", err)
 		return nil, err
+	}
+	if input.RequiredSkills != nil {
+		if err := uc.skillRepo.SyncCourseRequiredSkills(ctx, course.ID, *input.RequiredSkills); err != nil {
+			ctxLogger.Errorf("Error syncing course required skills: %v", err)
+			return nil, err
+		}
 	}
 	return &UpdateCourseOutput{Course: course}, nil
 }

@@ -2,8 +2,9 @@ package infrastructure
 
 import (
 	"doan/internal/infrastructure/database"
-	_interface "doan/internal/infrastructure/queue/interface"
-	"doan/internal/infrastructure/queue/noop"
+	"doan/internal/infrastructure/database/postgres"
+	"doan/internal/infrastructure/database/postgres/implement"
+	_interface "doan/internal
 
 	"github.com/google/wire"
 )
@@ -11,8 +12,32 @@ import (
 // InfrastructureProviders provides all infrastructure dependencies
 // Including: Database, Queue, External services
 var InfrastructureProviders = wire.NewSet(
-	// Database layer
-	database.DBProvider,
+	database.ProvideDB,
+	postgres.NewMigration,
+	postgres.NewUnitOfWork,
+	implement.NewUserRepository,
+	implement.NewPasswordResetRepository,
+	implement.NewTeacherRepository,
+	implement.NewCampusRepository,
+	implement.NewCampusTravelTimeRepository,
+	implement.NewRoomRepository,
+	implement.NewShiftRepository,
+	implement.NewClassRepository,
+	implement.NewStudentRepository,
+	implement.NewLessonRepository,
+	implement.NewCourseRepository,
+	implement.NewSkillRepository,
+	implement.NewProgramRepository,
+	implement.NewEnrollmentRepository,
+	implement.NewAttendanceRepository,
+	implement.NewLessonSummaryRepository,
+	implement.NewAcademicRecordRepository,
+	implement.NewLeaveRequestRepository,
+	implement.NewMaterialRepository,
+	implement.NewLabelRepository,
+	implement.NewAuditLogRepository,
+	implement.NewApprovalDecisionRepository,
+	implement.NewClassScheduleRepository,
 
 	// Queue infrastructure
 	ProvideQueue,

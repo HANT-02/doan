@@ -53,17 +53,29 @@ func (uc *enrollStudentsUseCase) Execute(ctx context.Context, input EnrollStuden
 		}
 	}
 
-	// We would ideally query existing enrollments count here to see if remaining seats exist
-	// For now, we will just assume we can enroll up to maxAllowed if provided.
-	// In a real system you'd count `SELECT COUNT(*) FROM enrollments WHERE class_id = ?`
-	// but currently the base repo may not support Count natively easily without extending.
+	existingEnrollments, err := uc.enrollmentRepo.ListByClassID(ctx, input.ClassID)
+	if err != nil {
+		ctxLogger.Errorf("Failed to load existing enrollments: %v", err)
+		return nil, err
+	}
+
+	activeStudentIDs := make(map[string]struct{}, len(existingEnrollments))
+	existingCount := 0
+	for _, enrollment := range existingEnrollments {
+		if !isActiveEnrollmentStatus(enrollment.Status) {
+			continue
+		}
+		existingCount++
+		activeStudentIDs[enrollment.StudentID] = struct{}{}
+	}
 
 	// Create enrollments
 	enrolledCount := 0
 	for _, sID := range input.StudentIDs {
-		// Basic naive capacity check logic (assuming 0 existing enrollments for simplicity in this demo)
-		// If needed, we'll implement a custom count in repo later over-budget.
-		if maxAllowed > 0 && enrolledCount >= maxAllowed {
+		if _, exists := activeStudentIDs[sID]; exists {
+			continue
+		}
+		if maxAllowed > 0 && existingCount+enrolledCount >= maxAllowed {
 			ctxLogger.Warnf("Capacity reached (%d). Skipping remaining students.", maxAllowed)
 			break
 		}
@@ -71,7 +83,7 @@ func (uc *enrollStudentsUseCase) Execute(ctx context.Context, input EnrollStuden
 		enroll := &entities.Enrollment{
 			ClassID:   input.ClassID,
 			StudentID: sID,
-			Status:    "ENROLLED",
+			Status:    entities.EnrollmentStatusEnrolled,
 		}
 		_, err := uc.enrollmentRepo.Create(ctx, enroll)
 		if err != nil {
@@ -79,6 +91,7 @@ func (uc *enrollStudentsUseCase) Execute(ctx context.Context, input EnrollStuden
 			continue
 		}
 		enrolledCount++
+		activeStudentIDs[sID] = struct{}{}
 	}
 
 	return &EnrollStudentsOutput{Enrolled: enrolledCount}, nil

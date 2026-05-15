@@ -8,11 +8,40 @@ import (
 	"time"
 
 	"doan/internal/entities"
+	schedulingservice "doan/internal/services/scheduling"
 )
+
+func existingLessonStatusesForPreviewMode(mode string) []string {
+	switch normalizePreviewMode(mode) {
+	case schedulingservice.PreviewModeReplanWithPublishedLock:
+		return []string{entities.LessonStatusPublished}
+	case schedulingservice.PreviewModeReplanDraft:
+		return []string{entities.LessonStatusDraft, entities.LessonStatusUnplanned}
+	default:
+		return nil
+	}
+}
+
+func lessonLifecycleLabel(status string) string {
+	switch status {
+	case entities.LessonStatusPublished:
+		return "Published"
+	case entities.LessonStatusDraft:
+		return "Draft"
+	case entities.LessonStatusUnplanned:
+		return "Unplanned"
+	case entities.LessonStatusHistory:
+		return "History"
+	default:
+		return "Existing"
+	}
+}
 
 func (uc *previewUseCase) collectExistingLessonConflicts(
 	ctx context.Context,
 	preview PreviewResult,
+	travelMap map[string]int,
+	roomsByID map[string]entities.Room,
 ) ([]ExistingLesson, map[string]map[string]struct{}, []PreviewConflict, error) {
 	if preview.Filters.DateTo.Before(preview.Filters.DateFrom) {
 		return []ExistingLesson{}, map[string]map[string]struct{}{}, []PreviewConflict{}, nil
@@ -23,6 +52,11 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		from, to = previewAssignmentWindow(preview.Assignments)
 	}
 
+	statuses := existingLessonStatusesForPreviewMode(preview.Mode)
+	if len(statuses) == 0 {
+		return []ExistingLesson{}, map[string]map[string]struct{}{}, []PreviewConflict{}, nil
+	}
+
 	lessons, err := uc.lessonRepo.FindOverlappingLessons(
 		ctx,
 		from,
@@ -30,14 +64,27 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		collectAssignmentClassIDs(preview.Assignments),
 		collectAssignmentTeacherIDs(preview.Assignments),
 		collectAssignmentRoomIDs(preview.Assignments),
+		statuses,
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	if len(lessons) == 0 {
-		return []ExistingLesson{}, map[string]map[string]struct{}{}, []PreviewConflict{}, nil
+	selectedClassIDs := make(map[string]struct{}, len(preview.Variables))
+	for _, variable := range preview.Variables {
+		if variable.ClassID != "" {
+			selectedClassIDs[variable.ClassID] = struct{}{}
+		}
 	}
+
+	filteredLessons := make([]entities.Lesson, 0, len(lessons))
+	for _, lesson := range lessons {
+		if _, isSelectedClass := selectedClassIDs[lesson.ClassID]; isSelectedClass {
+			continue
+		}
+		filteredLessons = append(filteredLessons, lesson)
+	}
+	lessons = filteredLessons
 
 	classIDs := make(map[string]struct{})
 	for _, variable := range preview.Variables {
@@ -54,6 +101,10 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 	studentIDsByClass, err := uc.loadStudentIDsByClass(ctx, classIDs)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	if len(lessons) == 0 {
+		return []ExistingLesson{}, studentIDsByClass, []PreviewConflict{}, nil
 	}
 
 	events := make([]ExistingLesson, 0, len(lessons))
@@ -83,6 +134,7 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 			ClassID:      lesson.ClassID,
 			ClassCode:    lesson.Class.Code,
 			ClassName:    lesson.Class.Name,
+			Status:       lesson.Status,
 			TeacherID:    teacherID,
 			TeacherLabel: teacherLabel,
 			RoomID:       roomID,
@@ -99,6 +151,44 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		studentSet := studentIDsByClass[assignment.ClassID]
 		for _, lesson := range lessons {
 			if !overlaps(assignment.StartTime, assignment.EndTime, lesson.DateStart, lesson.DateEnd) {
+				if assignment.TeacherID != "" && lesson.TeacherID != nil && assignment.TeacherID == *lesson.TeacherID && sameCalendarDay(assignment.StartTime, lesson.DateStart) {
+					var previousEnd, nextStart time.Time
+					var fromRoom, toRoom entities.Room
+
+					if assignment.EndTime.Before(lesson.DateStart) || assignment.EndTime.Equal(lesson.DateStart) {
+						previousEnd = assignment.EndTime
+						nextStart = lesson.DateStart
+						fromRoom = roomsByID[assignment.RoomID]
+						if lesson.RoomID != nil {
+							toRoom = roomsByID[*lesson.RoomID]
+						}
+					} else {
+						previousEnd = lesson.DateEnd
+						nextStart = assignment.StartTime
+						if lesson.RoomID != nil {
+							fromRoom = roomsByID[*lesson.RoomID]
+						}
+						toRoom = roomsByID[assignment.RoomID]
+					}
+
+					if !schedulingservice.HasSufficientTravelGap(previousEnd, nextStart, &fromRoom, &toRoom, travelMap) {
+						conflicts = append(conflicts, PreviewConflict{
+							VariableID:   assignment.VariableID,
+							ClassID:      assignment.ClassID,
+							ClassCode:    assignment.ClassCode,
+							ClassName:    assignment.ClassName,
+							SessionIndex: assignment.SessionIndex,
+							SessionTotal: assignment.SessionTotal,
+							Type:         "SYSTEM_LESSON_CONFLICT",
+							Message: fmt.Sprintf(
+								"Trùng với lesson %s đã lưu [%s - %s] vì di chuyển không kịp.",
+								lessonLifecycleLabel(lesson.Status),
+								lesson.DateStart.Format("02/01/2006 15:04"),
+								lesson.DateEnd.Format("15:04"),
+							),
+						})
+					}
+				}
 				continue
 			}
 
@@ -116,7 +206,8 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 				SessionTotal: assignment.SessionTotal,
 				Type:         "SYSTEM_LESSON_CONFLICT",
 				Message: fmt.Sprintf(
-					"Trùng với lesson đã lưu [%s - %s] vì %s.",
+					"Trùng với lesson %s đã lưu [%s - %s] vì %s.",
+					lessonLifecycleLabel(lesson.Status),
 					lesson.DateStart.Format("02/01/2006 15:04"),
 					lesson.DateEnd.Format("15:04"),
 					strings.Join(reasons, ", "),

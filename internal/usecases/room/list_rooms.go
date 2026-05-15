@@ -46,6 +46,7 @@ func (uc *listRoomsUseCase) Execute(ctx context.Context, input ListRoomsInput) (
 	ctxLogger := logger.NewLogger(ctx)
 
 	commonCond := repositories.NewCommonCondition()
+	commonCond.SetPreload([]string{"Campus"})
 
 	if input.Search != "" {
 		commonCond.AddCondition("name ILIKE ?", "%"+input.Search+"%", repositories.Like)

@@ -65,6 +65,7 @@ export interface ClassRoster {
     capacity_limit: number;
     current_count: number;
     students: Student[];
+    reserved_students: Student[];
 }
 
 export interface ClassRosterResponse {
@@ -78,6 +79,49 @@ export interface ClassScheduleListResponse {
     message: string;
     data: {
         schedules: ClassSchedule[];
+    };
+}
+
+export interface ReserveStudentResponse {
+    success: boolean;
+    message: string;
+    data?: {
+        message: string;
+        class_id: string;
+        student_id: string;
+        status: string;
+        impacted_lesson_count: number;
+        effective_at: string;
+    };
+}
+
+export interface TransferStudentResponse {
+    success: boolean;
+    message: string;
+    data?: {
+        message: string;
+        student_id: string;
+        source_class_id: string;
+        target_class_id: string;
+        source_enrollment_state: string;
+        target_enrollment_state: string;
+        impacted_lesson_count: number;
+        remaining_capacity: number;
+        capacity_utilization: number;
+        effective_at: string;
+    };
+}
+
+export interface ResumeStudentResponse {
+    success: boolean;
+    message: string;
+    data?: {
+        message: string;
+        class_id: string;
+        student_id: string;
+        status: string;
+        impacted_lesson_count: number;
+        effective_at: string;
     };
 }
 
@@ -124,11 +168,13 @@ interface RawClassRosterResponse {
         capacity_limit?: number;
         current_count?: number;
         students?: Student[];
+        reserved_students?: Student[];
         ClassID?: string;
         MaxStudents?: number;
         CapacityLimit?: number;
         CurrentCount?: number;
         Students?: Student[];
+        ReservedStudents?: Student[];
     };
 }
 
@@ -174,6 +220,7 @@ export const classApi = baseApi.injectEndpoints({
                     capacity_limit: response.data?.capacity_limit || response.data?.CapacityLimit || 0,
                     current_count: response.data?.current_count || response.data?.CurrentCount || 0,
                     students: response.data?.students || response.data?.Students || [],
+                    reserved_students: response.data?.reserved_students || response.data?.ReservedStudents || [],
                 },
             }),
             providesTags: (_result, _error, id) => [{ type: 'Class', id }, { type: 'Class', id: `ROSTER-${id}` }],
@@ -217,6 +264,47 @@ export const classApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (_result, _error, { id }) => [{ type: 'Class', id }, { type: 'Class', id: `ROSTER-${id}` }, { type: 'Student', id: 'LIST' }],
         }),
+        reserveStudent: builder.mutation<ReserveStudentResponse, { classId: string; studentId: string; reason?: string; effective_at?: string }>({
+            query: ({ classId, studentId, ...body }) => ({
+                url: `/v1/classes/${classId}/students/${studentId}/reserve`,
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: (_result, _error, { classId }) => [
+                { type: 'Class', id: classId },
+                { type: 'Class', id: `ROSTER-${classId}` },
+                { type: 'Lesson', id: 'STUDENT-TIMETABLE' },
+                { type: 'Student', id: 'LIST' },
+            ],
+        }),
+        resumeStudent: builder.mutation<ResumeStudentResponse, { classId: string; studentId: string; reason?: string; effective_at?: string }>({
+            query: ({ classId, studentId, ...body }) => ({
+                url: `/v1/classes/${classId}/students/${studentId}/resume`,
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: (_result, _error, { classId }) => [
+                { type: 'Class', id: classId },
+                { type: 'Class', id: `ROSTER-${classId}` },
+                { type: 'Lesson', id: 'STUDENT-TIMETABLE' },
+                { type: 'Student', id: 'LIST' },
+            ],
+        }),
+        transferStudent: builder.mutation<TransferStudentResponse, { classId: string; studentId: string; target_class_id: string; reason?: string; effective_at?: string }>({
+            query: ({ classId, studentId, ...body }) => ({
+                url: `/v1/classes/${classId}/students/${studentId}/transfer`,
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: (_result, _error, { classId, target_class_id }) => [
+                { type: 'Class', id: classId },
+                { type: 'Class', id: `ROSTER-${classId}` },
+                { type: 'Class', id: target_class_id },
+                { type: 'Class', id: `ROSTER-${target_class_id}` },
+                { type: 'Lesson', id: 'STUDENT-TIMETABLE' },
+                { type: 'Student', id: 'LIST' },
+            ],
+        }),
         assignTeacher: builder.mutation<{ success: boolean; message: string }, { id: string; teacher_id: string }>({
             query: ({ id, teacher_id }) => ({
                 url: `/v1/classes/${id}/teacher`,
@@ -256,6 +344,9 @@ export const {
     useDeleteClassMutation,
     useEnrollStudentsMutation,
     useRemoveStudentsMutation,
+    useReserveStudentMutation,
+    useResumeStudentMutation,
+    useTransferStudentMutation,
     useAssignTeacherMutation,
     useGetClassSchedulesQuery,
     useCreateClassScheduleMutation,

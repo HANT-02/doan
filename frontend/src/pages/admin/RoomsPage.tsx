@@ -191,6 +191,14 @@ export const RoomsPage = () => {
                         >
                             {params.row.address || params.row.location || 'Chưa cập nhật địa chỉ'}
                         </Typography>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            noWrap
+                            sx={{ display: 'block', lineHeight: 1.4 }}
+                        >
+                            {params.row.campus?.name || 'Chưa gán campus'}
+                        </Typography>
                     </Box>
                 </Stack>
             ),

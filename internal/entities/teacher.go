@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"time"
 )
@@ -15,6 +16,7 @@ type Teacher struct {
 	SchoolName      string         `gorm:"type:varchar(255)" json:"school_name"`
 	EmploymentType  string         `gorm:"type:varchar(50);default:'PART_TIME'" json:"employment_type"`
 	Status          string         `gorm:"type:varchar(50);default:'ACTIVE'" json:"status"`
+	Skills          pq.StringArray `gorm:"type:text[];default:'{}'" json:"skills"`
 	Notes           string         `gorm:"type:text" json:"notes"`
 	CreatedAt       time.Time      `gorm:"default:now()" json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`

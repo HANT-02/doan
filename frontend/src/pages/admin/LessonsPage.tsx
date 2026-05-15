@@ -21,7 +21,6 @@ import {
     ChevronRightRounded,
     RefreshRounded,
     TodayRounded,
-    VisibilityOutlined,
     ViewWeekRounded,
 } from '@mui/icons-material';
 import {
@@ -43,6 +42,8 @@ import { useGetLessonsQuery, type Lesson } from '@/api/lessonApi';
 import { useGetClassesQuery } from '@/api/classApi';
 import { useGetTeachersQuery } from '@/api/teacherApi';
 import PageHeader from '@/components/common/PageHeader';
+import PreviewScheduleGrid from '@/components/schedule/PreviewScheduleGrid';
+import ScheduleCardShell from '@/components/schedule/ScheduleCardShell';
 import { getApiErrorMessage } from '@/utils/apiError';
 
 type CalendarViewMode = 'week' | 'month';
@@ -56,18 +57,22 @@ const weekLabels = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ S
 
 const formatDateParam = (value: Date) => format(value, 'yyyy-MM-dd');
 
-const formatDateTime = (value: string) => format(parseISO(value), 'dd/MM/yyyy HH:mm', { locale: vi });
-
 const formatTimeOnly = (value: string) => format(parseISO(value), 'HH:mm', { locale: vi });
 
-const palette = [
-    { bg: 'rgba(14, 116, 144, 0.10)', border: '#0ea5e9' },
-    { bg: 'rgba(5, 150, 105, 0.10)', border: '#10b981' },
-    { bg: 'rgba(234, 88, 12, 0.10)', border: '#f97316' },
-    { bg: 'rgba(190, 24, 93, 0.10)', border: '#ec4899' },
-    { bg: 'rgba(79, 70, 229, 0.10)', border: '#6366f1' },
-    { bg: 'rgba(161, 98, 7, 0.10)', border: '#eab308' },
-];
+function getLessonStatusMeta(status: Lesson['status']) {
+    switch (status) {
+        case 'PUBLISHED':
+            return { label: 'Đã công bố', color: 'success' as const };
+        case 'HISTORY':
+            return { label: 'Lịch sử', color: 'default' as const };
+        case 'DRAFT':
+            return { label: 'Nháp', color: 'warning' as const };
+        case 'UNPLANNED':
+            return { label: 'Chưa xếp', color: 'error' as const };
+        default:
+            return { label: status || 'Chưa rõ', color: 'default' as const };
+    }
+}
 
 function buildVisibleRange(anchorDate: Date, viewMode: CalendarViewMode) {
     if (viewMode === 'week') {
@@ -101,17 +106,10 @@ function buildCalendarDays(anchorDate: Date, viewMode: CalendarViewMode, lessons
     return days;
 }
 
-function getLessonTone(lesson: Lesson) {
-    const seed = lesson.class_id
-        .split('')
-        .reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    return palette[seed % palette.length];
-}
-
 export default function LessonsPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
+    const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
     const [anchorDate, setAnchorDate] = useState(new Date());
     const [classId, setClassId] = useState(searchParams.get('class_id') || '');
     const [teacherId, setTeacherId] = useState('');
@@ -186,67 +184,23 @@ export default function LessonsPage() {
     };
 
     const renderLessonCard = (lesson: Lesson) => {
-        const tone = getLessonTone(lesson);
+        const statusMeta = getLessonStatusMeta(lesson.status);
         return (
-            <Paper
+            <ScheduleCardShell
                 key={lesson.id}
-                variant="outlined"
+                seed={lesson.class_id}
+                title={lesson.class?.name || lesson.class_id}
+                subtitle={`Buổi học • ${formatTimeOnly(lesson.date_start)} - ${formatTimeOnly(lesson.date_end)}`}
+                lines={[
+                    lesson.class?.code || 'Chưa có mã lớp',
+                    lesson.teacher?.full_name || 'Chưa phân công giáo viên',
+                    lesson.room?.name || 'Chưa xếp phòng',
+                ]}
+                chips={[{ label: statusMeta.label, color: statusMeta.color }]}
+                actionLabel="Xem"
+                onActionClick={() => navigate(`/app/admin/lessons/${lesson.id}`)}
                 onClick={() => navigate(`/app/admin/lessons/${lesson.id}`)}
-                sx={{
-                    p: 1.25,
-                    borderRadius: 2.5,
-                    cursor: 'pointer',
-                    borderLeft: `4px solid ${tone.border}`,
-                    backgroundColor: tone.bg,
-                    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
-                    '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: 2,
-                    },
-                }}
-            >
-                <Stack spacing={0.75}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-                        <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
-                                {lesson.class?.name || lesson.class_id}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {lesson.class?.code || 'Không có mã lớp'}
-                            </Typography>
-                        </Box>
-                        <Button
-                            size="small"
-                            startIcon={<VisibilityOutlined />}
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                navigate(`/app/admin/lessons/${lesson.id}`);
-                            }}
-                            sx={{ minWidth: 'auto', px: 1 }}
-                        >
-                            Xem
-                        </Button>
-                    </Stack>
-
-                    <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                        {formatTimeOnly(lesson.date_start)} - {formatTimeOnly(lesson.date_end)}
-                    </Typography>
-
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                        {lesson.teacher?.full_name || 'Chưa phân công giáo viên'}
-                    </Typography>
-
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                        {lesson.room?.name || 'Chưa xếp phòng'}
-                    </Typography>
-
-                    {lesson.notes ? (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
-                            {lesson.notes}
-                        </Typography>
-                    ) : null}
-                </Stack>
-            </Paper>
+            />
         );
     };
 
@@ -255,7 +209,6 @@ export default function LessonsPage() {
             <Stack sx={{ p: { xs: 2, md: 4 } }} spacing={3}>
                 <PageHeader
                     title="Quản lý buổi học"
-                    subtitle="Theo dõi lesson theo dạng lịch, lọc theo lớp hoặc giáo viên và đi thẳng vào chi tiết từng buổi."
                     icon={<CalendarMonthRounded />}
                     actions={(
                         <Button
@@ -309,6 +262,7 @@ export default function LessonsPage() {
                                         </MenuItem>
                                     ))}
                                 </TextField>
+
                             </Stack>
 
                             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
@@ -352,7 +306,7 @@ export default function LessonsPage() {
                                     size="small"
                                     color="primary"
                                     variant="outlined"
-                                    label={hasFilters ? 'Đang lọc dữ liệu' : 'Toàn bộ lesson'}
+                                    label={hasFilters ? 'Đang lọc dữ liệu' : 'Toàn bộ buổi học'}
                                 />
                                 <Chip
                                     size="small"
@@ -429,6 +383,14 @@ export default function LessonsPage() {
                         <Skeleton variant="rounded" height={80} />
                         <Skeleton variant="rounded" height={420} />
                     </Stack>
+                ) : viewMode === 'week' ? (
+                    <PreviewScheduleGrid
+                        title={headerLabel}
+                        weekStart={visibleRange.start}
+                        items={lessons}
+                        isFetching={isFetching}
+                        renderItem={(lesson: Lesson) => renderLessonCard(lesson)}
+                    />
                 ) : (
                     <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
                         <Box
@@ -448,9 +410,6 @@ export default function LessonsPage() {
                                 <Box>
                                     <Typography variant="h6" sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
                                         {headerLabel}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Hiển thị lịch từ {formatDateTime(queryParams.date_from || '')} đến {formatDateTime(queryParams.date_to || '')}
                                     </Typography>
                                 </Box>
                                 {isFetching ? (
@@ -489,11 +448,11 @@ export default function LessonsPage() {
                                         <Box
                                             key={day.date.toISOString()}
                                             sx={{
-                                                minHeight: viewMode === 'month' ? 220 : 320,
+                                                minHeight: 220,
                                                 p: 1.25,
                                                 borderLeft: '1px solid rgba(15,23,42,0.08)',
                                                 borderBottom: '1px solid rgba(15,23,42,0.08)',
-                                                backgroundColor: isSameMonth(day.date, anchorDate) || viewMode === 'week'
+                                                backgroundColor: isSameMonth(day.date, anchorDate)
                                                     ? '#ffffff'
                                                     : 'rgba(248,250,252,0.7)',
                                             }}
@@ -530,11 +489,7 @@ export default function LessonsPage() {
                                                     <Stack spacing={1}>
                                                         {day.lessons.map(renderLessonCard)}
                                                     </Stack>
-                                                ) : (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Không có buổi học trong ngày này.
-                                                    </Typography>
-                                                )}
+                                                ) : null}
                                             </Stack>
                                         </Box>
                                     ))}

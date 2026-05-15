@@ -6,12 +6,14 @@ import (
 	"doan/internal/infrastructure/database/postgres"
 	"doan/internal/repositories"
 	repointerface "doan/internal/repositories/interface"
+	skillservice "doan/internal/services/skills"
 	"doan/pkg/base_struct"
 	"doan/pkg/config"
 	"doan/pkg/logger"
 	"fmt"
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -66,7 +68,8 @@ func (r *teacherRepository) GetTeacherLessons(ctx context.Context, teacherID str
 		Preload("Class").
 		Preload("Room").
 		Preload("Teacher").
-		Where("teacher_id = ?", teacherID)
+		Where("teacher_id = ?", teacherID).
+		Where("status IN ?", []string{entities.LessonStatusPublished, entities.LessonStatusHistory})
 
 	// Apply date range filter if provided
 	if !from.IsZero() {
@@ -108,7 +111,8 @@ func (r *teacherRepository) GetTeachingHoursStats(ctx context.Context, teacherID
 			TO_CHAR(date_start, '%s') as period,
 			SUM(EXTRACT(EPOCH FROM (date_end - date_start)) / 3600.0) as hours
 		`, dateFormat)).
-		Where("teacher_id = ?", teacherID)
+		Where("teacher_id = ?", teacherID).
+		Where("status IN ?", []string{entities.LessonStatusPublished, entities.LessonStatusHistory})
 
 	// Apply date range filter
 	if !from.IsZero() {
@@ -128,4 +132,20 @@ func (r *teacherRepository) GetTeachingHoursStats(ctx context.Context, teacherID
 	}
 
 	return stats, nil
+}
+
+func (r *teacherRepository) ListByRequiredSkillCodes(ctx context.Context, requiredSkills []string) ([]*entities.Teacher, error) {
+	normalized := skillservice.NormalizeCodes(requiredSkills)
+
+	var teachers []*entities.Teacher
+	query := r.db.WithContext(ctx).Model(&entities.Teacher{})
+	if len(normalized) > 0 {
+		query = query.Where("skills @> ?", pq.Array(normalized))
+	}
+
+	if err := query.Order("full_name ASC").Find(&teachers).Error; err != nil {
+		return nil, err
+	}
+
+	return teachers, nil
 }

@@ -130,6 +130,7 @@ func (uc *getStudentTimetableUseCase) Execute(ctx context.Context, input GetStud
 
 	lessonCondition := repositories.NewCommonCondition()
 	lessonCondition.AddCondition("class_id", classIDs, repositories.In)
+	lessonCondition.AddCondition("status", []string{entities.LessonStatusPublished, entities.LessonStatusHistory}, repositories.In)
 	if input.DateFrom != nil {
 		lessonCondition.AddCondition("date_end", input.DateFrom.UTC(), repositories.GreaterThanOrEqual)
 	}

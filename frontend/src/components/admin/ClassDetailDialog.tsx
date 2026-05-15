@@ -27,9 +27,11 @@ import {
 } from '@mui/material';
 import {
     AddRounded,
+    CompareArrowsRounded,
     DeleteOutlineRounded,
     EditOutlined,
     InfoOutlined,
+    PauseCircleOutlineRounded,
     PersonOutline,
     RefreshRounded,
     SchoolOutlined,
@@ -42,13 +44,18 @@ import { toast } from 'sonner';
 import {
     useAssignTeacherMutation,
     useEnrollStudentsMutation,
+    useGetClassesQuery,
     useGetClassByIdQuery,
     useGetClassRosterQuery,
     useRemoveStudentsMutation,
+    useReserveStudentMutation,
+    useResumeStudentMutation,
+    useTransferStudentMutation,
     type Class,
 } from '@/api/classApi';
+import { useGetCoursesQuery } from '@/api/courseApi';
 import { useGetStudentsQuery, type Student } from '@/api/studentApi';
-import { useGetTeachersQuery, type Teacher } from '@/api/teacherApi';
+import { useGetSkillCatalogQuery, useGetTeachersQuery, type Teacher } from '@/api/teacherApi';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ClassScheduleTab from './ClassScheduleTab';
 
@@ -58,6 +65,7 @@ const enrollStudentsSchema = z.object({
 
 const assignTeacherSchema = z.object({
     teacher_id: z.string().min(1, 'Vui lòng chọn giáo viên phụ trách'),
+    teacher_skill_codes: z.array(z.string()).optional(),
 });
 
 type EnrollStudentsValues = z.infer<typeof enrollStudentsSchema>;
@@ -121,6 +129,11 @@ export default function ClassDetailDialog({
     const [rosterSearch, setRosterSearch] = useState('');
     const [studentSearch, setStudentSearch] = useState('');
     const [studentToRemove, setStudentToRemove] = useState<Student | null>(null);
+    const [studentToReserve, setStudentToReserve] = useState<Student | null>(null);
+    const [studentToResume, setStudentToResume] = useState<Student | null>(null);
+    const [studentToTransfer, setStudentToTransfer] = useState<Student | null>(null);
+    const [transferTarget, setTransferTarget] = useState<Class | null>(null);
+    const [transferReason, setTransferReason] = useState('');
 
     const {
         data: classResponse,
@@ -140,10 +153,16 @@ export default function ClassDetailDialog({
     } = useGetClassRosterQuery(classId || '', {
         skip: !open || !classId,
     });
-    const { data: teachersResponse, isFetching: isFetchingTeachers } = useGetTeachersQuery(
-        { page: 1, limit: 200, status: 'ACTIVE' },
+    const { data: classesResponse, isFetching: isFetchingClasses } = useGetClassesQuery(
+        { page: 1, limit: 300, status: 'OPEN' },
         { skip: !open },
     );
+    const { data: teachersResponse, isFetching: isFetchingTeachers } = useGetTeachersQuery(
+        { page: 1, limit: 200, status: 'ACTIVE', class_id: classId || undefined },
+        { skip: !open },
+    );
+    const { data: coursesResponse } = useGetCoursesQuery({ limit: 200 }, { skip: !open });
+    const { data: skillCatalogResponse, isFetching: isFetchingSkillCatalog } = useGetSkillCatalogQuery({ limit: 200 });
     const { data: studentsResponse, isFetching: isFetchingStudents } = useGetStudentsQuery(
         { page: 1, limit: 500, status: 'ACTIVE' },
         { skip: !open || !isEnrollDialogOpen },
@@ -151,35 +170,67 @@ export default function ClassDetailDialog({
 
     const [enrollStudents, { isLoading: isEnrolling }] = useEnrollStudentsMutation();
     const [removeStudents, { isLoading: isRemoving }] = useRemoveStudentsMutation();
+    const [reserveStudent, { isLoading: isReserving }] = useReserveStudentMutation();
+    const [resumeStudent, { isLoading: isResuming }] = useResumeStudentMutation();
+    const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
     const [assignTeacher, { isLoading: isAssigning }] = useAssignTeacherMutation();
 
-    const teachers = useMemo(() => teachersResponse?.data?.teachers || [], [teachersResponse?.data?.teachers]);
+    const courses = useMemo(() => coursesResponse?.data?.courses || [], [coursesResponse?.data?.courses]);
+    const skillCatalog = useMemo(() => skillCatalogResponse?.data?.skills || [], [skillCatalogResponse?.data?.skills]);
+    const allTeachers = useMemo(() => teachersResponse?.data?.teachers || [], [teachersResponse?.data?.teachers]);
+    const allClasses = useMemo(() => classesResponse?.data?.classes || [], [classesResponse?.data?.classes]);
     const classData = classResponse?.data || null;
     const roster = rosterResponse?.data;
+    const currentCourse = useMemo(
+        () => courses.find((course) => course.id === classData?.course_id) || null,
+        [classData?.course_id, courses],
+    );
 
     const teacherForm = useForm<AssignTeacherValues>({
         resolver: zodResolver(assignTeacherSchema),
-        defaultValues: { teacher_id: '' },
+        defaultValues: { teacher_id: '', teacher_skill_codes: [] },
     });
     const enrollForm = useForm<EnrollStudentsValues>({
         resolver: zodResolver(enrollStudentsSchema),
         defaultValues: { student_ids: [] },
     });
 
+    const selectedTeacherSkillCodes = teacherForm.watch('teacher_skill_codes') || [];
+    const teachers = useMemo(() => {
+        const source = allTeachers;
+        if (selectedTeacherSkillCodes.length === 0) {
+            return source;
+        }
+
+        return source.filter((teacher) =>
+            selectedTeacherSkillCodes.every((skillCode) => teacher.skills?.includes(skillCode)),
+        );
+    }, [allTeachers, selectedTeacherSkillCodes]);
+
     const currentTeacher = useMemo(
-        () => teachers.find((teacher) => teacher.id === classData?.teacher_id) || null,
-        [teachers, classData?.teacher_id],
+        () => allTeachers.find((teacher) => teacher.id === classData?.teacher_id) || null,
+        [allTeachers, classData?.teacher_id],
     );
 
     useEffect(() => {
-        teacherForm.reset({ teacher_id: classData?.teacher_id || '' });
-    }, [classData?.teacher_id, teacherForm]);
+        teacherForm.reset({
+            teacher_id: classData?.teacher_id || '',
+            teacher_skill_codes: currentCourse?.required_skills || [],
+        });
+    }, [classData?.teacher_id, currentCourse?.required_skills, teacherForm]);
 
     useEffect(() => {
         if (!isEnrollDialogOpen) {
             setStudentSearch('');
         }
     }, [isEnrollDialogOpen]);
+
+    useEffect(() => {
+        if (!studentToTransfer) {
+            setTransferTarget(null);
+            setTransferReason('');
+        }
+    }, [studentToTransfer]);
 
     const rosterStudents = useMemo(() => {
         const keyword = rosterSearch.trim().toLowerCase();
@@ -197,14 +248,26 @@ export default function ClassDetailDialog({
     }, [roster?.students, rosterSearch]);
 
     const availableStudents = useMemo(() => {
-        const enrolledIds = new Set((roster?.students || []).map((student) => student.id));
+        const enrolledIds = new Set([
+            ...(roster?.students || []).map((student) => student.id),
+            ...(roster?.reserved_students || []).map((student) => student.id),
+        ]);
         return (studentsResponse?.data?.students || []).filter((student) => !enrolledIds.has(student.id));
-    }, [roster?.students, studentsResponse?.data?.students]);
+    }, [roster?.reserved_students, roster?.students, studentsResponse?.data?.students]);
 
     const selectedStudentMap = useMemo(
         () => new Map(availableStudents.map((student) => [student.id, student])),
         [availableStudents],
     );
+
+    const transferTargets = useMemo(() => {
+        const currentCourseId = classData?.course_id;
+        const currentClassId = classData?.id;
+        const openClasses = allClasses.filter((item) => item.id !== currentClassId && item.status === 'OPEN');
+        const sameCourse = openClasses.filter((item) => currentCourseId && item.course_id === currentCourseId);
+        const fallback = openClasses.filter((item) => !currentCourseId || item.course_id !== currentCourseId);
+        return [...sameCourse, ...fallback];
+    }, [allClasses, classData?.course_id, classData?.id]);
 
     const capacityLimit = roster?.capacity_limit || classData?.max_students || 0;
     const currentCount = roster?.current_count || 0;
@@ -258,6 +321,69 @@ export default function ClassDetailDialog({
         }
     };
 
+    const handleReserveStudent = async () => {
+        if (!classId || !studentToReserve) {
+            return;
+        }
+
+        try {
+            const result = await reserveStudent({
+                classId,
+                studentId: studentToReserve.id,
+            }).unwrap();
+            toast.success(result.data?.impacted_lesson_count
+                ? `Đã bảo lưu ${studentToReserve.full_name}. Có ${result.data.impacted_lesson_count} buổi tương lai cần theo dõi học bù.`
+                : `Đã bảo lưu ${studentToReserve.full_name}.`);
+            setStudentToReserve(null);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Không thể bảo lưu học viên'));
+        }
+    };
+
+    const handleTransferStudent = async () => {
+        if (!classId || !studentToTransfer || !transferTarget) {
+            toast.error('Vui lòng chọn lớp đích để chuyển học viên');
+            return;
+        }
+
+        try {
+            const result = await transferStudent({
+                classId,
+                studentId: studentToTransfer.id,
+                target_class_id: transferTarget.id,
+                reason: transferReason.trim() || undefined,
+            }).unwrap();
+            const remaining = result.data?.remaining_capacity;
+            toast.success(
+                remaining !== undefined
+                    ? `Đã chuyển ${studentToTransfer.full_name} sang ${transferTarget.name}. Chỗ trống còn lại: ${remaining}.`
+                    : `Đã chuyển ${studentToTransfer.full_name} sang ${transferTarget.name}.`,
+            );
+            setStudentToTransfer(null);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Không thể chuyển lớp cho học viên'));
+        }
+    };
+
+    const handleResumeStudent = async () => {
+        if (!classId || !studentToResume) {
+            return;
+        }
+
+        try {
+            const result = await resumeStudent({
+                classId,
+                studentId: studentToResume.id,
+            }).unwrap();
+            toast.success(result.data?.impacted_lesson_count
+                ? `Đã hoàn tác bảo lưu cho ${studentToResume.full_name}. Có ${result.data.impacted_lesson_count} buổi tương lai cần rà lại.`
+                : `Đã hoàn tác bảo lưu cho ${studentToResume.full_name}.`);
+            setStudentToResume(null);
+        } catch (error) {
+            toast.error(getErrorMessage(error, 'Không thể hoàn tác bảo lưu'));
+        }
+    };
+
     const rosterColumns: GridColDef<Student>[] = [
         {
             field: 'full_name',
@@ -265,15 +391,20 @@ export default function ClassDetailDialog({
             flex: 1.3,
             minWidth: 220,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="flex-start"
+                    sx={{ minWidth: 0, width: '100%', height: '100%', py: 1 }}
+                >
                     <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.light', color: 'primary.dark' }}>
                         {params.row.full_name?.charAt(0) || 'H'}
                     </Avatar>
                     <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.35 }} noWrap>
                             {params.row.full_name || 'Chưa có tên học sinh'}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.35 }} noWrap>
                             {params.row.code || 'Chưa có mã học sinh'}
                         </Typography>
                     </Box>
@@ -285,7 +416,11 @@ export default function ClassDetailDialog({
             headerName: 'Khối lớp',
             width: 120,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Typography variant="body2">{params.row.grade_level || '-'}</Typography>
+                <Box sx={{ width: '100%' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {params.row.grade_level || '-'}
+                    </Typography>
+                </Box>
             ),
         },
         {
@@ -293,7 +428,11 @@ export default function ClassDetailDialog({
             headerName: 'Số điện thoại',
             width: 140,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Typography variant="body2">{params.row.phone || '-'}</Typography>
+                <Box sx={{ width: '100%' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {params.row.phone || '-'}
+                    </Typography>
+                </Box>
             ),
         },
         {
@@ -301,7 +440,11 @@ export default function ClassDetailDialog({
             headerName: 'SĐT phụ huynh',
             width: 150,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Typography variant="body2">{params.row.guardian_phone || '-'}</Typography>
+                <Box sx={{ width: '100%' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {params.row.guardian_phone || '-'}
+                    </Typography>
+                </Box>
             ),
         },
         {
@@ -320,18 +463,36 @@ export default function ClassDetailDialog({
         {
             field: 'actions',
             headerName: '',
-            width: 86,
+            minWidth: 280,
             sortable: false,
-            align: 'center',
+            flex: 1,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Button
-                    color="error"
-                    size="small"
-                    startIcon={<DeleteOutlineRounded />}
-                    onClick={() => setStudentToRemove(params.row)}
-                >
-                    Xóa
-                </Button>
+                <Stack direction="row" spacing={1} sx={{ py: 1, width: '100%' }} justifyContent="flex-end">
+                    <Button
+                        color="warning"
+                        size="small"
+                        startIcon={<PauseCircleOutlineRounded />}
+                        onClick={() => setStudentToReserve(params.row)}
+                    >
+                        Bảo lưu
+                    </Button>
+                    <Button
+                        color="primary"
+                        size="small"
+                        startIcon={<CompareArrowsRounded />}
+                        onClick={() => setStudentToTransfer(params.row)}
+                    >
+                        Chuyển lớp
+                    </Button>
+                    <Button
+                        color="error"
+                        size="small"
+                        startIcon={<DeleteOutlineRounded />}
+                        onClick={() => setStudentToRemove(params.row)}
+                    >
+                        Xóa
+                    </Button>
+                </Stack>
             ),
         },
     ];
@@ -466,7 +627,7 @@ export default function ClassDetailDialog({
         <Stack spacing={2}>
             {capacityExceeded ? (
                 <Alert severity="error">
-                    Lớp đang vượt sức chứa cho phép ({currentCount}/{capacityLimit}). Cần điều chỉnh roster hoặc sức chứa phòng/lớp.
+                    Lớp đang vượt sức chứa cho phép ({currentCount}/{capacityLimit}). Cần điều chỉnh học viên hoặc sức chứa phòng/lớp.
                 </Alert>
             ) : null}
             {!capacityExceeded && capacityReached ? (
@@ -531,8 +692,93 @@ export default function ClassDetailDialog({
                         '& .MuiDataGrid-columnHeaders': {
                             backgroundColor: '#f8fafc',
                         },
+                        '& .MuiDataGrid-cell': {
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            py: '10px !important',
+                            lineHeight: 'normal !important',
+                        },
+                        '& .MuiDataGrid-row': {
+                            maxHeight: 'none !important',
+                        },
+                        '& .MuiDataGrid-columnHeaderTitle': {
+                            fontWeight: 700,
+                        },
                     }}
+                    rowHeight={94}
+                    columnHeaderHeight={48}
                 />
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
+                <Stack spacing={1.5}>
+                    <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                            Học viên đang bảo lưu
+                        </Typography>
+                    </Box>
+
+                    {(roster?.reserved_students || []).length > 0 ? (
+                        <Stack spacing={1.25}>
+                            {(roster?.reserved_students || []).map((student) => (
+                                <Paper
+                                    key={student.id}
+                                    variant="outlined"
+                                    sx={{ p: 1.5, borderRadius: 2.5, bgcolor: 'warning.50', borderColor: 'warning.light' }}
+                                >
+                                    <Box
+                                        sx={{
+                                            display: 'grid',
+                                            gap: 1.5,
+                                            alignItems: 'center',
+                                            gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.4fr) 140px 180px auto' },
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                                            <Avatar sx={{ width: 34, height: 34, bgcolor: 'warning.light', color: 'warning.dark' }}>
+                                                {student.full_name?.charAt(0) || 'H'}
+                                            </Avatar>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                                                    {student.full_name || 'Chưa có tên học sinh'}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap>
+                                                    {student.code || 'Chưa có mã học sinh'}
+                                                </Typography>
+                                            </Box>
+                                        </Stack>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Khối lớp
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                {student.grade_level || '-'}
+                                            </Typography>
+                                        </Box>
+                                        <Stack alignItems={{ xs: 'flex-start', md: 'flex-end' }} spacing={0.5}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Liên hệ
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                {student.phone || 'Chưa có số điện thoại'}
+                                            </Typography>
+                                        </Stack>
+                                        <Button
+                                            variant="outlined"
+                                            color="warning"
+                                            startIcon={<RefreshRounded />}
+                                            onClick={() => setStudentToResume(student)}
+                                        >
+                                            Hoàn tác bảo lưu
+                                        </Button>
+                                    </Box>
+                                </Paper>
+                            ))}
+                        </Stack>
+                    ) : (
+                        <Alert severity="info">Hiện chưa có học viên nào đang ở trạng thái bảo lưu.</Alert>
+                    )}
+                </Stack>
             </Paper>
         </Stack>
     );
@@ -544,9 +790,6 @@ export default function ClassDetailDialog({
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                             Giáo viên hiện tại
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Gán giáo viên phụ trách để dùng cho demo quản trị và luồng xếp lịch tiếp theo.
                         </Typography>
                     </Box>
 
@@ -572,6 +815,48 @@ export default function ClassDetailDialog({
                         <Stack spacing={2}>
                             <Controller
                                 control={teacherForm.control}
+                                name="teacher_skill_codes"
+                                render={({ field }) => (
+                                    <Autocomplete<string, true, false, false>
+                                        multiple
+                                        options={skillCatalog.map((item) => item.code)}
+                                        loading={isFetchingSkillCatalog}
+                                        value={field.value || []}
+                                        onChange={(_, value) => field.onChange(value)}
+                                        disableCloseOnSelect
+                                        filterSelectedOptions
+                                        getOptionLabel={(option) => {
+                                            const matchedSkill = skillCatalog.find((item) => item.code === option);
+                                            return matchedSkill ? `${matchedSkill.name} (${matchedSkill.code})` : option;
+                                        }}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => {
+                                                const matchedSkill = skillCatalog.find((item) => item.code === option);
+                                                return (
+                                                    <Chip
+                                                        {...getTagProps({ index })}
+                                                        key={option}
+                                                        label={matchedSkill?.name || option}
+                                                        size="small"
+                                                        color="primary"
+                                                        variant="outlined"
+                                                    />
+                                                );
+                                            })
+                                        }
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Lọc giáo viên theo kỹ năng"
+                                                helperText="Mặc định lấy theo khóa học của lớp. Bạn có thể bỏ bớt kỹ năng để mở rộng danh sách giáo viên."
+                                            />
+                                        )}
+                                    />
+                                )}
+                            />
+
+                            <Controller
+                                control={teacherForm.control}
                                 name="teacher_id"
                                 render={({ field, fieldState }) => (
                                     <Autocomplete<Teacher, false, false, false>
@@ -585,7 +870,7 @@ export default function ClassDetailDialog({
                                                 {...params}
                                                 label="Chọn giáo viên phụ trách"
                                                 error={!!fieldState.error}
-                                                helperText={fieldState.error?.message || 'Có thể đổi giáo viên nhiều lần để demo nghiệp vụ'}
+                                                helperText={fieldState.error?.message || (teachers.length === 0 ? 'Không có giáo viên phù hợp với nhóm kỹ năng đang lọc.' : undefined)}
                                             />
                                         )}
                                     />
@@ -656,9 +941,6 @@ export default function ClassDetailDialog({
                                         <Box>
                                             <Typography variant="h6" sx={{ fontWeight: 700 }}>
                                                 {classData?.name}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Theo dõi roster, sĩ số và giáo viên phụ trách trong một màn hình.
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -793,6 +1075,80 @@ export default function ClassDetailDialog({
                 onClose={() => setStudentToRemove(null)}
                 onConfirm={() => void handleRemoveStudent()}
             />
+
+            <ConfirmDialog
+                open={!!studentToReserve}
+                title="Bảo lưu học viên"
+                message={
+                    studentToReserve
+                        ? `Bảo lưu ${studentToReserve.full_name} khỏi lớp hiện tại? Hệ thống sẽ giảm sĩ số active và giữ lại các buổi tương lai để theo dõi học bù/chuyển lớp.`
+                        : ''
+                }
+                confirmText="Bảo lưu"
+                loading={isReserving}
+                onClose={() => setStudentToReserve(null)}
+                onConfirm={() => void handleReserveStudent()}
+            />
+
+            <ConfirmDialog
+                open={!!studentToResume}
+                title="Hoàn tác bảo lưu"
+                message={
+                    studentToResume
+                        ? `Cho ${studentToResume.full_name} quay lại lớp hiện tại? Hệ thống sẽ chuyển trạng thái từ bảo lưu sang đang theo học.`
+                        : ''
+                }
+                confirmText="Cho quay lại lớp"
+                loading={isResuming}
+                onClose={() => setStudentToResume(null)}
+                onConfirm={() => void handleResumeStudent()}
+            />
+
+            <Dialog open={!!studentToTransfer} onClose={() => setStudentToTransfer(null)} fullWidth maxWidth="sm">
+                <DialogTitle>Chuyển lớp học viên</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2.5} sx={{ pt: 1 }}>
+                        {studentToTransfer ? (
+                            <Alert severity="info">
+                                Chuyển <strong>{studentToTransfer.full_name}</strong> sang lớp phù hợp.
+                            </Alert>
+                        ) : null}
+
+                        <Autocomplete<Class, false, false, false>
+                            options={transferTargets}
+                            loading={isFetchingClasses}
+                            value={transferTarget}
+                            onChange={(_, value) => setTransferTarget(value)}
+                            getOptionLabel={(option) => `${option.name} (${option.code})`}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Lớp đích"
+                                />
+                            )}
+                        />
+
+                        <TextField
+                            label="Lý do chuyển lớp"
+                            value={transferReason}
+                            onChange={(event) => setTransferReason(event.target.value)}
+                            multiline
+                            minRows={2}
+                            placeholder="Ví dụ: đổi ca để tránh trùng lịch, cân bằng sĩ số, chuyển cơ sở..."
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setStudentToTransfer(null)}>Đóng</Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void handleTransferStudent()}
+                        disabled={!transferTarget || isTransferring}
+                    >
+                        {isTransferring ? 'Đang chuyển...' : 'Xác nhận chuyển lớp'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }

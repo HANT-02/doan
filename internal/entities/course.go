@@ -3,6 +3,7 @@ package entities
 import (
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -18,6 +19,7 @@ type Course struct {
 	TotalHours             float64        `gorm:"type:numeric(8,2)" json:"total_hours"`
 	Price                  float64        `gorm:"type:numeric(10,2)" json:"price"`
 	Status                 string         `gorm:"type:varchar(50);default:'ACTIVE'" json:"status"`
+	RequiredSkills         pq.StringArray `gorm:"type:text[];default:'{}'" json:"required_skills"`
 	CreatedAt              time.Time      `gorm:"default:now()" json:"created_at"`
 	UpdatedAt              time.Time      `json:"updated_at"`
 	DeletedAt              gorm.DeletedAt `gorm:"index" json:"deleted_at"`

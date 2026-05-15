@@ -102,6 +102,24 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 		preview = rebuildPreviewResult(preview, assignmentsByID)
 	}
 
+	manualAdjustmentLimit := allowedManualAdjustmentLimit(preview.Summary.RequestedSessions)
+	if len(input.ManualAssignments) > manualAdjustmentLimit {
+		preview = appendOperationalConflict(preview, PreviewConflict{
+			Type: "EXCESSIVE_MANUAL_ADJUSTMENT",
+			Message: fmt.Sprintf(
+				"Preview đang cần %d chỉnh tay, vượt ngưỡng cho phép %d chỉnh tay cho %d ca học. Hãy tối ưu lại dữ liệu đầu vào hoặc chạy lại solver thay vì vá tay quá nhiều.",
+				len(input.ManualAssignments),
+				manualAdjustmentLimit,
+				preview.Summary.RequestedSessions,
+			),
+		})
+		uc.store.Save(preview.RunID, preview)
+		return nil, &CommitPreviewConflictError{
+			Message: "so luong chinh tay vuot nguong cho phep de commit",
+			Preview: preview,
+		}
+	}
+
 	if preview.Status != "COMPLETED" {
 		return nil, fmt.Errorf(
 			"preview %s chưa thể commit vì còn %d buổi chưa xếp và %d conflict. Hãy chạy lại preview đến khi trạng thái COMPLETED",
@@ -121,6 +139,11 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 			collectAssignmentClassIDs(preview.Assignments),
 			collectAssignmentTeacherIDs(preview.Assignments),
 			collectAssignmentRoomIDs(preview.Assignments),
+			[]string{
+				entities.LessonStatusPublished,
+				entities.LessonStatusDraft,
+				entities.LessonStatusUnplanned,
+			},
 		)
 		if err != nil {
 			return nil, err
@@ -136,16 +159,39 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 			}
 		}
 
+		replacedLessonIDs := collectReplaceLessonIDs(preview.Assignments)
+		for _, lessonID := range replacedLessonIDs {
+			if lessonID == "" {
+				continue
+			}
+			if err := uc.lessonRepo.Update(txCtx, lessonID, map[string]interface{}{
+				"status":        entities.LessonStatusHistory,
+				"change_reason": entities.LessonChangeReasonReplanArchived,
+			}); err != nil {
+				return nil, err
+			}
+		}
+
 		for _, assignment := range preview.Assignments {
 			teacherID := assignment.TeacherID
 			roomID := assignment.RoomID
+			publishedAt := time.Now().UTC()
+			sourcePreviewRunID := input.RunID
+			changeReason := entities.LessonChangeReasonInitialSchedulingCommit
+			if assignment.ReplaceLessonID != "" {
+				changeReason = entities.LessonChangeReasonReplanReplacement
+			}
 
 			_, err := uc.lessonRepo.Create(txCtx, &entities.Lesson{
-				ClassID:   assignment.ClassID,
-				TeacherID: &teacherID,
-				RoomID:    &roomID,
-				DateStart: assignment.StartTime,
-				DateEnd:   assignment.EndTime,
+				ClassID:          assignment.ClassID,
+				TeacherID:        &teacherID,
+				RoomID:           &roomID,
+				DateStart:        assignment.StartTime,
+				DateEnd:          assignment.EndTime,
+				Status:           entities.LessonStatusPublished,
+				PublishedAt:      &publishedAt,
+				SourcePreviewRun: &sourcePreviewRunID,
+				ChangeReason:     changeReason,
 				Notes: fmt.Sprintf(
 					"Generated from scheduling preview %s - session %d/%d",
 					input.RunID,
@@ -155,12 +201,6 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 			})
 			if err != nil {
 				return nil, err
-			}
-
-			if _, ok := manualAssignmentIDs[assignment.VariableID]; ok {
-				if err := uc.ensureManualScheduleTemplate(txCtx, assignment); err != nil {
-					return nil, err
-				}
 			}
 
 			committedLessons++
@@ -181,49 +221,6 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 		ScheduledLessons: committedLessons,
 		Status:           "COMMITTED",
 	}, nil
-}
-
-func (uc *commitPreviewUseCase) ensureManualScheduleTemplate(ctx context.Context, assignment PreviewAssignment) error {
-	if assignment.ClassID == "" || assignment.ShiftID == "" {
-		return nil
-	}
-
-	existingSchedules, err := uc.classScheduleRepo.GetSchedulesByClassID(ctx, assignment.ClassID)
-	if err != nil {
-		return err
-	}
-
-	dayOfWeek := weekdayToScheduleDay(assignment.StartTime.Weekday())
-	if dayOfWeek == "" {
-		return nil
-	}
-
-	for _, schedule := range existingSchedules {
-		sameRoom := false
-		switch {
-		case schedule.RoomID == nil && assignment.RoomID == "":
-			sameRoom = true
-		case schedule.RoomID != nil && *schedule.RoomID == assignment.RoomID:
-			sameRoom = true
-		}
-
-		if schedule.DayOfWeek == dayOfWeek && schedule.ShiftID == assignment.ShiftID && sameRoom {
-			return nil
-		}
-	}
-
-	var roomID *string
-	if assignment.RoomID != "" {
-		roomID = &assignment.RoomID
-	}
-
-	_, err = uc.classScheduleRepo.Create(ctx, &entities.ClassSchedule{
-		ClassID:   assignment.ClassID,
-		DayOfWeek: dayOfWeek,
-		ShiftID:   assignment.ShiftID,
-		RoomID:    roomID,
-	})
-	return err
 }
 
 func weekdayToScheduleDay(weekday time.Weekday) string {
@@ -324,6 +321,9 @@ func detectCommitConflicts(assignments []PreviewAssignment, lessons []entities.L
 	conflicts := make([]commitConflict, 0)
 	for _, assignment := range assignments {
 		for _, lesson := range lessons {
+			if assignment.ReplaceLessonID != "" && lesson.ID == assignment.ReplaceLessonID {
+				continue
+			}
 			if !overlaps(assignment.StartTime, assignment.EndTime, lesson.DateStart, lesson.DateEnd) {
 				continue
 			}
@@ -349,6 +349,22 @@ func detectCommitConflicts(assignments []PreviewAssignment, lessons []entities.L
 	}
 
 	return conflicts
+}
+
+func collectReplaceLessonIDs(assignments []PreviewAssignment) []string {
+	seen := make(map[string]struct{}, len(assignments))
+	ids := make([]string, 0)
+	for _, assignment := range assignments {
+		if assignment.ReplaceLessonID == "" {
+			continue
+		}
+		if _, ok := seen[assignment.ReplaceLessonID]; ok {
+			continue
+		}
+		seen[assignment.ReplaceLessonID] = struct{}{}
+		ids = append(ids, assignment.ReplaceLessonID)
+	}
+	return ids
 }
 
 func refreshPreviewWithExistingLessons(preview PreviewResult, lessons []entities.Lesson) PreviewResult {
@@ -394,6 +410,7 @@ func buildExistingLessonEventsForPreview(
 			ClassID:      lesson.ClassID,
 			ClassCode:    lesson.Class.Code,
 			ClassName:    lesson.Class.Name,
+			Status:       lesson.Status,
 			TeacherID:    teacherID,
 			TeacherLabel: teacherLabel,
 			RoomID:       roomID,
@@ -456,12 +473,13 @@ func formatCommitConflicts(conflicts []commitConflict) string {
 		}
 
 		lines = append(lines, fmt.Sprintf(
-			"- %s (%s buoi %d/%d) xung dot vi %s voi lesson dang ton tai [%s - %s]",
+			"- %s (%s buoi %d/%d) xung dot vi %s voi lesson %s dang ton tai [%s - %s]",
 			conflict.Assignment.ClassName,
 			conflict.Assignment.ClassCode,
 			conflict.Assignment.SessionIndex,
 			conflict.Assignment.SessionTotal,
 			conflict.Reason,
+			lessonLifecycleLabel(conflict.Lesson.Status),
 			conflict.Lesson.DateStart.Format("02/01/2006 15:04"),
 			conflict.Lesson.DateEnd.Format("15:04"),
 		))

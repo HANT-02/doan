@@ -8,13 +8,19 @@ export interface Teacher {
     phone?: string;
     status: string;
     employment_type: string;
-    specialization?: string;
-    bio?: string;
     is_school_teacher?: boolean;
     school_name?: string;
+    skills?: string[];
     notes?: string;
     created_at: string;
     updated_at: string;
+}
+
+export interface SkillCatalogItem {
+    id: string;
+    code: string;
+    name: string;
+    status: string;
 }
 
 export interface ListTeachersParams {
@@ -23,6 +29,8 @@ export interface ListTeachersParams {
     search?: string;
     status?: string;
     employment_type?: string;
+    course_id?: string;
+    class_id?: string;
 }
 
 export interface ListTeachersResponse {
@@ -64,6 +72,15 @@ interface RawTeacherListResponse {
     };
 }
 
+interface RawSkillCatalogResponse {
+    success?: boolean;
+    message?: string;
+    data?: {
+        skills?: SkillCatalogItem[];
+        Skills?: SkillCatalogItem[];
+    };
+}
+
 export const teacherApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getTeachers: builder.query<ListTeachersResponse, ListTeachersParams>({
@@ -96,13 +113,27 @@ export const teacherApi = baseApi.injectEndpoints({
             query: (id) => `v1/teachers/${id}`,
             providesTags: (_result, _error, id) => [{ type: 'Teacher', id }],
         }),
+        getSkillCatalog: builder.query<{ success: boolean; message?: string; data: { skills: SkillCatalogItem[] } }, { search?: string; limit?: number } | void>({
+            query: (params) => ({
+                url: 'v1/teachers/skills/catalog',
+                params: params || undefined,
+            }),
+            transformResponse: (response: RawSkillCatalogResponse) => ({
+                success: response.success ?? false,
+                message: response.message,
+                data: {
+                    skills: response.data?.skills || response.data?.Skills || [],
+                },
+            }),
+            providesTags: [{ type: 'Teacher', id: 'SKILL-CATALOG' }],
+        }),
         createTeacher: builder.mutation({
             query: (body) => ({
                 url: 'v1/teachers',
                 method: 'POST',
                 body,
             }),
-            invalidatesTags: [{ type: 'Teacher', id: 'LIST' }],
+            invalidatesTags: [{ type: 'Teacher', id: 'LIST' }, { type: 'Teacher', id: 'SKILL-CATALOG' }],
         }),
         updateTeacher: builder.mutation({
             query: ({ id, ...body }) => ({
@@ -110,7 +141,7 @@ export const teacherApi = baseApi.injectEndpoints({
                 method: 'PUT',
                 body,
             }),
-            invalidatesTags: (_result, _error, { id }) => [{ type: 'Teacher', id }, { type: 'Teacher', id: 'LIST' }],
+            invalidatesTags: (_result, _error, { id }) => [{ type: 'Teacher', id }, { type: 'Teacher', id: 'LIST' }, { type: 'Teacher', id: 'SKILL-CATALOG' }],
         }),
         deleteTeacher: builder.mutation({
             query: (id) => ({
@@ -125,6 +156,7 @@ export const teacherApi = baseApi.injectEndpoints({
 export const {
     useGetTeachersQuery,
     useGetTeacherByIdQuery,
+    useGetSkillCatalogQuery,
     useCreateTeacherMutation,
     useUpdateTeacherMutation,
     useDeleteTeacherMutation,

@@ -59,6 +59,7 @@ func (c *ControllerV1) CreateCourse(ctx *gin.Context) {
 		TotalHours:             req.TotalHours,
 		Price:                  req.Price,
 		Status:                 req.Status,
+		RequiredSkills:         req.RequiredSkills,
 	})
 
 	if err != nil {
@@ -121,6 +122,7 @@ func (c *ControllerV1) UpdateCourse(ctx *gin.Context) {
 		TotalHours:             req.TotalHours,
 		Price:                  req.Price,
 		Status:                 req.Status,
+		RequiredSkills:         req.RequiredSkills,
 	})
 
 	if err != nil {
@@ -214,6 +216,7 @@ func mapCourseToResponse(c *entities.Course) CourseResponse {
 		TotalHours:             c.TotalHours,
 		Price:                  c.Price,
 		Status:                 c.Status,
+		RequiredSkills:         append([]string(nil), c.RequiredSkills...),
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
 	}

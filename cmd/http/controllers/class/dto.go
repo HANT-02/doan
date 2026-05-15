@@ -40,6 +40,22 @@ type RemoveStudentsRequest struct {
 	StudentIDs []string `json:"student_ids" binding:"required,min=1"`
 }
 
+type ReserveStudentRequest struct {
+	Reason      string     `json:"reason"`
+	EffectiveAt *time.Time `json:"effective_at"`
+}
+
+type ResumeStudentRequest struct {
+	Reason      string     `json:"reason"`
+	EffectiveAt *time.Time `json:"effective_at"`
+}
+
+type TransferStudentRequest struct {
+	TargetClassID string     `json:"target_class_id" binding:"required"`
+	Reason        string     `json:"reason"`
+	EffectiveAt   *time.Time `json:"effective_at"`
+}
+
 type AssignTeacherRequest struct {
 	TeacherID string `json:"teacher_id" binding:"required"`
 }

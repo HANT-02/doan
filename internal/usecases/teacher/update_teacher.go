@@ -4,22 +4,26 @@ import (
 	"context"
 	"doan/internal/entities"
 	repointerface "doan/internal/repositories/interface"
+	skillservice "doan/internal/services/skills"
 	"doan/pkg/logger"
 	"errors"
+
+	"github.com/lib/pq"
 )
 
 // UpdateTeacherInput represents the input for updating a teacher
 type UpdateTeacherInput struct {
-	ID              string  `json:"id"`
-	Code            *string `json:"code"`
-	FullName        *string `json:"full_name"`
-	Email           *string `json:"email"`
-	Phone           *string `json:"phone"`
-	IsSchoolTeacher *bool   `json:"is_school_teacher"`
-	SchoolName      *string `json:"school_name"`
-	EmploymentType  *string `json:"employment_type"`
-	Status          *string `json:"status"`
-	Notes           *string `json:"notes"`
+	ID              string    `json:"id"`
+	Code            *string   `json:"code"`
+	FullName        *string   `json:"full_name"`
+	Email           *string   `json:"email"`
+	Phone           *string   `json:"phone"`
+	IsSchoolTeacher *bool     `json:"is_school_teacher"`
+	SchoolName      *string   `json:"school_name"`
+	EmploymentType  *string   `json:"employment_type"`
+	Status          *string   `json:"status"`
+	Skills          *[]string `json:"skills"`
+	Notes           *string   `json:"notes"`
 }
 
 // UpdateTeacherOutput represents the output after updating a teacher
@@ -34,12 +38,17 @@ type UpdateTeacherUseCase interface {
 
 type updateTeacherUseCase struct {
 	teacherRepo repointerface.TeacherRepository
+	skillRepo   repointerface.SkillRepository
 }
 
 // NewUpdateTeacherUseCase creates a new instance of UpdateTeacherUseCase
-func NewUpdateTeacherUseCase(teacherRepo repointerface.TeacherRepository) UpdateTeacherUseCase {
+func NewUpdateTeacherUseCase(
+	teacherRepo repointerface.TeacherRepository,
+	skillRepo repointerface.SkillRepository,
+) UpdateTeacherUseCase {
 	return &updateTeacherUseCase{
 		teacherRepo: teacherRepo,
+		skillRepo:   skillRepo,
 	}
 }
 
@@ -108,6 +117,9 @@ func (uc *updateTeacherUseCase) Execute(ctx context.Context, input UpdateTeacher
 	if input.Status != nil {
 		updateData["status"] = *input.Status
 	}
+	if input.Skills != nil {
+		updateData["skills"] = pq.StringArray(skillservice.NormalizeCodes(*input.Skills))
+	}
 	if input.Notes != nil {
 		updateData["notes"] = *input.Notes
 	}
@@ -124,6 +136,13 @@ func (uc *updateTeacherUseCase) Execute(ctx context.Context, input UpdateTeacher
 	if err != nil {
 		ctxLogger.Errorf("Failed to get updated teacher: %v", err)
 		return nil, err
+	}
+
+	if input.Skills != nil {
+		if err := uc.skillRepo.SyncTeacherSkills(ctx, input.ID, *input.Skills); err != nil {
+			ctxLogger.Errorf("Failed to sync teacher skills: %v", err)
+			return nil, err
+		}
 	}
 
 	return &UpdateTeacherOutput{Teacher: updatedTeacher}, nil

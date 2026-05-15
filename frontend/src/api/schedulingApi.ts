@@ -3,6 +3,8 @@ import { baseApi } from './baseApi';
 export interface SchedulingFilters {
     date_from?: string;
     date_to?: string;
+    effective_date_from?: string;
+    mode?: 'cold_start' | 'replan_draft' | 'replan_with_published_lock';
     class_ids?: string[];
     teacher_ids?: string[];
     room_ids?: string[];
@@ -20,6 +22,7 @@ export interface SchedulingAssignment {
     room_id: string;
     room_name: string;
     room_capacity: number;
+    replace_lesson_id?: string;
     shift_id?: string;
     shift_code?: string;
     shift_name?: string;
@@ -58,6 +61,7 @@ export interface SchedulingExistingLesson {
     class_id: string;
     class_code: string;
     class_name: string;
+    status?: string;
     teacher_id?: string;
     teacher_label?: string;
     room_id?: string;
@@ -70,8 +74,10 @@ export interface SchedulingExistingLesson {
 
 export interface SchedulingPreview {
     run_id: string;
+    mode?: string;
     status: 'FAILED' | 'PARTIAL' | 'COMPLETED';
     generated_at: string;
+    effective_date_from?: string;
     filters: SchedulingFilters;
     summary: {
         requested_classes: number;
@@ -80,6 +86,10 @@ export interface SchedulingPreview {
         unscheduled_lessons: number;
         conflict_count: number;
         soft_score: number;
+        schedule_change_count: number;
+        teacher_change_count: number;
+        room_change_count: number;
+        average_capacity_utilization: number;
     };
     assignments: SchedulingAssignment[];
     conflicts: SchedulingConflict[];
@@ -100,6 +110,63 @@ export interface CommitSchedulingResponse {
         message: string;
         scheduled_lessons: number;
         status: string;
+    };
+}
+
+export interface SubstituteSuggestion {
+    teacher_id: string;
+    teacher_name: string;
+    teacher_code: string;
+    score: number;
+    match_reasons: string[];
+    is_available: boolean;
+}
+
+export interface SuggestSubstituteResponse {
+    success: boolean;
+    message?: string;
+    data: SubstituteSuggestion[];
+}
+
+export interface AssignSubstituteRequest {
+    new_teacher_id: string;
+    reason: string;
+}
+
+export interface AssignSubstituteResponse {
+    success: boolean;
+    message?: string;
+}
+
+export interface MakeupSpot {
+    lesson_id: string;
+    class_id: string;
+    class_code: string;
+    class_name: string;
+    course_id?: string;
+    course_name?: string;
+    teacher_id?: string;
+    teacher_name?: string;
+    room_id?: string;
+    room_name?: string;
+    start_time: string;
+    end_time: string;
+    match_type: string;
+    expected_student_count: number;
+    capacity_limit: number;
+    remaining_capacity: number;
+    capacity_utilization: number;
+    eligible: boolean;
+    reasons: string[];
+}
+
+export interface FindMakeupSpotsResponse {
+    success: boolean;
+    message?: string;
+    data: {
+        student_id: string;
+        lesson_id: string;
+        spots: MakeupSpot[];
     };
 }
 
@@ -124,11 +191,15 @@ const normalizePreviewResponse = (response: RawSchedulingPreviewResponse): Sched
     message: response.message,
     data: response.data || {
         run_id: '',
+        mode: 'replan_with_published_lock',
         status: 'FAILED',
         generated_at: '',
+        effective_date_from: '',
         filters: {
             date_from: '',
             date_to: '',
+            effective_date_from: '',
+            mode: 'replan_with_published_lock',
             class_ids: [],
             teacher_ids: [],
             room_ids: [],
@@ -140,6 +211,10 @@ const normalizePreviewResponse = (response: RawSchedulingPreviewResponse): Sched
             unscheduled_lessons: 0,
             conflict_count: 0,
             soft_score: 0,
+            schedule_change_count: 0,
+            teacher_change_count: 0,
+            room_change_count: 0,
+            average_capacity_utilization: 0,
         },
         assignments: [],
         conflicts: [],
@@ -197,6 +272,31 @@ export const schedulingApi = baseApi.injectEndpoints({
                 { type: 'Scheduling', id: 'LATEST' },
             ],
         }),
+        suggestSubstitute: builder.query<SuggestSubstituteResponse, string>({
+            query: (lessonId) => `/v1/scheduling/lessons/${lessonId}/suggest-substitutes`,
+            providesTags: ['Scheduling'],
+        }),
+        assignSubstitute: builder.mutation<AssignSubstituteResponse, { lessonId: string, data: AssignSubstituteRequest }>({
+            query: ({ lessonId, data }) => ({
+                url: `/v1/scheduling/lessons/${lessonId}/assign-substitute`,
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: [
+                { type: 'Lesson', id: 'LIST' },
+                { type: 'Lesson', id: 'TEACHER-LIST' },
+            ],
+        }),
+        findMakeupSpots: builder.query<FindMakeupSpotsResponse, { lessonId: string; studentId: string; limit?: number }>({
+            query: ({ lessonId, studentId, limit }) => ({
+                url: `/v1/scheduling/lessons/${lessonId}/find-makeup-spots`,
+                params: {
+                    student_id: studentId,
+                    limit,
+                },
+            }),
+            providesTags: ['Scheduling'],
+        }),
     }),
 });
 
@@ -205,4 +305,7 @@ export const {
     useLazyGetSchedulingPreviewQuery,
     useLazyGetLatestSchedulingPreviewQuery,
     useCommitSchedulingPreviewMutation,
+    useLazySuggestSubstituteQuery,
+    useAssignSubstituteMutation,
+    useLazyFindMakeupSpotsQuery,
 } = schedulingApi;

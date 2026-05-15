@@ -12,6 +12,7 @@ type UpdateRoomInput struct {
 	ID       string
 	Name     string
 	Capacity int
+	CampusID *string
 	Location *string
 	Status   string
 }
@@ -45,8 +46,9 @@ func (uc *updateRoomUseCase) Execute(ctx context.Context, input UpdateRoomInput)
 	}
 
 	updateData := map[string]interface{}{
-		"name":     input.Name,
-		"capacity": input.Capacity,
+		"name":      input.Name,
+		"capacity":  input.Capacity,
+		"campus_id": input.CampusID,
 	}
 
 	err = uc.roomRepo.Update(ctx, input.ID, updateData)
@@ -57,6 +59,7 @@ func (uc *updateRoomUseCase) Execute(ctx context.Context, input UpdateRoomInput)
 
 	room.Name = input.Name
 	room.Capacity = input.Capacity
+	room.CampusID = input.CampusID
 
 	return &UpdateRoomOutput{Room: room}, nil
 }

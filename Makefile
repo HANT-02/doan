@@ -22,12 +22,12 @@ install-tools:
 # Generate wire for HTTP server
 http-wire:
 	@echo "Generating wire for HTTP server..."
-	cd cmd/http && wire
+	./scripts/wire_compat.sh cmd/http cmd/http/wire_gen.go
 
 # Generate wire for migration CLI
 migration-wire:
 	@echo "Generating wire for migration CLI..."
-	cd cmd/cli/migration && wire
+	./scripts/wire_compat.sh cmd/cli/migration cmd/cli/migration/wire_gen.go
 
 # Generate all wire injections
 wire: http-wire migration-wire

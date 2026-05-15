@@ -50,6 +50,7 @@ var TeacherUseCaseProviders = wire.NewSet(
 	teacher.NewGetTeacherUseCase,
 	teacher.NewGetTeachingHoursStatsUseCase,
 	teacher.NewGetTeacherTimetableUseCase,
+	teacher.NewListSkillCatalogUseCase,
 	teacher.NewListTeachersUseCase,
 	teacher.NewUpdateTeacherUseCase,
 )
@@ -96,6 +97,9 @@ var ClassUseCaseProviders = wire.NewSet(
 	class.NewListClassesUseCase,
 	class.NewEnrollStudentsUseCase,
 	class.NewRemoveStudentsUseCase,
+	class.NewReserveStudentUseCase,
+	class.NewResumeStudentUseCase,
+	class.NewTransferStudentUseCase,
 	class.NewAssignTeacherUseCase,
 	class.NewGetClassSchedulesUseCase,
 	class.NewCreateClassScheduleUseCase,
@@ -125,6 +129,8 @@ var SchedulingUseCaseProviders = wire.NewSet(
 	scheduling.NewBenchmarkUseCase,
 	scheduling.NewGetPreviewUseCase,
 	scheduling.NewCommitPreviewUseCase,
+	scheduling.NewSubstituteUseCase,
+	scheduling.NewMakeupUseCase,
 )
 
 var MaterialUseCaseProviders = wire.NewSet(

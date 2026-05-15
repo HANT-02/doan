@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"doan/internal/entities"
+	skillservice "doan/internal/services/skills"
 )
 
 type legacyPreviewSolver struct{}
@@ -26,7 +27,7 @@ func (s *legacyPreviewSolver) Label() string {
 
 func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput, error) {
 	problem := prepareSchedulingProblem(input)
-	solver := newBacktrackingSolver(problem.variables, problem.domains, problem.noDomainConflicts)
+	solver := newBacktrackingSolver(&problem)
 	assignments, solverConflicts := solver.Solve()
 
 	assignmentsByID := make(map[string]PreviewAssignment, len(assignments))
@@ -34,7 +35,7 @@ func (s *legacyPreviewSolver) Solve(_ context.Context, input SolverInput) (*Solv
 		assignmentsByID[assignment.VariableID] = assignment
 	}
 
-	return buildSolverOutput(input, problem.variables, assignmentsByID, problem.presetConflicts, problem.noDomainConflicts, solverConflicts), nil
+	return buildSolverOutput(input, problem.variables, assignmentsByID, problem.presetConflicts, problem.noDomainConflicts, solverConflicts, problem.targetLessons), nil
 }
 
 func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
@@ -97,6 +98,37 @@ func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
 			continue
 		}
 
+		if classEntity.Course.SessionCount <= 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "INVALID_COURSE_SESSION_COUNT",
+				Message:    "Khóa học của lớp chưa có tổng số buổi hợp lệ, nên chưa thể xác định đủ số buổi cần xếp.",
+			})
+			continue
+		}
+
+		missingRequiredSkills := skillservice.MissingRequiredCodes(
+			[]string(classEntity.Teacher.Skills),
+			[]string(classEntity.Course.RequiredSkills),
+		)
+		if len(missingRequiredSkills) > 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "SKILL_MISMATCH",
+				Message: fmt.Sprintf(
+					"Giáo viên phụ trách chưa đáp ứng kỹ năng/chứng chỉ bắt buộc của khóa học. Thiếu: %s.",
+					strings.Join(missingRequiredSkills, ", "),
+				),
+			})
+			continue
+		}
+
 		if len(teacherFilter) > 0 {
 			if _, ok := teacherFilter[*classEntity.TeacherID]; !ok {
 				continue
@@ -115,14 +147,8 @@ func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
 			preferredRoomID = *classEntity.RoomID
 		}
 
-		sessionTotal := countUniqueTimeSlots(generateTimeSlotsForVariable(
-			input.DateFrom,
-			input.DateTo,
-			classEntity.Course.SessionDurationMinutes,
-			classEntity.ClassSchedules,
-			input.Shifts,
-		))
-		if sessionTotal <= 0 {
+		window := resolveClassSchedulingWindow(input, classEntity)
+		if window.DateFrom.IsZero() || window.DateTo.IsZero() {
 			conflicts = append(conflicts, PreviewConflict{
 				VariableID: classEntity.ID,
 				ClassID:    classEntity.ID,
@@ -130,8 +156,33 @@ func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
 				ClassName:  classEntity.Name,
 				Type:       "NO_SLOT_IN_RANGE",
 				Message: fmt.Sprintf(
-					"Trong khoảng ngày của lớp chưa tạo được buổi học nào theo lịch tuần (%s). Hãy kiểm tra ngày bắt đầu/kết thúc lớp hoặc lịch tuần lớp.",
+					"Không thể suy ra khoảng ngày xếp lịch hợp lệ từ ngày bắt đầu dự kiến và lịch tuần của lớp (%s). Hãy kiểm tra ngày bắt đầu lớp hoặc lịch tuần lớp.",
 					describeScheduleDays(classEntity.ClassSchedules),
+				),
+			})
+			continue
+		}
+
+		sessionTotal := window.SessionTotal
+		slotCapacity := countUniqueTimeSlots(generateTimeSlotsForVariable(
+			window.DateFrom,
+			window.DateTo,
+			classEntity.Course.SessionDurationMinutes,
+			classEntity.ClassSchedules,
+			input.Shifts,
+		))
+		if slotCapacity < sessionTotal {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "INSUFFICIENT_SCHEDULE_SLOTS",
+				Message: fmt.Sprintf(
+					"Khoảng ngày dự kiến của lớp chỉ tạo được %d slot hợp lệ theo lịch tuần (%s), chưa đủ để phủ %d buổi của khóa học.",
+					slotCapacity,
+					describeScheduleDays(classEntity.ClassSchedules),
+					sessionTotal,
 				),
 			})
 			continue
@@ -185,7 +236,39 @@ func buildDomains(
 			continue
 		}
 
-		slots := generateTimeSlotsForVariable(input.DateFrom, input.DateTo, variable.DurationMinutes, classSchedules, defaultShifts)
+		classEntity, ok := findClassByID(input.Classes, variable.ClassID)
+		if !ok {
+			domains[variable.ID] = []DomainValue{}
+			noDomainConflicts[variable.ID] = PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "MISSING_CLASS",
+				Message:      fmt.Sprintf("Không tìm thấy dữ liệu lớp để xếp buổi %d/%d.", variable.SessionIndex, variable.SessionTotal),
+			}
+			continue
+		}
+
+		window := resolveClassSchedulingWindow(input, classEntity)
+		if window.DateFrom.IsZero() || window.DateTo.IsZero() {
+			domains[variable.ID] = []DomainValue{}
+			noDomainConflicts[variable.ID] = PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "NO_SLOT_IN_RANGE",
+				Message:      fmt.Sprintf("Chưa suy ra được khoảng ngày hợp lệ để xếp buổi %d/%d của lớp.", variable.SessionIndex, variable.SessionTotal),
+			}
+			continue
+		}
+
+		slots := generateTimeSlotsForVariable(window.DateFrom, window.DateTo, variable.DurationMinutes, classSchedules, defaultShifts)
 		if _, ok := classUniqueSlotCapacity[variable.ClassID]; !ok {
 			classUniqueSlotCapacity[variable.ClassID] = countUniqueTimeSlots(slots)
 		}
@@ -419,8 +502,43 @@ func startOfDay(value time.Time) time.Time {
 	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, value.Location())
 }
 
-func scoreAssignments(assignments []PreviewAssignment) int {
+func scoreAssignments(assignments []PreviewAssignment, targetLessons map[string]entities.Lesson) int {
 	score := 0
+	for _, assignment := range assignments {
+		if target, ok := targetLessons[assignment.VariableID]; ok {
+			targetTeacherID := ""
+			if target.TeacherID != nil {
+				targetTeacherID = *target.TeacherID
+			}
+			targetRoomID := ""
+			if target.RoomID != nil {
+				targetRoomID = *target.RoomID
+			}
+
+			if target.Status == entities.LessonStatusPublished {
+				if !assignment.StartTime.Equal(target.DateStart) {
+					score -= 1000
+				}
+				if assignment.TeacherID != targetTeacherID {
+					score -= 500
+				}
+				if assignment.RoomID != targetRoomID {
+					score -= 500
+				}
+			} else {
+				if !assignment.StartTime.Equal(target.DateStart) {
+					score -= 100
+				}
+				if assignment.TeacherID != targetTeacherID {
+					score -= 50
+				}
+				if assignment.RoomID != targetRoomID {
+					score -= 50
+				}
+			}
+		}
+	}
+
 	for i := 0; i < len(assignments)-1; i++ {
 		current := assignments[i]
 		next := assignments[i+1]
@@ -441,25 +559,23 @@ func sameDay(left, right time.Time) bool {
 }
 
 type backtrackingSolver struct {
+	problem           *preparedSchedulingProblem
 	variables         []Variable
 	domains           map[string][]DomainValue
 	noDomainConflicts map[string]PreviewConflict
 }
 
-func newBacktrackingSolver(
-	variables []Variable,
-	domains map[string][]DomainValue,
-	noDomainConflicts map[string]PreviewConflict,
-) *backtrackingSolver {
-	clonedDomains := make(map[string][]DomainValue, len(domains))
-	for key, values := range domains {
+func newBacktrackingSolver(problem *preparedSchedulingProblem) *backtrackingSolver {
+	clonedDomains := make(map[string][]DomainValue, len(problem.domains))
+	for key, values := range problem.domains {
 		clonedDomains[key] = append([]DomainValue(nil), values...)
 	}
 
 	return &backtrackingSolver{
-		variables:         append([]Variable(nil), variables...),
+		problem:           problem,
+		variables:         append([]Variable(nil), problem.variables...),
 		domains:           clonedDomains,
-		noDomainConflicts: noDomainConflicts,
+		noDomainConflicts: problem.noDomainConflicts,
 	}
 }
 
@@ -588,7 +704,7 @@ func (s *backtrackingSolver) isConsistent(variable Variable, value DomainValue, 
 		return false
 	}
 
-	return !hasConflict(variable, value, assignments)
+	return !s.problem.hasConflict(variable, value, assignments)
 }
 
 func (s *backtrackingSolver) forwardCheck(variable Variable, assignments map[string]PreviewAssignment) (map[string][]DomainValue, bool) {
@@ -772,6 +888,15 @@ func indexClassSchedules(classes []entities.Class) map[string][]entities.ClassSc
 	}
 
 	return indexed
+}
+
+func findClassByID(classes []entities.Class, classID string) (entities.Class, bool) {
+	for _, classEntity := range classes {
+		if classEntity.ID == classID {
+			return classEntity, true
+		}
+	}
+	return entities.Class{}, false
 }
 
 func collectRequiredSlotRooms(slots []TimeSlot) map[string]struct{} {

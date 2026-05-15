@@ -4,6 +4,7 @@ import {
     AssignmentTurnedInRounded,
     BookRounded,
     MenuBookRounded,
+    PersonSearchRounded,
 } from '@mui/icons-material';
 import { parseISO, format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -122,6 +123,13 @@ export default function TeacherLessonDetailPage() {
                                     >
                                         Mở sổ đầu bài
                                     </Button>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<PersonSearchRounded />}
+                                        onClick={() => navigate(`/app/teacher/substitute?lessonId=${lesson.id}`)}
+                                    >
+                                        Tìm dạy thay
+                                    </Button>
                                 </Stack>
                             </Stack>
                         ) : (
@@ -141,7 +149,7 @@ export default function TeacherLessonDetailPage() {
                                         Tình trạng điểm danh
                                     </Typography>
                                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                        <Chip label={`Roster ${attendanceRecords.length}`} variant="outlined" />
+                                        <Chip label={`Học sinh ${attendanceRecords.length}`} variant="outlined" />
                                         <Chip label={`Có mặt ${attendanceStats.present}`} color="success" variant="outlined" />
                                         <Chip label={`Muộn ${attendanceStats.late}`} color="warning" variant="outlined" />
                                         <Chip label={`Vắng ${attendanceStats.absent}`} color="error" variant="outlined" />

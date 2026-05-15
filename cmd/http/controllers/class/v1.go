@@ -22,6 +22,9 @@ type ControllerV1 struct {
 	listClassesUseCase         class.ListClassesUseCase
 	enrollStudentsUseCase      class.EnrollStudentsUseCase
 	removeStudentsUseCase      class.RemoveStudentsUseCase
+	reserveStudentUseCase      class.ReserveStudentUseCase
+	resumeStudentUseCase       class.ResumeStudentUseCase
+	transferStudentUseCase     class.TransferStudentUseCase
 	assignTeacherUseCase       class.AssignTeacherUseCase
 	getClassSchedulesUseCase   class.GetClassSchedulesUseCase
 	createClassScheduleUseCase class.CreateClassScheduleUseCase
@@ -37,6 +40,9 @@ func NewClassControllerV1(
 	listClassesUseCase class.ListClassesUseCase,
 	enrollStudentsUseCase class.EnrollStudentsUseCase,
 	removeStudentsUseCase class.RemoveStudentsUseCase,
+	reserveStudentUseCase class.ReserveStudentUseCase,
+	resumeStudentUseCase class.ResumeStudentUseCase,
+	transferStudentUseCase class.TransferStudentUseCase,
 	assignTeacherUseCase class.AssignTeacherUseCase,
 	getClassSchedulesUseCase class.GetClassSchedulesUseCase,
 	createClassScheduleUseCase class.CreateClassScheduleUseCase,
@@ -51,6 +57,9 @@ func NewClassControllerV1(
 		listClassesUseCase:         listClassesUseCase,
 		enrollStudentsUseCase:      enrollStudentsUseCase,
 		removeStudentsUseCase:      removeStudentsUseCase,
+		reserveStudentUseCase:      reserveStudentUseCase,
+		resumeStudentUseCase:       resumeStudentUseCase,
+		transferStudentUseCase:     transferStudentUseCase,
 		assignTeacherUseCase:       assignTeacherUseCase,
 		getClassSchedulesUseCase:   getClassSchedulesUseCase,
 		createClassScheduleUseCase: createClassScheduleUseCase,
@@ -82,7 +91,7 @@ func (ctrl *ControllerV1) CreateClass(c *gin.Context) {
 	})
 
 	if err != nil {
-		rest.ResponseError(c, http.StatusInternalServerError, "Failed to create class", err)
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to create class", err)
 		return
 	}
 
@@ -135,7 +144,7 @@ func (ctrl *ControllerV1) UpdateClass(c *gin.Context) {
 	})
 
 	if err != nil {
-		rest.ResponseError(c, http.StatusInternalServerError, "Failed to update class", err)
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to update class", err)
 		return
 	}
 
@@ -221,6 +230,88 @@ func (ctrl *ControllerV1) RemoveStudents(c *gin.Context) {
 	rest.ResponseSuccess(c, http.StatusOK, output.Message, nil)
 }
 
+func (ctrl *ControllerV1) ReserveStudent(c *gin.Context) {
+	id := c.Param("id")
+	studentID := c.Param("studentId")
+	var req ReserveStudentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	output, err := ctrl.reserveStudentUseCase.Execute(c.Request.Context(), class.ReserveStudentInput{
+		ClassID:     id,
+		StudentID:   studentID,
+		Reason:      req.Reason,
+		EffectiveAt: req.EffectiveAt,
+	})
+	if err != nil {
+		statusCode := http.StatusBadRequest
+		if err == class.ErrEnrollmentNotFound {
+			statusCode = http.StatusNotFound
+		}
+		rest.ResponseError(c, statusCode, "Failed to reserve student", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, output.Message, output)
+}
+
+func (ctrl *ControllerV1) ResumeStudent(c *gin.Context) {
+	id := c.Param("id")
+	studentID := c.Param("studentId")
+	var req ResumeStudentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	output, err := ctrl.resumeStudentUseCase.Execute(c.Request.Context(), class.ResumeStudentInput{
+		ClassID:     id,
+		StudentID:   studentID,
+		Reason:      req.Reason,
+		EffectiveAt: req.EffectiveAt,
+	})
+	if err != nil {
+		statusCode := http.StatusBadRequest
+		if err == class.ErrReservedEnrollmentNotFound {
+			statusCode = http.StatusNotFound
+		}
+		rest.ResponseError(c, statusCode, "Failed to resume student", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, output.Message, output)
+}
+
+func (ctrl *ControllerV1) TransferStudent(c *gin.Context) {
+	id := c.Param("id")
+	studentID := c.Param("studentId")
+	var req TransferStudentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		rest.ResponseError(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	output, err := ctrl.transferStudentUseCase.Execute(c.Request.Context(), class.TransferStudentInput{
+		SourceClassID: id,
+		TargetClassID: req.TargetClassID,
+		StudentID:     studentID,
+		Reason:        req.Reason,
+		EffectiveAt:   req.EffectiveAt,
+	})
+	if err != nil {
+		statusCode := http.StatusBadRequest
+		if err == class.ErrEnrollmentNotFound {
+			statusCode = http.StatusNotFound
+		}
+		rest.ResponseError(c, statusCode, "Failed to transfer student", err)
+		return
+	}
+
+	rest.ResponseSuccess(c, http.StatusOK, output.Message, output)
+}
+
 func (ctrl *ControllerV1) AssignTeacher(c *gin.Context) {
 	id := c.Param("id")
 	var req AssignTeacherRequest
@@ -235,7 +326,7 @@ func (ctrl *ControllerV1) AssignTeacher(c *gin.Context) {
 	})
 
 	if err != nil {
-		rest.ResponseError(c, http.StatusInternalServerError, "Failed to assign teacher", err)
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to assign teacher", err)
 		return
 	}
 

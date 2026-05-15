@@ -49,6 +49,7 @@ func (ctrl *ControllerV1) CreateRoom(c *gin.Context) {
 	output, err := ctrl.createRoomUseCase.Execute(c.Request.Context(), room.CreateRoomInput{
 		Name:     req.Name,
 		Capacity: req.Capacity,
+		CampusID: req.CampusID,
 	})
 
 	if err != nil {
@@ -82,6 +83,7 @@ func (ctrl *ControllerV1) UpdateRoom(c *gin.Context) {
 		ID:       id,
 		Name:     req.Name,
 		Capacity: req.Capacity,
+		CampusID: req.CampusID,
 	})
 
 	if err != nil {

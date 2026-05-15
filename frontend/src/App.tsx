@@ -27,6 +27,7 @@ import TeacherSchedulePage from '@/pages/teacher/TeacherSchedulePage';
 import TeacherAttendancePage from '@/pages/teacher/TeacherAttendancePage';
 import TeacherJournalPage from '@/pages/teacher/TeacherJournalPage';
 import TeacherLeavesPage from '@/pages/teacher/TeacherLeavesPage';
+import { TeacherSubstitutePage } from '@/pages/teacher/TeacherSubstitutePage';
 import { StudentOverview } from '@/pages/student/StudentOverview';
 import StudentTimetablePage from '@/pages/student/StudentTimetablePage';
 import StudentResultsPage from '@/pages/student/StudentResultsPage';
@@ -152,7 +153,7 @@ const AppRoutes = () => {
             <Route path="journal" element={<TeacherJournalPage />} />
             <Route path="leaves" element={<TeacherLeavesPage />} />
             <Route path="documents" element={<TeacherDocumentsPage />} />
-            <Route path="substitute" element={<PlaceholderPage title="Substitute Request" />} />
+            <Route path="substitute" element={<TeacherSubstitutePage />} />
           </Route>
 
           {/* Student/Parent Routes */}

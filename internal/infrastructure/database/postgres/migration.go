@@ -77,7 +77,9 @@ func (m *migration) getAllEntities() []interface{} {
 		&entities.User{},
 		&entities.Teacher{},
 		&entities.Student{},
+		&entities.Campus{},
 		&entities.Room{},
+		&entities.CampusTravelTime{},
 		&entities.Shift{},
 		&entities.Course{},
 		&entities.Program{},
@@ -95,6 +97,9 @@ func (m *migration) getAllEntities() []interface{} {
 		&entities.LeaveRequest{},
 		&entities.PasswordReset{}, // Add PasswordReset entity for auto-migration
 		&entities.UserOTP{},       // Add UserOTP entity for auto-migration
+		&entities.Skill{},
+		&entities.TeacherSkill{},
+		&entities.CourseRequiredSkill{},
 	}
 }
 

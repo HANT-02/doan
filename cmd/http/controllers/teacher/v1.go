@@ -20,6 +20,7 @@ type ControllerV1 struct {
 	updateTeacherUseCase         teacher.UpdateTeacherUseCase
 	deleteTeacherUseCase         teacher.DeleteTeacherUseCase
 	listTeachersUseCase          teacher.ListTeachersUseCase
+	listSkillCatalogUseCase      teacher.ListSkillCatalogUseCase
 	getTeacherTimetableUseCase   teacher.GetTeacherTimetableUseCase
 	getTeachingHoursStatsUseCase teacher.GetTeachingHoursStatsUseCase
 }
@@ -30,6 +31,7 @@ func NewTeacherControllerV1(
 	updateTeacherUseCase teacher.UpdateTeacherUseCase,
 	deleteTeacherUseCase teacher.DeleteTeacherUseCase,
 	listTeachersUseCase teacher.ListTeachersUseCase,
+	listSkillCatalogUseCase teacher.ListSkillCatalogUseCase,
 	getTeacherTimetableUseCase teacher.GetTeacherTimetableUseCase,
 	getTeachingHoursStatsUseCase teacher.GetTeachingHoursStatsUseCase,
 ) *ControllerV1 {
@@ -39,6 +41,7 @@ func NewTeacherControllerV1(
 		updateTeacherUseCase:         updateTeacherUseCase,
 		deleteTeacherUseCase:         deleteTeacherUseCase,
 		listTeachersUseCase:          listTeachersUseCase,
+		listSkillCatalogUseCase:      listSkillCatalogUseCase,
 		getTeacherTimetableUseCase:   getTeacherTimetableUseCase,
 		getTeachingHoursStatsUseCase: getTeachingHoursStatsUseCase,
 	}
@@ -77,6 +80,7 @@ func (c *ControllerV1) CreateTeacher(ctx *gin.Context) {
 		SchoolName:      req.SchoolName,
 		EmploymentType:  req.EmploymentType,
 		Status:          req.Status,
+		Skills:          req.Skills,
 		Notes:           req.Notes,
 	})
 
@@ -167,6 +171,7 @@ func (c *ControllerV1) UpdateTeacher(ctx *gin.Context) {
 		SchoolName:      req.SchoolName,
 		EmploymentType:  req.EmploymentType,
 		Status:          req.Status,
+		Skills:          req.Skills,
 		Notes:           req.Notes,
 	})
 
@@ -241,6 +246,8 @@ func (c *ControllerV1) ListTeachers(ctx *gin.Context) {
 	search := ctx.Query("search")
 	status := ctx.Query("status")
 	employmentType := ctx.Query("employment_type")
+	courseID := ctx.Query("course_id")
+	classID := ctx.Query("class_id")
 	sortBy := ctx.Query("sort_by")
 	sortOrder := ctx.Query("sort_order")
 
@@ -251,6 +258,8 @@ func (c *ControllerV1) ListTeachers(ctx *gin.Context) {
 		Search:         search,
 		Status:         status,
 		EmploymentType: employmentType,
+		CourseID:       courseID,
+		ClassID:        classID,
 		Page:           page,
 		Limit:          limit,
 		SortBy:         sortBy,
@@ -280,6 +289,38 @@ func (c *ControllerV1) ListTeachers(ctx *gin.Context) {
 	}
 
 	rest.ResponseSuccess(ctx, http.StatusOK, "Teachers retrieved successfully", response)
+}
+
+func (c *ControllerV1) ListSkillCatalog(ctx *gin.Context) {
+	ctxLogger := logger.NewLogger(ctx)
+
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "200"))
+	output, err := c.listSkillCatalogUseCase.Execute(ctx, teacher.ListSkillCatalogInput{
+		Search: ctx.Query("search"),
+		Limit:  limit,
+	})
+	if err != nil {
+		ctxLogger.Errorf("Failed to list skill catalog: %v", err)
+		rest.ResponseError(ctx, http.StatusInternalServerError, "Failed to list skill catalog", err)
+		return
+	}
+
+	items := make([]SkillCatalogItemResponse, 0, len(output.Skills))
+	for _, skill := range output.Skills {
+		if skill == nil {
+			continue
+		}
+		items = append(items, SkillCatalogItemResponse{
+			ID:     skill.ID,
+			Code:   skill.Code,
+			Name:   skill.Name,
+			Status: skill.Status,
+		})
+	}
+
+	rest.ResponseSuccess(ctx, http.StatusOK, "Skill catalog retrieved successfully", ListSkillCatalogResponse{
+		Skills: items,
+	})
 }
 
 // GetTeacherTimetable godoc
@@ -449,6 +490,7 @@ func mapTeacherToResponse(t *entities.Teacher) TeacherResponse {
 		SchoolName:      t.SchoolName,
 		EmploymentType:  t.EmploymentType,
 		Status:          t.Status,
+		Skills:          append([]string(nil), t.Skills...),
 		Notes:           t.Notes,
 		CreatedAt:       t.CreatedAt,
 		UpdatedAt:       t.UpdatedAt,

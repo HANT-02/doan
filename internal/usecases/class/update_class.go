@@ -33,12 +33,20 @@ type UpdateClassUseCase interface {
 }
 
 type updateClassUseCase struct {
-	classRepo repointerface.ClassRepository
+	classRepo   repointerface.ClassRepository
+	teacherRepo repointerface.TeacherRepository
+	courseRepo  repointerface.CourseRepository
 }
 
-func NewUpdateClassUseCase(classRepo repointerface.ClassRepository) UpdateClassUseCase {
+func NewUpdateClassUseCase(
+	classRepo repointerface.ClassRepository,
+	teacherRepo repointerface.TeacherRepository,
+	courseRepo repointerface.CourseRepository,
+) UpdateClassUseCase {
 	return &updateClassUseCase{
-		classRepo: classRepo,
+		classRepo:   classRepo,
+		teacherRepo: teacherRepo,
+		courseRepo:  courseRepo,
 	}
 }
 
@@ -49,6 +57,18 @@ func (uc *updateClassUseCase) Execute(ctx context.Context, input UpdateClassInpu
 	classEntity, err := uc.classRepo.GetByID(ctx, input.ID)
 	if err != nil {
 		ctxLogger.Errorf("Class not found: %v", err)
+		return nil, err
+	}
+
+	resolvedTeacherID := input.TeacherID
+	if resolvedTeacherID == nil {
+		resolvedTeacherID = classEntity.TeacherID
+	}
+	resolvedCourseID := input.CourseID
+	if resolvedCourseID == nil {
+		resolvedCourseID = classEntity.CourseID
+	}
+	if err := validateTeacherCourseSkills(ctx, uc.teacherRepo, uc.courseRepo, resolvedTeacherID, resolvedCourseID); err != nil {
 		return nil, err
 	}
 

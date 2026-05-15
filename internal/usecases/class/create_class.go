@@ -32,12 +32,20 @@ type CreateClassUseCase interface {
 }
 
 type createClassUseCase struct {
-	classRepo repointerface.ClassRepository
+	classRepo   repointerface.ClassRepository
+	teacherRepo repointerface.TeacherRepository
+	courseRepo  repointerface.CourseRepository
 }
 
-func NewCreateClassUseCase(classRepo repointerface.ClassRepository) CreateClassUseCase {
+func NewCreateClassUseCase(
+	classRepo repointerface.ClassRepository,
+	teacherRepo repointerface.TeacherRepository,
+	courseRepo repointerface.CourseRepository,
+) CreateClassUseCase {
 	return &createClassUseCase{
-		classRepo: classRepo,
+		classRepo:   classRepo,
+		teacherRepo: teacherRepo,
+		courseRepo:  courseRepo,
 	}
 }
 
@@ -46,6 +54,10 @@ func (uc *createClassUseCase) Execute(ctx context.Context, input CreateClassInpu
 
 	if input.Status == "" {
 		input.Status = "OPEN"
+	}
+
+	if err := validateTeacherCourseSkills(ctx, uc.teacherRepo, uc.courseRepo, input.TeacherID, input.CourseID); err != nil {
+		return nil, err
 	}
 
 	classEntity := &entities.Class{

@@ -21,11 +21,21 @@ type AssignTeacherUseCase interface {
 }
 
 type assignTeacherUseCase struct {
-	classRepo repointerface.ClassRepository
+	classRepo   repointerface.ClassRepository
+	teacherRepo repointerface.TeacherRepository
+	courseRepo  repointerface.CourseRepository
 }
 
-func NewAssignTeacherUseCase(cRepo repointerface.ClassRepository) AssignTeacherUseCase {
-	return &assignTeacherUseCase{classRepo: cRepo}
+func NewAssignTeacherUseCase(
+	cRepo repointerface.ClassRepository,
+	teacherRepo repointerface.TeacherRepository,
+	courseRepo repointerface.CourseRepository,
+) AssignTeacherUseCase {
+	return &assignTeacherUseCase{
+		classRepo:   cRepo,
+		teacherRepo: teacherRepo,
+		courseRepo:  courseRepo,
+	}
 }
 
 func (uc *assignTeacherUseCase) Execute(ctx context.Context, input AssignTeacherInput) (*AssignTeacherOutput, error) {
@@ -38,6 +48,10 @@ func (uc *assignTeacherUseCase) Execute(ctx context.Context, input AssignTeacher
 	classEntity, err := uc.classRepo.GetByID(ctx, input.ClassID)
 	if err != nil {
 		ctxLogger.Errorf("Class not found: %v", err)
+		return nil, err
+	}
+
+	if err := validateTeacherCourseSkills(ctx, uc.teacherRepo, uc.courseRepo, &input.TeacherID, classEntity.CourseID); err != nil {
 		return nil, err
 	}
 

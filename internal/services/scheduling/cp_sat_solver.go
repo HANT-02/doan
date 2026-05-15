@@ -3,6 +3,8 @@ package scheduling
 import (
 	"context"
 	"sort"
+
+	"doan/internal/entities"
 )
 
 type cpSatSolver struct {
@@ -14,6 +16,7 @@ type cpSearchState struct {
 	bestAssigned    int
 	bestSoftScore   int
 	nodesVisited    int
+	targetLessons   map[string]entities.Lesson
 }
 
 func NewCPSATSolver() *cpSatSolver {
@@ -34,6 +37,7 @@ func (s *cpSatSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput
 		bestAssignments: make(map[string]PreviewAssignment),
 		bestAssigned:    -1,
 		bestSoftScore:   -1,
+		targetLessons:   problem.targetLessons,
 	}
 
 	ordered := append([]Variable(nil), problem.variables...)
@@ -46,12 +50,13 @@ func (s *cpSatSolver) Solve(_ context.Context, input SolverInput) (*SolverOutput
 		return leftDomain < rightDomain
 	})
 
-	s.search(ordered, problem.domains, 0, make(map[string]PreviewAssignment), state)
+	s.search(&problem, ordered, problem.domains, 0, make(map[string]PreviewAssignment), state)
 
-	return buildSolverOutput(input, problem.variables, state.bestAssignments, problem.presetConflicts, problem.noDomainConflicts, nil), nil
+	return buildSolverOutput(input, problem.variables, state.bestAssignments, problem.presetConflicts, problem.noDomainConflicts, nil, problem.targetLessons), nil
 }
 
 func (s *cpSatSolver) search(
+	problem *preparedSchedulingProblem,
 	variables []Variable,
 	domains map[string][]DomainValue,
 	index int,
@@ -83,21 +88,21 @@ func (s *cpSatSolver) search(
 	})
 
 	for _, candidate := range candidates {
-		if hasConflict(variable, candidate, assignments) {
+		if problem.hasConflict(variable, candidate, assignments) {
 			continue
 		}
 
 		assignments[variable.ID] = newPreviewAssignment(variable, candidate, "CP_SAT_OK")
-		s.search(variables, domains, index+1, assignments, state)
+		s.search(problem, variables, domains, index+1, assignments, state)
 		delete(assignments, variable.ID)
 	}
 
-	s.search(variables, domains, index+1, assignments, state)
+	s.search(problem, variables, domains, index+1, assignments, state)
 }
 
 func (s *cpSatSolver) maybeUpdateBest(assignments map[string]PreviewAssignment, state *cpSearchState) {
 	assignmentCount := len(assignments)
-	softScore := scoreAssignments(assignmentsToSlice(assignments))
+	softScore := scoreAssignments(assignmentsToSlice(assignments), state.targetLessons)
 
 	if assignmentCount > state.bestAssigned || (assignmentCount == state.bestAssigned && softScore > state.bestSoftScore) {
 		state.bestAssigned = assignmentCount
