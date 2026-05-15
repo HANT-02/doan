@@ -34,11 +34,15 @@ type CreateCourseUseCase interface {
 }
 
 type createCourseUseCaseImpl struct {
-	repo repointerface.CourseRepository
+	repo      repointerface.CourseRepository
+	skillRepo repointerface.SkillRepository
 }
 
-func NewCreateCourseUseCase(repo repointerface.CourseRepository) CreateCourseUseCase {
-	return &createCourseUseCaseImpl{repo: repo}
+func NewCreateCourseUseCase(
+	repo repointerface.CourseRepository,
+	skillRepo repointerface.SkillRepository,
+) CreateCourseUseCase {
+	return &createCourseUseCaseImpl{repo: repo, skillRepo: skillRepo}
 }
 
 func (uc *createCourseUseCaseImpl) Execute(ctx context.Context, input CreateCourseInput) (*CreateCourseOutput, error) {
@@ -66,6 +70,10 @@ func (uc *createCourseUseCaseImpl) Execute(ctx context.Context, input CreateCour
 	created, err := uc.repo.Create(ctx, course)
 	if err != nil {
 		ctxLogger.Errorf("Error creating course: %v", err)
+		return nil, err
+	}
+	if err := uc.skillRepo.SyncCourseRequiredSkills(ctx, created.ID, normalizedRequiredSkills); err != nil {
+		ctxLogger.Errorf("Error syncing course required skills: %v", err)
 		return nil, err
 	}
 	return &CreateCourseOutput{Course: created}, nil

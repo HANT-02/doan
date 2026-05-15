@@ -46,3 +46,11 @@ func MissingRequiredCodes(have []string, required []string) []string {
 
 	return missing
 }
+
+func HumanizeCode(code string) string {
+	normalized := strings.TrimSpace(code)
+	if normalized == "" {
+		return ""
+	}
+	return strings.ReplaceAll(normalized, "_", " ")
+}

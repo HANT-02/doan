@@ -26,6 +26,7 @@ var DBProvider = wire.NewSet(
 	implement.NewStudentRepository,
 	implement.NewLessonRepository,
 	implement.NewCourseRepository,
+	implement.NewSkillRepository,
 	implement.NewProgramRepository,
 	implement.NewEnrollmentRepository,
 	implement.NewAttendanceRepository,

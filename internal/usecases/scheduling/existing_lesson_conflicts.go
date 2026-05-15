@@ -70,6 +70,22 @@ func (uc *previewUseCase) collectExistingLessonConflicts(
 		return nil, nil, nil, err
 	}
 
+	selectedClassIDs := make(map[string]struct{}, len(preview.Variables))
+	for _, variable := range preview.Variables {
+		if variable.ClassID != "" {
+			selectedClassIDs[variable.ClassID] = struct{}{}
+		}
+	}
+
+	filteredLessons := make([]entities.Lesson, 0, len(lessons))
+	for _, lesson := range lessons {
+		if _, isSelectedClass := selectedClassIDs[lesson.ClassID]; isSelectedClass {
+			continue
+		}
+		filteredLessons = append(filteredLessons, lesson)
+	}
+	lessons = filteredLessons
+
 	classIDs := make(map[string]struct{})
 	for _, variable := range preview.Variables {
 		if variable.ClassID != "" {

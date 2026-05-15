@@ -12,7 +12,7 @@ export type WeekScheduleDay<T> = {
 
 type WeekScheduleBoardProps<T> = {
     title: string;
-    subtitle: string;
+    subtitle?: string;
     days: WeekScheduleDay<T>[];
     isFetching?: boolean;
     emptyLabel?: string;
@@ -25,7 +25,7 @@ export default function WeekScheduleBoard<T>({
     subtitle,
     days,
     isFetching = false,
-    emptyLabel = 'Không có buổi nào trong ngày này.',
+    emptyLabel = '',
     minDayHeight = 260,
     renderItem,
 }: WeekScheduleBoardProps<T>) {
@@ -49,9 +49,11 @@ export default function WeekScheduleBoard<T>({
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                             {title}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            {subtitle}
-                        </Typography>
+                        {subtitle ? (
+                            <Typography variant="body2" color="text.secondary">
+                                {subtitle}
+                            </Typography>
+                        ) : null}
                     </Box>
                     {isFetching ? (
                         <Chip size="small" label="Đang tải..." color="info" variant="outlined" />
@@ -106,9 +108,6 @@ export default function WeekScheduleBoard<T>({
                                     >
                                         {format(day.date, 'dd/MM', { locale: vi })}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {format(day.date, 'EEEE', { locale: vi })}
-                                    </Typography>
                                 </Box>
                                 <Chip size="small" variant="outlined" label={`${day.items.length} buổi`} />
                             </Stack>
@@ -117,8 +116,10 @@ export default function WeekScheduleBoard<T>({
                                 <Stack spacing={1}>
                                     {day.items.map((item) => renderItem(item))}
                                 </Stack>
-                            ) : (
+                            ) : emptyLabel ? (
                                 <Alert severity="info">{isFetching ? 'Đang tải lịch...' : emptyLabel}</Alert>
+                            ) : (
+                                <Box sx={{ minHeight: 28 }} />
                             )}
                         </Stack>
                     </Box>

@@ -72,21 +72,30 @@ func NewPreviewUseCase(
 }
 
 func normalizePreviewDateRange(dateFrom, dateTo time.Time, classes []entities.Class) (time.Time, time.Time) {
+	today := truncateToDate(time.Now())
+
 	if dateFrom.IsZero() {
 		dateFrom = earliestClassStartDate(classes)
 	}
 	if dateFrom.IsZero() {
-		dateFrom = truncateToDate(time.Now())
+		dateFrom = today
+	}
+	dateFrom = truncateToDate(dateFrom)
+	if dateFrom.Before(today) {
+		dateFrom = today
 	}
 
 	if dateTo.IsZero() {
 		dateTo = latestClassEndDate(classes)
 	}
+	if !dateTo.IsZero() {
+		dateTo = truncateToDate(dateTo)
+	}
 	if dateTo.IsZero() || dateTo.Before(dateFrom) {
 		dateTo = dateFrom.AddDate(0, 3, 0)
 	}
 
-	return truncateToDate(dateFrom), truncateToDate(dateTo)
+	return dateFrom, dateTo
 }
 
 func earliestClassStartDate(classes []entities.Class) time.Time {
@@ -115,6 +124,26 @@ func latestClassEndDate(classes []entities.Class) time.Time {
 	return latest
 }
 
+func collectClassIDs(classes []entities.Class) []string {
+	if len(classes) == 0 {
+		return nil
+	}
+
+	ids := make([]string, 0, len(classes))
+	seen := make(map[string]struct{}, len(classes))
+	for _, classEntity := range classes {
+		if classEntity.ID == "" {
+			continue
+		}
+		if _, ok := seen[classEntity.ID]; ok {
+			continue
+		}
+		seen[classEntity.ID] = struct{}{}
+		ids = append(ids, classEntity.ID)
+	}
+	return ids
+}
+
 func truncateToDate(value time.Time) time.Time {
 	return time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, value.Location())
 }
@@ -138,17 +167,19 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 	classes = eligibleClasses
 	if input.DateTo.Before(input.DateFrom) {
 		return &PreviewResult{
-			RunID:       utils.GenerateUUIDWithPrefix("sched-preview-"),
-			Mode:        input.Mode,
-			Status:      "FAILED",
-			GeneratedAt: time.Now(),
+			RunID:             utils.GenerateUUIDWithPrefix("sched-preview-"),
+			Mode:              input.Mode,
+			Status:            "FAILED",
+			GeneratedAt:       time.Now(),
+			EffectiveDateFrom: input.DateFrom,
 			Filters: PreviewFilters{
-				DateFrom:   input.DateFrom,
-				DateTo:     input.DateTo,
-				Mode:       input.Mode,
-				ClassIDs:   input.ClassIDs,
-				TeacherIDs: input.TeacherIDs,
-				RoomIDs:    input.RoomIDs,
+				DateFrom:          input.DateFrom,
+				DateTo:            input.DateTo,
+				EffectiveDateFrom: input.DateFrom,
+				Mode:              input.Mode,
+				ClassIDs:          input.ClassIDs,
+				TeacherIDs:        input.TeacherIDs,
+				RoomIDs:           input.RoomIDs,
 			},
 			Summary:     PreviewSummary{},
 			Assignments: []PreviewAssignment{},
@@ -161,15 +192,20 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		}, nil
 	}
 
-	rooms, err := loadSchedulingRooms(ctx, uc.roomRepo, input.RoomIDs)
-	if err != nil {
-		ctxLogger.Errorf("Failed to load rooms for scheduling preview: %v", err)
-		return nil, err
-	}
-
 	shifts, err := loadActiveShifts(ctx, uc.shiftRepo)
 	if err != nil {
 		ctxLogger.Errorf("Failed to load shifts for scheduling preview: %v", err)
+		return nil, err
+	}
+
+	classWindows := schedulingservice.BuildClassSchedulingWindows(input.DateFrom, classes, shifts, time.Now())
+	previewWindowFrom, previewWindowTo := schedulingservice.AggregateClassSchedulingWindow(input.DateFrom, input.DateTo, classWindows)
+	input.DateFrom = previewWindowFrom
+	input.DateTo = previewWindowTo
+
+	rooms, err := loadSchedulingRooms(ctx, uc.roomRepo, input.RoomIDs)
+	if err != nil {
+		ctxLogger.Errorf("Failed to load rooms for scheduling preview: %v", err)
 		return nil, err
 	}
 
@@ -193,17 +229,19 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 
 	runID := utils.GenerateUUIDWithPrefix("sched-preview-")
 	result := PreviewResult{
-		RunID:       runID,
-		Mode:        input.Mode,
-		Status:      "FAILED",
-		GeneratedAt: time.Now(),
+		RunID:             runID,
+		Mode:              input.Mode,
+		Status:            "FAILED",
+		GeneratedAt:       time.Now(),
+		EffectiveDateFrom: input.DateFrom,
 		Filters: PreviewFilters{
-			DateFrom:   input.DateFrom,
-			DateTo:     input.DateTo,
-			Mode:       input.Mode,
-			ClassIDs:   input.ClassIDs,
-			TeacherIDs: input.TeacherIDs,
-			RoomIDs:    input.RoomIDs,
+			DateFrom:          input.DateFrom,
+			DateTo:            input.DateTo,
+			EffectiveDateFrom: input.DateFrom,
+			Mode:              input.Mode,
+			ClassIDs:          input.ClassIDs,
+			TeacherIDs:        input.TeacherIDs,
+			RoomIDs:           input.RoomIDs,
 		},
 		Assignments: []PreviewAssignment{},
 		Conflicts:   append([]PreviewConflict{}, enrollmentConflicts...),
@@ -235,12 +273,13 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		targetLessonStatuses = nil
 	}
 	var targetLessonsList []entities.Lesson
-	if len(targetLessonStatuses) > 0 && len(input.ClassIDs) > 0 {
+	targetClassIDs := collectClassIDs(classes)
+	if len(targetLessonStatuses) > 0 && len(targetClassIDs) > 0 {
 		targetLessonsList, err = uc.lessonRepo.FindOverlappingLessons(
 			ctx,
 			input.DateFrom,
 			input.DateTo.Add(24*time.Hour),
-			input.ClassIDs,
+			targetClassIDs,
 			nil,
 			nil,
 			targetLessonStatuses,
@@ -258,6 +297,7 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		TeacherIDs:    input.TeacherIDs,
 		RoomIDs:       input.RoomIDs,
 		Classes:       classes,
+		ClassWindows:  classWindows,
 		Rooms:         rooms,
 		Shifts:        shifts,
 		RoomsByID:     roomsByID,
@@ -275,6 +315,7 @@ func (uc *previewUseCase) Execute(ctx context.Context, input PreviewInput) (*Pre
 		TeacherIDs:    input.TeacherIDs,
 		RoomIDs:       input.RoomIDs,
 		Classes:       classes,
+		ClassWindows:  classWindows,
 		Rooms:         rooms,
 		Shifts:        shifts,
 		RoomsByID:     roomsByID,

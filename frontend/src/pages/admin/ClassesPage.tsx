@@ -321,7 +321,6 @@ export const ClassesPage = () => {
         <Box>
             <PageHeader
                 title="Quản lý lớp học"
-                subtitle="Theo dõi danh sách lớp, học sinh và giáo viên phụ trách theo chuẩn demo edu admin."
                 breadcrumbs={[
                     { label: 'Tổng quan', path: '/app/admin/overview' },
                     { label: 'Quản lý lớp học' },

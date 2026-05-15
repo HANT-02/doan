@@ -1,434 +1,463 @@
 # Scheduling Implementation Backlog 2026-05-14
 
-Tài liệu này bóc phần định hướng scheduling production thành backlog triển khai bám sát codebase hiện tại.
+Tài liệu này là backlog triển khai scheduling production-like sau các vòng bổ sung nghiệp vụ ngày 2026-05-14.
 
-## 1. Trạng thái hiện tại trong repo
+Mục tiêu hiện tại:
 
-Những phần đã có:
+- xếp lịch là bài toán chính để chấm điểm;
+- học máy chỉ còn là hướng phát triển tương lai;
+- ưu tiên thuật toán xếp lịch, bộ dữ liệu lớn, benchmark hiệu năng, độ đúng luật cứng và chất lượng luật mềm;
+- chọn `CP-SAT` dựa trên số liệu thực nghiệm, không chọn bằng cảm tính;
+- giao diện vận hành phải gọn, thuần tiếng Việt, ít chữ thừa, giúp giáo vụ sửa lịch nhanh.
 
-- preview scheduling và commit preview sang `lesson`;
-- benchmark so sánh solver, trong đó `CP-SAT` đang là solver chính;
+## 1. Trạng thái hiện tại sau các đợt đã làm
+
+Đã có trong repo:
+
+- preview scheduling và commit preview sang buổi học;
+- benchmark solver ban đầu, trong đó `CP-SAT` là solver chính;
 - rule lọc lớp chưa đủ sĩ số tối thiểu trước khi đưa vào preview;
+- fix rule sĩ số để đếm đúng học viên `APPROVED` và `ENROLLED`;
 - rule chặn commit nếu số ca chỉnh tay vượt ngưỡng vận hành;
-- UI preview có kéo thả và hiển thị `score delta` cho lựa chọn chỉnh tay;
-- màn lịch admin, teacher, student đã bắt đầu dùng cùng ngôn ngữ hiển thị theo tuần.
+- lifecycle cơ bản cho buổi học: `DRAFT`, `PUBLISHED`, `HISTORY`;
+- mô hình `campus`, `campus_travel_times`, `room.campus_id`;
+- field kỹ năng dạng mảng trên giáo viên và khóa học;
+- hard check kỹ năng trong preview;
+- preview mode backend có các chế độ xếp mới, xếp lại nháp, giữ lịch đã công bố;
+- API/use case dạy thay cơ bản;
+- API tìm slot học bù dạng tra cứu;
+- nghiệp vụ bảo lưu, hoàn tác bảo lưu và chuyển lớp;
+- impact summary cơ bản: số ca đổi lịch, đổi giáo viên, đổi phòng, mức lấp đầy;
+- UI teacher substitute, học bù lookup, roster bảo lưu/chuyển lớp;
+- màn lịch admin, teacher, student bắt đầu dùng component lịch tuần chung.
 
-Những phần chưa có trong model/code:
+Những điểm đã có nhưng cần chỉnh lại:
 
-- chưa có trạng thái vòng đời `History/Published/Draft/Unplanned` trên `lesson`;
-- chưa có mô hình `campus`, thời gian di chuyển, kỹ năng giáo viên và kỹ năng yêu cầu của khóa học;
-- chưa có use case production cho dạy thay, học bù, chuyển lớp, tái lập lịch ít xáo trộn;
-- chưa có benchmark production-like cho substitution, makeup và replanning;
-- route UI `teacher/substitute` vẫn đang là placeholder.
+- UI preview còn rối, nhiều subtext, alert và tiếng Anh lẫn tiếng Việt;
+- flow đổi slot thủ công đang liệt kê quá nhiều phương án cùng lúc;
+- kéo thả đã có nhưng cần test và tinh chỉnh UX;
+- lịch tuần chưa có cột khung giờ để nhìn ngang theo ca;
+- preview vẫn cho chọn chế độ xếp lịch ở UI dù product direction là mặc định giữ lịch đã công bố;
+- quản lý buổi học còn filter lifecycle không cần thiết với người dùng cuối;
+- kỹ năng/chứng chỉ hiện là field mảng, chưa phải bảng chuẩn hóa.
 
-## 2. Kết luận nghiên cứu ngắn
+## 2. Nguyên tắc thiết kế mới
 
-Nếu triển khai thẳng các luật mới vào solver ngay bây giờ thì sẽ bị thiếu dữ liệu đầu vào.
+Luật sản phẩm:
 
-Vì vậy cần đi theo thứ tự:
+- không xếp lịch về quá khứ;
+- nếu người dùng chọn ngày bắt đầu dự kiến trong quá khứ, hệ thống tự lấy từ ngày hiện tại hoặc ngày hợp lệ gần nhất;
+- vùng quá khứ chỉ là lịch sử, không đưa vào preview và không tính conflict cho kế hoạch mới;
+- mặc định preview dùng chế độ giữ lịch đã công bố;
+- không hiển thị bộ lọc mode xếp mới/giữ lịch cũ trên UI vận hành;
+- chỉ dùng xếp mới hoàn toàn trong benchmark hoặc debug nội bộ.
 
-1. mở rộng domain và migration;
-2. chuẩn hóa API và use case vận hành;
-3. cài ràng buộc mới vào solver;
-4. hoàn thiện UI;
-5. thêm benchmark và test.
+Luật UI:
 
-## 3. Epic A - Chuẩn hóa domain và dữ liệu nền
+- toàn bộ text hiển thị phải là tiếng Việt;
+- bỏ subtext, subtitle, alert nếu không giúp thao tác nhanh hơn;
+- ưu tiên chip, bảng, tooltip ngắn và trạng thái rõ;
+- calendar không ghi text trống trong ô trống;
+- card lịch chỉ hiện thông tin cần để ra quyết định;
+- thông tin giải thích dài đưa vào hover hoặc panel phụ.
 
-### A1. Bổ sung vòng đời lesson
+Luật chỉnh tay:
 
-Mục tiêu:
+- người dùng chọn ca trước;
+- sau đó chọn phòng;
+- hệ thống mới hiện các vị trí hợp lệ tương ứng;
+- mỗi slot/chip phải biết buổi thứ mấy của khóa học;
+- tooltip slot/chip hiển thị: buổi thứ mấy, luật cứng đã qua, điểm cộng, điểm trừ, lý do điểm mềm thay đổi.
 
-- cho phép phân biệt `History`, `Published`, `Draft`, `Unplanned`;
-- làm nền cho continuous planning và nonvolatile replanning.
+## 3. Các vấn đề cần xử lý theo nhóm
 
-Task:
+### Nhóm P0 - Lỗi đúng sai scheduling
 
-- thêm các field trạng thái vào `Lesson`;
-- thêm metadata như `published_at`, `draft_group_id`, `source_preview_run_id`, `change_reason`;
-- thống nhất rule chuyển trạng thái;
-- cập nhật DTO, repository, migration và seed.
-
-Acceptance:
-
-- lesson mới từ preview commit có trạng thái rõ ràng;
-- API list lesson lọc được theo trạng thái;
-- `History` không bị đưa vào solver.
-
-Dependency:
-
-- không có, nên làm đầu tiên.
-
-### A2. Bổ sung mô hình campus và travel time
-
-Mục tiêu:
-
-- hỗ trợ luật di chuyển giữa các cơ sở.
-
-Task:
-
-- thêm `Campus` hoặc tối thiểu `campus_id` cho `Room`;
-- thêm bảng `campus_travel_times` hoặc cấu hình matrix thời gian di chuyển;
-- cập nhật CRUD room và seed dữ liệu;
-- thêm helper tính travel feasibility giữa hai lesson.
-
-Acceptance:
-
-- mỗi room có thể truy ra campus;
-- hệ thống tính được thời gian di chuyển tối thiểu giữa 2 campus.
-
-Dependency:
-
-- độc lập với lesson lifecycle, nhưng nên làm trước khi viết constraint travel.
-
-### A3. Bổ sung kỹ năng giáo viên và yêu cầu kỹ năng khóa học
+P0.1. Không xếp lịch về quá khứ
 
 Mục tiêu:
 
-- hỗ trợ hard constraint skill matching;
-- làm nền cho substitute matching.
+- preview không sinh buổi học trước ngày hiện tại;
+- không tính các ngày cũ vào số slot cần xếp;
+- không báo thiếu slot do lẫn dữ liệu quá khứ.
 
 Task:
 
-- thêm `TeacherSkill` hoặc field chứng chỉ cho giáo viên;
-- thêm `required_skills` cho `Course`;
-- chuẩn hóa mapper giữa kỹ năng của teacher và yêu cầu của course;
-- cập nhật form admin và seed dữ liệu benchmark.
+- thêm hàm chuẩn hóa `effectiveDateFrom = max(inputDateFrom, today, classStartDate nếu hợp lệ)`;
+- nếu lớp đã có `start_date` trong quá khứ nhưng còn buổi chưa xếp, chỉ xếp phần từ hôm nay trở đi;
+- cập nhật preview response để trả lại `effective_date_from` cho UI hiểu hệ thống đã tự điều chỉnh;
+- thêm test case chọn ngày bắt đầu trong quá khứ.
 
 Acceptance:
 
-- hệ thống xác định được teacher có đủ kỹ năng cho class hay không;
-- preview conflict hiện được lỗi thiếu kỹ năng nếu teacher không hợp lệ.
+- chọn ngày bắt đầu trước ngày hiện tại không sinh assignment quá khứ;
+- số buổi cần xếp không bị phình vì khoảng ngày cũ;
+- message UI không yêu cầu người dùng tự sửa ngày nếu hệ thống có thể tự chuẩn hóa.
 
-Dependency:
-
-- nên làm trước substitute use case và solver upgrade.
-
-## 4. Epic B - Nâng cấp scheduling core
-
-### B1. Tách solver theo vùng Draft và Published
+P0.2. Số buổi và khoảng thời gian phải theo từng lớp
 
 Mục tiêu:
 
-- production scheduling chỉ chạy trong vùng `Draft`;
-- `Published` là semi-movable entity.
+- chọn nhiều lớp hoặc chọn giáo viên dạy nhiều lớp thì mỗi lớp có số buổi, số buổi/tuần và khoảng thời gian riêng;
+- không dùng chung một `date_to` suy ra từ lớp dài nhất cho mọi lớp một cách làm sai logic.
+
+Logic mới:
+
+- lấy `course.total_sessions` hoặc field tương đương làm số buổi cần xếp;
+- lấy số buổi/tuần từ cấu hình khóa học hoặc lịch tuần lớp;
+- lấy ngày bắt đầu dự kiến của lớp;
+- suy ra ngày kết thúc dự kiến của từng lớp từ số buổi và số buổi/tuần;
+- preview input có thể nhận một ngày bắt đầu chung, nhưng solver phải build window riêng theo lớp.
 
 Task:
 
-- sửa input builder của preview để nạp lesson theo lifecycle;
-- xem `Published` như lesson existing đặc biệt;
-- loại `History` khỏi vùng tái lập lịch;
-- thêm option preview mode: `cold_start`, `replan_draft`, `replan_with_published_lock`.
+- rà model khóa học để xác định field số buổi và số buổi/tuần hiện có hoặc cần bổ sung;
+- bổ sung `ClassSchedulingWindow` trong builder: `class_id`, `effective_start`, `expected_end`, `sessions_required`;
+- sửa `buildVariables` và `buildDomains` để dùng window riêng của từng class;
+- thêm test chọn 2 lớp có số buổi và lịch tuần khác nhau.
 
 Acceptance:
 
-- preview không động vào lesson `History`;
-- preview có thể khóa cứng lesson `Published`;
-- commit conflict message phân biệt rõ conflict với published lesson.
+- class A 12 buổi, class B 24 buổi không bị dùng chung session total;
+- giáo viên có nhiều lớp thì preview sinh đúng số buổi từng lớp;
+- UI summary từng lớp hiện đúng `đã xếp/tổng buổi`.
 
-Dependency:
-
-- cần A1.
-
-### B2. Cài hard constraint travel time
+P0.3. Conflict với buổi đã công bố của chính lớp đang xếp
 
 Mục tiêu:
 
-- không xếp giáo viên di chuyển không kịp giữa 2 campus.
+- nếu xếp lại chính lớp đó và gặp buổi `PUBLISHED` đã có từ trước thì không báo trùng toàn bộ như conflict ngoài;
+- lịch mới có thể đè lên chính buổi cũ theo cơ chế replan;
+- vẫn báo conflict nếu trùng giáo viên/phòng/lớp với buổi published của lớp khác hoặc đối tượng khác.
 
 Task:
 
-- mở rộng conflict detector và candidate filter với travel feasibility;
-- thêm hard check trong solver input/domain validation;
-- thêm conflict type mới, ví dụ `TRAVEL_TIME_BLOCK`.
+- trong conflict detector, phân biệt `same_class_same_session/replan_target` với conflict thật;
+- nếu existing lesson thuộc class đang replan, map thành candidate có thể thay thế;
+- thêm action metadata: `replace_lesson_id`;
+- commit preview cập nhật lesson cũ hoặc tạo draft thay thế theo policy đã chọn;
+- thêm test regression cho class tự đè lesson published của chính nó.
 
 Acceptance:
 
-- candidate option vi phạm travel time không được chọn;
-- preview hiển thị conflict travel rõ ràng.
+- replan một lớp đã có lịch published không sinh conflict hàng loạt với chính lịch của nó;
+- vẫn chặn trùng phòng/giáo viên với lịch của lớp khác;
+- UI hiển thị đây là "cập nhật buổi đã có", không phải "trùng lịch".
 
-Dependency:
+### Nhóm P1 - Đơn giản hóa UI preview
 
-- cần A2.
-
-### B3. Cài hard constraint skill matching
+P1.1. Bỏ bộ lọc chế độ preview trên UI
 
 Mục tiêu:
 
-- chỉ teacher có kỹ năng phù hợp mới được dạy class hoặc nhận dạy thay.
+- UI vận hành không còn chọn `cold_start/replan_draft/replan_with_published_lock`;
+- mặc định gửi mode giữ lịch đã công bố.
 
 Task:
-
-- validate teacher of class khi tạo variable;
-- chặn candidate/substitute nếu teacher không đủ skill;
-- thêm conflict type `SKILL_MISMATCH`.
+- field chọn theo lớp/giảng viên chuyển sang thành radio button;
+- bỏ field chọn chế độ khỏi form;
+- hardcode request mode là giữ lịch đã công bố;
+- giữ mode khác cho benchmark/dev tool nếu cần;
+- bỏ subtext giải thích mode khỏi màn preview.
 
 Acceptance:
 
-- class dùng teacher sai skill không đi qua preview clean;
-- substitute suggestion không trả teacher sai chuyên môn.
+- người dùng chỉ chọn đối tượng và ngày bắt đầu dự kiến;
+- request preview vẫn gửi đúng mode mặc định;
+- không còn text "cold start", "draft", "published lock" trên UI.
 
-Dependency:
-
-- cần A3.
-
-### B4. Nonvolatile replanning
+P1.2. Dọn text, subtext, alert rườm rà
 
 Mục tiêu:
 
-- khi replan, hệ thống ưu tiên ít xáo trộn lesson đã công bố.
+- màn preview gọn để giáo vụ thao tác nhanh;
+- không còn nửa Anh nửa Việt.
 
 Task:
 
-- thêm penalty rất lớn khi đổi slot/phòng/teacher của lesson `Published`;
-- thêm metric `schedule_change_count`, `teacher_change_count`, `room_change_count`;
-- hiển thị impact summary trước commit.
+- rà toàn bộ `SchedulingPage.tsx` bằng search các từ tiếng Anh đang hiển thị;
+- bỏ tổng quan `run_id` preview ở header;
+- bỏ ô tìm lớp/giáo viên trong preview lịch nếu không dùng thật;
+- bỏ alert chỉ mô tả hiển nhiên;
+- chỉ giữ alert lỗi thật, cảnh báo trùng thật, cảnh báo không thể lưu;
+- chuyển các giải thích dài sang tooltip.
 
 Acceptance:
 
-- cùng một input sự cố, solver ưu tiên sửa cục bộ thay vì xáo toàn lịch;
-- preview trả được số lượng lesson bị ảnh hưởng.
+- UI preview chỉ còn: cấu hình ngắn, summary từng lớp, calendar, danh sách ca cần xử lý;
+- không còn text tiếng Anh trên màn;
+- số alert trong trạng thái bình thường gần như bằng 0.
 
-Dependency:
-
-- cần A1 và B1.
-
-### B5. Capacity utilization và rule học bù/chuyển lớp
+P1.3. Calendar theo khung giờ ca
 
 Mục tiêu:
 
-- dùng sức chứa theo thời gian thực cho makeup và transfer.
+- lịch tuần nhìn như bảng ca theo hàng ngang;
+- ô trống để trống, không ghi "không có buổi".
 
 Task:
 
-- tính `capacity_utilization` cho lesson/lớp/phòng;
-- bổ sung helper tìm slot còn chỗ;
-- chặn makeup/transfer nếu vượt sức chứa tại thời điểm lesson diễn ra.
+- thêm trục dọc là ca/khung giờ: ví dụ `07:00-09:00`, `18:00-20:00`;
+- cột ngang là thứ/ngày;
+- card buổi học nằm đúng hàng ca và cột ngày;
+- ô trống không render text;
+- chip/card không cần lặp lại ngày giờ nếu hàng/cột đã thể hiện;
+- tooltip card hiển thị ngày giờ đầy đủ, buổi thứ mấy, phòng, giáo viên.
 
 Acceptance:
 
-- API tìm học bù trả được số chỗ còn lại;
-- không thể xác nhận nhét thêm học viên nếu vượt capacity.
+- nhìn ngang biết ngay một ca có những lớp nào;
+- ô trống không còn text dư;
+- card gọn hơn nhưng hover vẫn đủ thông tin.
 
-Dependency:
-
-- dùng được với model hiện tại, nhưng tốt hơn nếu hoàn thành A1 trước.
-
-## 5. Epic C - Use case vận hành thời gian thực
-
-### C1. Dạy thay trong 30 giây
+P1.4. Chỉnh tay theo luồng chọn ca rồi chọn phòng
 
 Mục tiêu:
 
-- khi teacher nghỉ đột xuất, hệ thống đề xuất người dạy thay khả dụng.
+- giảm danh sách phương án quá dài;
+- người dùng chọn theo tư duy vận hành thực tế.
+
+Luồng mới:
+
+1. Chọn ca.
+2. Chọn phòng.
+3. Hệ thống hiển thị các ngày/vị trí hợp lệ còn lại.
+4. Chọn slot.
 
 Task:
 
-- tạo use case `SuggestSubstituteTeachers`;
-- input gồm lesson, required skill, thời gian, campus;
-- rank theo skill match, lịch trống, workload balance, travel feasibility;
-- thêm API admin/teacher cho request và duyệt dạy thay.
+- group `candidate_options` theo `shift_id`;
+- sau khi chọn ca, lọc tiếp phòng hợp lệ trong ca đó;
+- sau khi chọn phòng, chỉ hiện các ngày/slot hợp lệ;
+- tooltip slot hiển thị điểm mềm, điểm cộng/trừ và buổi thứ mấy;
+- test lại kéo thả với dataTransfer và state giữ đúng lúc drop.
 
 Acceptance:
 
-- từ một lesson có thể gọi API trả danh sách teacher thay thế;
-- mỗi teacher có score và lý do gợi ý;
-- thời gian xử lý đạt ngưỡng vận hành mục tiêu.
+- dialog đổi ca không còn danh sách tất cả ca/phòng trộn chung;
+- số phương án nhìn thấy giảm mạnh;
+- kéo thả áp dụng được phương án đã chọn;
+- điểm mềm có giải thích đủ hiểu.
 
-Dependency:
-
-- cần A2, A3, B2, B3.
-
-### C2. Find spot cho học bù
+P1.5. Summary từng lớp thay cho tổng quan preview run
 
 Mục tiêu:
 
-- học viên nghỉ có thể được nhét vào lesson tương thích còn chỗ.
+- bỏ tổng quan `id preview`;
+- trạng thái xem trước nằm trên từng lớp.
 
 Task:
 
-- tạo use case `FindMakeupSpots`;
-- lọc lớp cùng course hoặc cùng level;
-- kiểm tra student conflict, capacity, campus, thời gian;
-- hỗ trợ xác nhận học bù vào lesson đích.
+- mỗi lớp hiển thị: trạng thái, số buổi đã xếp/tổng buổi, số trùng, số ca cần xử lý;
+- nếu có trùng, thêm chip ngay sau nhãn lớp;
+- bỏ panel header preview run nếu không cần debug.
 
 Acceptance:
 
-- API trả được danh sách lesson học bù hợp lệ;
-- có thể tạo record học bù mà không vi phạm sức chứa hoặc trùng lịch student.
+- người dùng nhìn từng lớp biết lớp nào cần xử lý;
+- không cần đọc `run_id`;
+- thông tin tổng chỉ giữ ở dạng rất gọn nếu cần.
 
-Dependency:
+### Nhóm P2 - Chuẩn hóa kỹ năng/chứng chỉ
 
-- cần B5.
-
-### C3. Bảo lưu và chuyển lớp
+P2.1. Tách kỹ năng/chứng chỉ thành bảng riêng
 
 Mục tiêu:
 
-- thay đổi roster không phá vỡ lịch đang chạy.
+- kỹ năng là dữ liệu chuẩn hóa, có thể quản trị, lọc và tái sử dụng;
+- dùng chung cho phân công giáo viên, preview và dạy thay.
+
+Model đề xuất:
+
+- `skills`: `id`, `code`, `name`, `description`, `is_active`;
+- `teacher_skills`: `teacher_id`, `skill_id`, `level`, `verified_at`, `expires_at`;
+- `course_required_skills`: `course_id`, `skill_id`, `required_level`, `is_mandatory`;
 
 Task:
 
-- cập nhật rule khi học viên bảo lưu;
-- khi chuyển lớp, kiểm tra class đích còn chỗ và cùng điều kiện;
-- nếu cần, đánh dấu nhu cầu `Unplanned` cho các buổi phải học bù.
+- tạo migration mới;
+- migrate dữ liệu từ field mảng hiện tại sang bảng mới;
+- giữ compatibility tạm thời nếu cần;
+- cập nhật repository/usecase/form admin.
 
 Acceptance:
 
-- luồng chuyển lớp không làm dữ liệu scheduling bị âm thầm sai;
-- số chỗ trống và utilization cập nhật đúng sau nghiệp vụ.
+- tạo/sửa skill được;
+- gắn skill cho giáo viên được;
+- gắn skill yêu cầu cho khóa học được;
+- preview không đọc field mảng cũ nữa.
 
-Dependency:
+P2.2. Validate khi gán giáo viên vào lớp
 
-- cần A1 và B5.
+Mục tiêu:
 
-## 6. Epic D - API và UI
-
-### D1. Mở rộng scheduling API
+- không gán giáo viên sai kỹ năng cho lớp;
+- danh sách giáo viên chọn trong lớp được lọc sẵn.
 
 Task:
 
-- thêm field lifecycle và impact summary vào preview response;
-- thêm endpoint replanning;
-- thêm endpoint substitute suggestion;
-- thêm endpoint find makeup spot;
-- thêm endpoint publish draft lessons.
+- API list giáo viên nhận `course_id` hoặc `class_id` để lọc giáo viên đủ kỹ năng;
+- use case assign teacher validate skill trước khi lưu;
+- UI class detail chỉ hiển thị giáo viên phù hợp, hoặc hiển thị nhóm "không phù hợp" nếu cần debug;
+- message lỗi thuần tiếng Việt.
 
 Acceptance:
 
-- frontend không phải tự suy diễn trạng thái lesson nữa;
-- API đủ để dựng flow production.
+- không lưu được giáo viên thiếu skill bắt buộc;
+- danh sách chọn giáo viên gọn hơn;
+- lỗi rõ thiếu kỹ năng nào.
 
-### D2. Hoàn thiện màn admin scheduling
+P2.3. Dùng skill trong đề xuất dạy thay
+
+Mục tiêu:
+
+- dạy thay chỉ đề xuất giáo viên cùng kỹ năng/chứng chỉ.
 
 Task:
 
-- thêm bộ lọc `Draft/Published/History/Unplanned`;
-- hiển thị change impact khi replan;
-- hiển thị cảnh báo travel/skill/capacity;
-- thêm panel summary cho `schedule_change_count` và `capacity_utilization`.
+- substitute matcher đọc `course_required_skills`;
+- loại giáo viên thiếu skill bắt buộc;
+- score thêm điểm cho giáo viên skill cao hơn hoặc chứng chỉ còn hiệu lực lâu;
+- tooltip lý do đề xuất hiển thị skill match.
 
 Acceptance:
 
-- người xếp lịch thấy ngay tác động của một lần replan;
-- preview không chỉ báo hard conflict mà còn báo ảnh hưởng vận hành.
+- danh sách dạy thay không có giáo viên sai chuyên môn;
+- mỗi gợi ý có lý do: kỹ năng, lịch trống, tải công việc, di chuyển.
 
-### D3. Thay placeholder bằng màn hình dạy thay
+### Nhóm P3 - Quản lý buổi học
+
+P3.1. Bỏ filter lifecycle trên UI quản lý buổi học
+
+Mục tiêu:
+
+- lifecycle là chi tiết kỹ thuật, không phải bộ lọc chính của giáo vụ.
 
 Task:
 
-- thay route `teacher/substitute` placeholder bằng page thật;
-- teacher có thể gửi request nghỉ/dạy thay;
-- admin có thể duyệt teacher thay thế.
+- bỏ filter lifecycle khỏi `LessonsPage`;
+- giữ filter ngày, lớp, giáo viên, trạng thái nghiệp vụ nếu có;
+- giản lược subtitle/subtext;
+- nếu cần hiện lifecycle, chỉ hiện chip nhỏ trên dòng dữ liệu hoặc tooltip.
 
 Acceptance:
 
-- route dạy thay dùng được end-to-end.
+- màn buổi học gọn hơn;
+- không còn filter "cyclelife/lifecycle";
+- text thuần tiếng Việt.
 
-### D4. Màn hình học bù/chuyển lớp
+## 4. Thứ tự triển khai khuyến nghị mới
+
+### Đợt 5A - Sửa đúng sai scheduling core
+
+Ưu tiên làm trước UI vì các lỗi này ảnh hưởng kết quả xếp lịch.
 
 Task:
 
-- thêm modal hoặc page để tìm slot học bù;
-- cho phép xác nhận nhét học viên vào lesson tương thích;
-- hiển thị remaining capacity và cảnh báo trùng lịch.
+- P0.1. Không xếp lịch về quá khứ;
+- P0.2. Window và số buổi riêng từng lớp;
+- P0.3. Không báo trùng với published lesson của chính lớp đang replan;
+- thêm test regression cho cả 3 case.
 
-Acceptance:
+Done khi:
 
-- giáo vụ có thể tìm và chốt slot học bù mà không cần rà tay lịch.
+- preview không sinh lịch quá khứ;
+- chọn nhiều lớp vẫn đúng số buổi từng lớp;
+- replan lớp đã có lịch không tự conflict với chính nó.
 
-## 7. Epic E - Benchmark, seed và test
-
-### E1. Seed large dataset chuẩn
-
-Task:
-
-- tạo dataset lớn có nhiều lớp, teacher, student, room, campus;
-- có teacher skill và course required skill;
-- có published draft history mix;
-- có scenario teacher nghỉ, room hỏng, học viên học bù.
-
-Acceptance:
-
-- benchmark và demo dùng cùng một bộ seed có thể tái tạo.
-
-### E2. Benchmark production-like
+### Đợt 5B - Gọt UI preview thành bản vận hành gọn
 
 Task:
 
-- thêm scenario `substitution`;
-- thêm scenario `makeup_find_spot`;
-- thêm scenario `published_stability`;
-- thêm metric `schedule_change_count`, `capacity_utilization`, `score_delta`.
+- P1.1. Bỏ bộ lọc chế độ preview;
+- P1.2. Dọn text, subtext, alert;
+- P1.5. Summary từng lớp thay tổng quan run;
+- rà toàn bộ text tiếng Anh trong `SchedulingPage`.
 
-Acceptance:
+Done khi:
 
-- có report số liệu để bảo vệ quyết định chọn `CP-SAT` cho bài toán production-like, không chỉ cold start.
+- màn preview thuần tiếng Việt;
+- ít alert, ít subtitle;
+- không còn `run_id` làm thông tin chính;
+- trạng thái lớp và số trùng nằm ngay trên summary lớp.
 
-### E3. Test coverage
+### Đợt 5C - Làm lại calendar và chỉnh tay
 
 Task:
 
-- unit test cho policy mới;
-- integration test cho preview/replan/substitute/makeup;
-- UI test cho kéo thả, delta score, lifecycle filter.
+- P1.3. Calendar theo khung giờ ca;
+- P1.4. Chọn ca -> chọn phòng -> chọn slot;
+- tooltip buổi thứ mấy, điểm cộng/trừ;
+- test kéo thả thật trên browser.
 
-Acceptance:
+Done khi:
 
-- mỗi epic đều có test regression tương ứng;
-- benchmark artifacts chạy được trong repo.
+- calendar có hàng khung giờ;
+- ô trống không có text;
+- chọn slot thủ công ít rối hơn;
+- kéo thả dùng được.
 
-## 8. Thứ tự triển khai khuyến nghị
+### Đợt 5D - Chuẩn hóa skill/chứng chỉ
 
-### Đợt 1 - Chốt nền dữ liệu
+Task:
 
-- A1. Lesson lifecycle
-- A2. Campus và travel time
-- A3. Teacher skill và course required skill
+- P2.1. Tạo bảng skill;
+- P2.2. Validate và lọc giáo viên khi gán lớp;
+- P2.3. Dùng skill chuẩn hóa trong dạy thay.
 
-### Đợt 2 - Chốt scheduling core
+Done khi:
 
-- B1. Draft/Published scheduling boundary
-- B2. Travel hard constraint
-- B3. Skill matching hard constraint
-- B4. Nonvolatile replanning
-- B5. Capacity utilization
+- skill không còn là mảng text tự do;
+- assign teacher chặn sai kỹ năng;
+- substitute suggestion dựa trên skill chuẩn.
 
-### Đợt 3 - Làm production operations
+### Đợt 5E - Dọn quản lý buổi học
 
-- C1. Dạy thay
-- C2. Học bù
-- C3. Chuyển lớp và bảo lưu
+Task:
 
-### Đợt 4 - Hoàn thiện API/UI
+- P3.1. Bỏ lifecycle filter;
+- giản lược subtitle/subtext;
+- rà text tiếng Việt.
 
-- D1. Scheduling API
-- D2. Admin scheduling UX
-- D3. Teacher substitute page
-- D4. Makeup/transfer UI
+Done khi:
 
-### Đợt 5 - Benchmark và chốt số liệu
+- màn quản lý buổi học gọn và bớt thuật ngữ kỹ thuật.
 
-- E1. Seed chuẩn
-- E2. Benchmark production-like
-- E3. Test coverage
+## 5. Test và benchmark cần bổ sung
 
-## 9. Lát cắt nên làm tiếp ngay
+Backend tests:
 
-Nếu cần chọn nhánh triển khai tiếp theo ngay sau tài liệu này, nên làm:
+- preview với ngày bắt đầu trong quá khứ;
+- nhiều lớp có số buổi khác nhau;
+- giáo viên dạy nhiều lớp có window riêng từng lớp;
+- replan chính lớp có published lesson cũ;
+- assign teacher thiếu skill bị chặn;
+- substitute không trả giáo viên thiếu skill.
 
-1. `A1` vì nó mở khóa replanning và publish stability.
-2. `A3` vì skill matching ảnh hưởng cả preview lẫn substitute.
-3. `D1` phần lifecycle trong preview response để UI và backend cùng nói chung một ngôn ngữ.
+Frontend tests hoặc manual QA:
 
-## 10. Định nghĩa Done cho phiên bản production-like đầu tiên
+- màn preview không còn text tiếng Anh;
+- bỏ mode filter vẫn gửi đúng mode mặc định;
+- calendar có hàng khung giờ;
+- ô trống không render text;
+- dialog đổi slot theo đúng luồng ca -> phòng -> slot;
+- tooltip hiển thị buổi thứ mấy, điểm cộng, điểm trừ;
+- kéo thả áp dụng được slot.
 
-Có thể xem scheduling đạt mốc production-like đầu tiên khi thỏa đủ:
+Benchmark:
 
-- preview chỉ chạy trên vùng `Draft`;
-- lesson có lifecycle rõ ràng;
-- có rule mở lớp theo sĩ số tối thiểu;
-- có travel time và skill matching trong hard constraints;
-- có `score delta` và impact summary khi chỉnh tay hoặc replan;
-- có flow dạy thay và tìm học bù cơ bản;
-- có benchmark production-like dùng số liệu thật để giải thích vì sao tiếp tục chọn `CP-SAT`.
+- cold start chỉ dùng để benchmark nội bộ;
+- production preview mặc định giữ lịch đã công bố;
+- báo cáo cần có: thời gian xử lý, số conflict luật cứng, số ca cần chỉnh tay, điểm mềm, số ca đổi lịch, mức lấp đầy.
+
+## 6. Definition of Done cho mốc kế tiếp
+
+Mốc kế tiếp đạt yêu cầu khi:
+
+- không còn sinh lịch quá khứ;
+- số buổi từng lớp đúng theo khóa học;
+- preview không tự báo trùng với lịch published của chính lớp đang xếp lại;
+- màn preview đủ gọn để giáo vụ dùng hằng ngày;
+- toàn bộ text UI liên quan scheduling là tiếng Việt;
+- chỉnh tay theo ca, phòng, slot;
+- skill/chứng chỉ có bảng chuẩn hóa và được dùng khi gán giáo viên, xếp lịch, dạy thay.

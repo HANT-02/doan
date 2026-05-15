@@ -50,6 +50,7 @@ var TeacherUseCaseProviders = wire.NewSet(
 	teacher.NewGetTeacherUseCase,
 	teacher.NewGetTeachingHoursStatsUseCase,
 	teacher.NewGetTeacherTimetableUseCase,
+	teacher.NewListSkillCatalogUseCase,
 	teacher.NewListTeachersUseCase,
 	teacher.NewUpdateTeacherUseCase,
 )

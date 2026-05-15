@@ -34,11 +34,15 @@ type UpdateCourseUseCase interface {
 }
 
 type updateCourseUseCaseImpl struct {
-	repo repointerface.CourseRepository
+	repo      repointerface.CourseRepository
+	skillRepo repointerface.SkillRepository
 }
 
-func NewUpdateCourseUseCase(repo repointerface.CourseRepository) UpdateCourseUseCase {
-	return &updateCourseUseCaseImpl{repo: repo}
+func NewUpdateCourseUseCase(
+	repo repointerface.CourseRepository,
+	skillRepo repointerface.SkillRepository,
+) UpdateCourseUseCase {
+	return &updateCourseUseCaseImpl{repo: repo, skillRepo: skillRepo}
 }
 
 func (uc *updateCourseUseCaseImpl) Execute(ctx context.Context, input UpdateCourseInput) (*UpdateCourseOutput, error) {
@@ -101,6 +105,12 @@ func (uc *updateCourseUseCaseImpl) Execute(ctx context.Context, input UpdateCour
 	if err != nil {
 		ctxLogger.Errorf("Error updating course: %v", err)
 		return nil, err
+	}
+	if input.RequiredSkills != nil {
+		if err := uc.skillRepo.SyncCourseRequiredSkills(ctx, course.ID, *input.RequiredSkills); err != nil {
+			ctxLogger.Errorf("Error syncing course required skills: %v", err)
+			return nil, err
+		}
 	}
 	return &UpdateCourseOutput{Course: course}, nil
 }

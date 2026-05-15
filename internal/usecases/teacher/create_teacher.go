@@ -37,12 +37,17 @@ type CreateTeacherUseCase interface {
 
 type createTeacherUseCase struct {
 	teacherRepo repointerface.TeacherRepository
+	skillRepo   repointerface.SkillRepository
 }
 
 // NewCreateTeacherUseCase creates a new instance of CreateTeacherUseCase
-func NewCreateTeacherUseCase(teacherRepo repointerface.TeacherRepository) CreateTeacherUseCase {
+func NewCreateTeacherUseCase(
+	teacherRepo repointerface.TeacherRepository,
+	skillRepo repointerface.SkillRepository,
+) CreateTeacherUseCase {
 	return &createTeacherUseCase{
 		teacherRepo: teacherRepo,
+		skillRepo:   skillRepo,
 	}
 }
 
@@ -105,6 +110,11 @@ func (uc *createTeacherUseCase) Execute(ctx context.Context, input CreateTeacher
 	createdTeacher, err := uc.teacherRepo.Create(ctx, teacher)
 	if err != nil {
 		ctxLogger.Errorf("Failed to create teacher: %v", err)
+		return nil, err
+	}
+
+	if err := uc.skillRepo.SyncTeacherSkills(ctx, createdTeacher.ID, normalizedSkills); err != nil {
+		ctxLogger.Errorf("Failed to sync teacher skills: %v", err)
 		return nil, err
 	}
 

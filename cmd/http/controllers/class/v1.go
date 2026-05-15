@@ -91,7 +91,7 @@ func (ctrl *ControllerV1) CreateClass(c *gin.Context) {
 	})
 
 	if err != nil {
-		rest.ResponseError(c, http.StatusInternalServerError, "Failed to create class", err)
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to create class", err)
 		return
 	}
 
@@ -144,7 +144,7 @@ func (ctrl *ControllerV1) UpdateClass(c *gin.Context) {
 	})
 
 	if err != nil {
-		rest.ResponseError(c, http.StatusInternalServerError, "Failed to update class", err)
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to update class", err)
 		return
 	}
 
@@ -326,7 +326,7 @@ func (ctrl *ControllerV1) AssignTeacher(c *gin.Context) {
 	})
 
 	if err != nil {
-		rest.ResponseError(c, http.StatusInternalServerError, "Failed to assign teacher", err)
+		rest.ResponseError(c, http.StatusBadRequest, "Failed to assign teacher", err)
 		return
 	}
 

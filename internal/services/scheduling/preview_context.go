@@ -68,7 +68,19 @@ func previewCandidateKey(value DomainValue) string {
 func buildManualOverrideDomains(variables []Variable, input SolverInput) map[string][]DomainValue {
 	domains := make(map[string][]DomainValue, len(variables))
 	for _, variable := range variables {
-		slots := generateTimeSlots(input.DateFrom, input.DateTo, variable.DurationMinutes, input.Shifts)
+		windowFrom := input.DateFrom
+		windowTo := input.DateTo
+		if classEntity, ok := findClassByID(input.Classes, variable.ClassID); ok {
+			window := resolveClassSchedulingWindow(input, classEntity)
+			if !window.DateFrom.IsZero() {
+				windowFrom = window.DateFrom
+			}
+			if !window.DateTo.IsZero() {
+				windowTo = window.DateTo
+			}
+		}
+
+		slots := generateTimeSlots(windowFrom, windowTo, variable.DurationMinutes, input.Shifts)
 		if len(slots) == 0 {
 			domains[variable.ID] = []DomainValue{}
 			continue

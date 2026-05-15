@@ -38,12 +38,17 @@ type UpdateTeacherUseCase interface {
 
 type updateTeacherUseCase struct {
 	teacherRepo repointerface.TeacherRepository
+	skillRepo   repointerface.SkillRepository
 }
 
 // NewUpdateTeacherUseCase creates a new instance of UpdateTeacherUseCase
-func NewUpdateTeacherUseCase(teacherRepo repointerface.TeacherRepository) UpdateTeacherUseCase {
+func NewUpdateTeacherUseCase(
+	teacherRepo repointerface.TeacherRepository,
+	skillRepo repointerface.SkillRepository,
+) UpdateTeacherUseCase {
 	return &updateTeacherUseCase{
 		teacherRepo: teacherRepo,
+		skillRepo:   skillRepo,
 	}
 }
 
@@ -131,6 +136,13 @@ func (uc *updateTeacherUseCase) Execute(ctx context.Context, input UpdateTeacher
 	if err != nil {
 		ctxLogger.Errorf("Failed to get updated teacher: %v", err)
 		return nil, err
+	}
+
+	if input.Skills != nil {
+		if err := uc.skillRepo.SyncTeacherSkills(ctx, input.ID, *input.Skills); err != nil {
+			ctxLogger.Errorf("Failed to sync teacher skills: %v", err)
+			return nil, err
+		}
 	}
 
 	return &UpdateTeacherOutput{Teacher: updatedTeacher}, nil

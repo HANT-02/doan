@@ -98,6 +98,18 @@ func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
 			continue
 		}
 
+		if classEntity.Course.SessionCount <= 0 {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "INVALID_COURSE_SESSION_COUNT",
+				Message:    "Khóa học của lớp chưa có tổng số buổi hợp lệ, nên chưa thể xác định đủ số buổi cần xếp.",
+			})
+			continue
+		}
+
 		missingRequiredSkills := skillservice.MissingRequiredCodes(
 			[]string(classEntity.Teacher.Skills),
 			[]string(classEntity.Course.RequiredSkills),
@@ -135,14 +147,8 @@ func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
 			preferredRoomID = *classEntity.RoomID
 		}
 
-		sessionTotal := countUniqueTimeSlots(generateTimeSlotsForVariable(
-			input.DateFrom,
-			input.DateTo,
-			classEntity.Course.SessionDurationMinutes,
-			classEntity.ClassSchedules,
-			input.Shifts,
-		))
-		if sessionTotal <= 0 {
+		window := resolveClassSchedulingWindow(input, classEntity)
+		if window.DateFrom.IsZero() || window.DateTo.IsZero() {
 			conflicts = append(conflicts, PreviewConflict{
 				VariableID: classEntity.ID,
 				ClassID:    classEntity.ID,
@@ -150,8 +156,33 @@ func buildVariables(input SolverInput) ([]Variable, []PreviewConflict) {
 				ClassName:  classEntity.Name,
 				Type:       "NO_SLOT_IN_RANGE",
 				Message: fmt.Sprintf(
-					"Trong khoảng ngày của lớp chưa tạo được buổi học nào theo lịch tuần (%s). Hãy kiểm tra ngày bắt đầu/kết thúc lớp hoặc lịch tuần lớp.",
+					"Không thể suy ra khoảng ngày xếp lịch hợp lệ từ ngày bắt đầu dự kiến và lịch tuần của lớp (%s). Hãy kiểm tra ngày bắt đầu lớp hoặc lịch tuần lớp.",
 					describeScheduleDays(classEntity.ClassSchedules),
+				),
+			})
+			continue
+		}
+
+		sessionTotal := window.SessionTotal
+		slotCapacity := countUniqueTimeSlots(generateTimeSlotsForVariable(
+			window.DateFrom,
+			window.DateTo,
+			classEntity.Course.SessionDurationMinutes,
+			classEntity.ClassSchedules,
+			input.Shifts,
+		))
+		if slotCapacity < sessionTotal {
+			conflicts = append(conflicts, PreviewConflict{
+				VariableID: classEntity.ID,
+				ClassID:    classEntity.ID,
+				ClassCode:  classEntity.Code,
+				ClassName:  classEntity.Name,
+				Type:       "INSUFFICIENT_SCHEDULE_SLOTS",
+				Message: fmt.Sprintf(
+					"Khoảng ngày dự kiến của lớp chỉ tạo được %d slot hợp lệ theo lịch tuần (%s), chưa đủ để phủ %d buổi của khóa học.",
+					slotCapacity,
+					describeScheduleDays(classEntity.ClassSchedules),
+					sessionTotal,
 				),
 			})
 			continue
@@ -205,7 +236,39 @@ func buildDomains(
 			continue
 		}
 
-		slots := generateTimeSlotsForVariable(input.DateFrom, input.DateTo, variable.DurationMinutes, classSchedules, defaultShifts)
+		classEntity, ok := findClassByID(input.Classes, variable.ClassID)
+		if !ok {
+			domains[variable.ID] = []DomainValue{}
+			noDomainConflicts[variable.ID] = PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "MISSING_CLASS",
+				Message:      fmt.Sprintf("Không tìm thấy dữ liệu lớp để xếp buổi %d/%d.", variable.SessionIndex, variable.SessionTotal),
+			}
+			continue
+		}
+
+		window := resolveClassSchedulingWindow(input, classEntity)
+		if window.DateFrom.IsZero() || window.DateTo.IsZero() {
+			domains[variable.ID] = []DomainValue{}
+			noDomainConflicts[variable.ID] = PreviewConflict{
+				VariableID:   variable.ID,
+				ClassID:      variable.ClassID,
+				ClassCode:    variable.ClassCode,
+				ClassName:    variable.ClassName,
+				SessionIndex: variable.SessionIndex,
+				SessionTotal: variable.SessionTotal,
+				Type:         "NO_SLOT_IN_RANGE",
+				Message:      fmt.Sprintf("Chưa suy ra được khoảng ngày hợp lệ để xếp buổi %d/%d của lớp.", variable.SessionIndex, variable.SessionTotal),
+			}
+			continue
+		}
+
+		slots := generateTimeSlotsForVariable(window.DateFrom, window.DateTo, variable.DurationMinutes, classSchedules, defaultShifts)
 		if _, ok := classUniqueSlotCapacity[variable.ClassID]; !ok {
 			classUniqueSlotCapacity[variable.ClassID] = countUniqueTimeSlots(slots)
 		}
@@ -825,6 +888,15 @@ func indexClassSchedules(classes []entities.Class) map[string][]entities.ClassSc
 	}
 
 	return indexed
+}
+
+func findClassByID(classes []entities.Class, classID string) (entities.Class, bool) {
+	for _, classEntity := range classes {
+		if classEntity.ID == classID {
+			return classEntity, true
+		}
+	}
+	return entities.Class{}, false
 }
 
 func collectRequiredSlotRooms(slots []TimeSlot) map[string]struct{} {

@@ -16,6 +16,8 @@ const (
 const (
 	LessonChangeReasonInitialSchedulingCommit = "INITIAL_SCHEDULING_COMMIT"
 	LessonChangeReasonLegacyBackfill          = "LEGACY_BACKFILL"
+	LessonChangeReasonReplanReplacement       = "REPLAN_REPLACEMENT"
+	LessonChangeReasonReplanArchived          = "REPLAN_ARCHIVED"
 )
 
 type Lesson struct {

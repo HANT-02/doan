@@ -20,6 +20,8 @@ type TeacherRepository interface {
 
 	// Stats: Calculate teaching hours grouped by period
 	GetTeachingHoursStats(ctx context.Context, teacherID string, from, to time.Time, groupBy string) ([]TeachingHoursStat, error)
+
+	ListByRequiredSkillCodes(ctx context.Context, requiredSkills []string) ([]*entities.Teacher, error)
 }
 
 // TeachingHoursStat represents teaching hours statistics for a period

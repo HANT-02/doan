@@ -3,25 +3,29 @@ import {
     Alert,
     Box,
     Button,
+    Chip,
     Grid,
     Paper,
     Skeleton,
     Stack,
     Typography,
 } from '@mui/material';
-import { RefreshRounded, ArrowBackRounded, ClassOutlined, PersonOutline, AccessTimeOutlined, MeetingRoomOutlined, NotesOutlined } from '@mui/icons-material';
+import { RefreshRounded, ArrowBackRounded, ClassOutlined, PersonOutline, AccessTimeOutlined, MeetingRoomOutlined, NotesOutlined, PersonSearchRounded } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useState } from 'react';
 
 import { useGetLessonByIdQuery } from '@/api/lessonApi';
 import PageHeader from '@/components/common/PageHeader';
 import LessonAttendanceManager from '@/components/lesson/LessonAttendanceManager';
 import LessonSummaryEditor from '@/components/lesson/LessonSummaryEditor';
 import LessonAcademicRecordManager from '@/components/lesson/LessonAcademicRecordManager';
+import { SuggestSubstituteModal } from '@/components/schedule/SuggestSubstituteModal';
 
 export default function LessonDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [isSubstituteModalOpen, setIsSubstituteModalOpen] = useState(false);
 
     const { data: lessonResponse, isLoading, isError, refetch } = useGetLessonByIdQuery(id!, {
         skip: !id,
@@ -116,14 +120,31 @@ export default function LessonDetailPage() {
                     <Stack spacing={3} sx={{ height: '100%' }}>
                         <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, flex: 1 }}>
                             <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>Giáo viên</Typography>
-                            <Stack direction="row" spacing={2} alignItems="center">
-                                <PersonOutline sx={{ color: 'primary.main', fontSize: 32 }} />
-                                <Box>
-                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>{lesson.teacher?.full_name || 'Chưa phân công'}</Typography>
-                                    {lesson.teacher?.code && (
-                                        <Typography variant="body2" color="text.secondary">Mã GV: {lesson.teacher.code}</Typography>
-                                    )}
-                                </Box>
+                            <Stack spacing={2}>
+                                <Stack direction="row" spacing={2} alignItems="center">
+                                    <PersonOutline sx={{ color: 'primary.main', fontSize: 32 }} />
+                                    <Box>
+                                        <Typography variant="body1" sx={{ fontWeight: 600 }}>{lesson.teacher?.full_name || 'Chưa phân công'}</Typography>
+                                        {lesson.teacher?.code && (
+                                            <Typography variant="body2" color="text.secondary">Mã GV: {lesson.teacher.code}</Typography>
+                                        )}
+                                    </Box>
+                                </Stack>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                    <Chip
+                                        size="small"
+                                        label={lesson.class?.code || 'Buổi học'}
+                                        variant="outlined"
+                                    />
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        startIcon={<PersonSearchRounded />}
+                                        onClick={() => setIsSubstituteModalOpen(true)}
+                                    >
+                                        Đề xuất dạy thay
+                                    </Button>
+                                </Stack>
                             </Stack>
                         </Paper>
                         
@@ -141,6 +162,12 @@ export default function LessonDetailPage() {
             <LessonAttendanceManager lessonId={id!} />
             <LessonSummaryEditor lessonId={id!} />
             <LessonAcademicRecordManager lessonId={id!} />
+            <SuggestSubstituteModal
+                isOpen={isSubstituteModalOpen}
+                lessonId={lesson.id}
+                lessonLabel={lesson.class?.name || lesson.class_id}
+                onClose={() => setIsSubstituteModalOpen(false)}
+            />
         </Stack>
     );
 }

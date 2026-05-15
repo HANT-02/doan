@@ -3,17 +3,10 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-    Alert,
     Autocomplete,
     Box,
     Button,
     Chip,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    InputAdornment,
     MenuItem,
     Paper,
     Skeleton,
@@ -28,14 +21,12 @@ import {
 import {
     CalendarMonthRounded,
     EditCalendarRounded,
-    InfoOutlined,
     PlayArrowRounded,
     RefreshRounded,
     RuleRounded,
-    SearchRounded,
     TuneRounded,
 } from '@mui/icons-material';
-import { addDays, eachWeekOfInterval, endOfWeek, format, isSameDay, parseISO, startOfWeek } from 'date-fns';
+import { addDays, eachWeekOfInterval, endOfWeek, format, parseISO, startOfWeek } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 
@@ -57,7 +48,6 @@ import { getApiErrorMessage } from '@/utils/apiError';
 
 const schedulingSchema = z.object({
     mode: z.enum(['class', 'teacher']),
-    preview_strategy: z.enum(['cold_start', 'replan_draft', 'replan_with_published_lock']),
     expected_start_date: z.string().optional(),
     class_ids: z.array(z.string()).optional(),
     teacher_ids: z.array(z.string()).optional(),
@@ -125,35 +115,12 @@ type DerivedPreviewState = {
     }>;
 };
 
-const previewStrategyOptions = [
-    {
-        value: 'replan_with_published_lock' as const,
-        label: 'Giữ lịch đã công bố',
-        description: 'Giữ các buổi đã công bố làm mốc ổn định, chỉ điều chỉnh cục bộ phần nháp hoặc xung đột mới.',
-    },
-    {
-        value: 'replan_draft' as const,
-        label: 'Xếp lại vùng nháp',
-        description: 'Cho phép xếp lại trên vùng nháp và các buổi mục tiêu, nhưng vẫn ưu tiên ít xáo trộn hơn xếp mới hoàn toàn.',
-    },
-    {
-        value: 'cold_start' as const,
-        label: 'Xếp mới hoàn toàn',
-        description: 'Xem như bài toán xếp từ đầu để so sánh đường cơ sở giữa các thuật toán và bộ dữ liệu đầu vào.',
-    },
-];
-
-const previewModeLabel = (value?: string) => {
-    switch (value) {
-        case 'cold_start':
-            return 'Xếp mới hoàn toàn';
-        case 'replan_draft':
-            return 'Xếp lại vùng nháp';
-        case 'replan_with_published_lock':
-            return 'Giữ lịch đã công bố';
-        default:
-            return value || 'Không rõ chế độ';
-    }
+type CalendarRow = {
+    key: string;
+    shiftLabel: string;
+    timeLabel: string;
+    startTime: string;
+    endTime: string;
 };
 
 const previewStatusLabel = (value?: string) => {
@@ -194,30 +161,11 @@ const deriveDefaultStartDate = (classes: MinimalScheduleClass[]) => {
     return dates[0]?.slice(0, 10) || fallbackDateFrom;
 };
 
-const deriveDefaultEndDate = (classes: MinimalScheduleClass[], dateFrom: string) => {
-    const dates = classes
-        .map((item) => item.end_date)
-        .filter((value): value is string => !!value)
-        .sort();
-    if (dates.length > 0) {
-        return dates[dates.length - 1].slice(0, 10);
-    }
-    return formatDateInput(addDays(parseISO(dateFrom), 90));
-};
-
 const formatDateTime = (value: string) =>
     format(parseISO(value), 'dd/MM/yyyy HH:mm', { locale: vi });
 
 const formatCompactDateTime = (value: string) =>
     format(parseISO(value), 'dd/MM HH:mm', { locale: vi });
-
-const formatWeekday = (value: string) => {
-    const date = parseISO(value);
-    return dayLabels[(date.getDay() + 6) % 7];
-};
-
-const formatOptionTitle = (option: SchedulingCandidateOption) =>
-    `${formatWeekday(option.start_time)}, ${format(parseISO(option.start_time), 'dd/MM/yyyy', { locale: vi })}`;
 
 const getConflictSeverity = (type: string): 'error' | 'warning' | 'info' => {
     switch (type) {
@@ -241,55 +189,6 @@ const getConflictSeverity = (type: string): 'error' | 'warning' | 'info' => {
             return 'warning';
         default:
             return 'info';
-    }
-};
-
-const getConflictActionHint = (type: string) => {
-    switch (type) {
-        case 'ASSIGNMENT_CONFLICT':
-            return 'Gợi ý: chọn lại slot/phòng cho một trong các buổi đang trùng ngay trong workspace bên dưới.';
-        case 'SYSTEM_LESSON_CONFLICT':
-            return 'Gợi ý: xem card buổi học đã lưu trên lịch rồi đổi tay sang ca/ngày/phòng khác để tránh đè dữ liệu hiện có.';
-        case 'MISSING_TEACHER':
-            return 'Gợi ý: vào Quản lý lớp học để gán giáo viên phụ trách rồi chạy lại xem trước.';
-        case 'SKILL_MISMATCH':
-            return 'Gợi ý: cập nhật kỹ năng/chứng chỉ cho giáo viên hoặc chỉnh `required skills` của khóa học để chỉ các lớp đủ chuẩn mới được đưa vào xếp lịch.';
-        case 'NO_CLASS_INPUT':
-            return 'Gợi ý: kiểm tra bộ lọc lớp, trạng thái đang mở hoặc giáo viên đã chọn.';
-        case 'NO_ACTIVE_ROOM':
-            return 'Gợi ý: bổ sung phòng học khả dụng hoặc kiểm tra phòng đã gán trong lịch tuần lớp.';
-        case 'PREFERRED_ROOM_UNAVAILABLE':
-            return 'Gợi ý: đổi phòng đang gán trong lịch tuần lớp hoặc chọn phòng trống khi chỉnh tay.';
-        case 'ROOM_CAPACITY_BLOCK':
-            return 'Gợi ý: chọn phòng sức chứa lớn hơn hoặc điều chỉnh sĩ số tối đa của lớp.';
-        case 'NO_SLOT_IN_RANGE':
-            return 'Gợi ý: đổi ngày bắt đầu dự kiến hoặc bổ sung thêm ngày/ca trong lịch tuần lớp.';
-        case 'NO_DOMAIN':
-            return 'Gợi ý: thử đổi sang ngày, ca hoặc phòng trống khác trong dialog chỉnh tay.';
-        case 'MISSING_COURSE':
-            return 'Gợi ý: gắn khóa học cho lớp trước khi chạy xem trước xếp lịch để hệ thống sinh đúng số buổi học.';
-        case 'INVALID_COURSE_SESSION_COUNT':
-            return 'Gợi ý: cập nhật `số ca` của khóa học thành số buổi hợp lệ.';
-        case 'INVALID_COURSE_DURATION':
-            return 'Gợi ý: cập nhật `thời lượng ca học` của khóa học để xem trước dùng đúng thời lượng buổi học.';
-        case 'CLASS_SCHEDULE_NO_SLOT':
-            return 'Gợi ý: kiểm tra lịch mẫu của lớp, `mã ca` đã gán và bảo đảm ca học đủ chứa thời lượng buổi học từ khóa học.';
-        case 'CLASS_SCHEDULE_ROOM_UNAVAILABLE':
-            return 'Gợi ý: kiểm tra `mã phòng` trong lịch mẫu của lớp hoặc nới lại bộ lọc phòng để giữ đúng phòng cố định theo lịch mẫu.';
-        case 'MISSING_CLASS_SCHEDULE':
-            return 'Gợi ý: vào Quản lý lớp học, mở tab lịch tuần và cấu hình ngày học cùng ca học cho lớp trước khi chạy xem trước lịch.';
-        case 'INSUFFICIENT_SCHEDULE_SLOTS':
-            return 'Gợi ý: tăng khoảng ngày xem trước hoặc bổ sung thêm ngày/ca trong lịch tuần lớp để đủ số slot hợp lệ.';
-        case 'INSUFFICIENT_ENROLLMENT':
-            return 'Gợi ý: chỉ đưa lớp vào xếp lịch khi lớp đã đạt ngưỡng sĩ số tối thiểu hoặc điều chỉnh lại chính sách mở lớp.';
-        case 'EXCESSIVE_MANUAL_ADJUSTMENT':
-            return 'Gợi ý: số ca cần sửa tay đang quá nhiều. Hãy tối ưu dữ liệu lớp, phòng, ca và lịch tuần trước khi chạy lại thuật toán.';
-        case 'NO_ACTIVE_SHIFT':
-            return 'Gợi ý: vào Quản lý ca học để tạo hoặc kích hoạt ít nhất một `Ca học` rồi chạy lại xem trước.';
-        case 'NO_VALID_DATE_RANGE':
-            return 'Gợi ý: chọn ngày kết thúc lớn hơn hoặc bằng ngày bắt đầu.';
-        default:
-            return 'Gợi ý: rà lại dữ liệu lớp, giáo viên, phòng và bộ lọc xem trước.';
     }
 };
 
@@ -368,6 +267,16 @@ const renderConflictChips = (tags: string[]) => {
         </Stack>
     );
 };
+
+const collectSessionIssueMessages = (session: SessionDraft) => uniqueTags([
+    ...session.baseConflicts.map((conflict) => conflict.message),
+    ...session.derivedConflictMessages,
+]);
+
+const summarizeIssueMessages = (messages: string[]) => ({
+    primary: messages[0] || '',
+    remainingCount: Math.max(0, messages.length - 1),
+});
 
 const getPreviewFromCommitError = (error: unknown): SchedulingPreview | null => {
     if (typeof error !== 'object' || !error || !('data' in error)) {
@@ -733,13 +642,59 @@ const buildWeeks = (preview: SchedulingPreview) => {
     );
 };
 
+const getCalendarRowKey = (item: {
+    shift_id?: string;
+    start_time: string;
+    end_time: string;
+}) => item.shift_id || `${item.start_time.slice(11, 16)}-${item.end_time.slice(11, 16)}`;
+
+const buildCalendarRows = (
+    derivedPreview: DerivedPreviewState,
+    activeOptions: SchedulingCandidateOption[],
+): CalendarRow[] => {
+    const rows = new Map<string, CalendarRow>();
+
+    const registerRow = (entry: {
+        shift_id?: string;
+        shift_name?: string;
+        shift_code?: string;
+        start_time: string;
+        end_time: string;
+    }) => {
+        const key = getCalendarRowKey(entry);
+        if (rows.has(key)) {
+            return;
+        }
+
+        rows.set(key, {
+            key,
+            shiftLabel: entry.shift_name || entry.shift_code || 'Ca học',
+            timeLabel: `${entry.start_time.slice(11, 16)} - ${entry.end_time.slice(11, 16)}`,
+            startTime: entry.start_time,
+            endTime: entry.end_time,
+        });
+    };
+
+    derivedPreview.calendarAssignments.forEach(registerRow);
+    derivedPreview.existingLessons.forEach(registerRow);
+    activeOptions.forEach(registerRow);
+
+    return Array.from(rows.values()).sort((left, right) => {
+        if (left.startTime === right.startTime) {
+            return left.endTime.localeCompare(right.endTime);
+        }
+        return left.startTime.localeCompare(right.startTime);
+    });
+};
+
 export const SchedulingPage = () => {
     const [preview, setPreview] = useState<SchedulingPreview | null>(null);
     const [wizardStep, setWizardStep] = useState(0);
-    const [search, setSearch] = useState('');
     const [manualSelections, setManualSelections] = useState<Record<string, string>>({});
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [pendingOptionKey, setPendingOptionKey] = useState('');
+    const [selectedShiftId, setSelectedShiftId] = useState<string>('');
+    const [selectedRoomId, setSelectedRoomId] = useState<string>('');
 
     const { data: classesData, isLoading: isLoadingClasses } = useGetClassesQuery({ page: 1, limit: 200, status: 'OPEN' });
     const { data: teachersData, isLoading: isLoadingTeachers } = useGetTeachersQuery({ page: 1, limit: 200, status: 'ACTIVE' });
@@ -761,7 +716,6 @@ export const SchedulingPage = () => {
         resolver: zodResolver(schedulingSchema),
         defaultValues: {
             mode: 'class',
-            preview_strategy: 'replan_with_published_lock',
             expected_start_date: '',
             class_ids: [],
             teacher_ids: [],
@@ -769,7 +723,6 @@ export const SchedulingPage = () => {
     });
 
     const selectedMode = useWatch({ control, name: 'mode' });
-    const selectedPreviewStrategy = useWatch({ control, name: 'preview_strategy' });
     const selectedClassIds = useWatch({ control, name: 'class_ids' }) || [];
     const selectedTeacherIds = useWatch({ control, name: 'teacher_ids' }) || [];
     const expectedStartDate = useWatch({ control, name: 'expected_start_date' }) || '';
@@ -787,7 +740,6 @@ export const SchedulingPage = () => {
     }, [classes, selectedClasses, selectedMode, selectedTeacherIds]);
 
     const derivedDateFrom = expectedStartDate || deriveDefaultStartDate(schedulingClasses);
-    const derivedDateTo = deriveDefaultEndDate(schedulingClasses, derivedDateFrom);
     const selectedTeacherLabels = teachers
         .filter((item) => selectedTeacherIds.includes(item.id))
         .map((item) => `${item.full_name} (${item.code})`);
@@ -1093,30 +1045,7 @@ export const SchedulingPage = () => {
 
     const weeks = useMemo(() => (preview ? buildWeeks(preview) : []), [preview]);
 
-    const filteredSessions = useMemo(() => {
-        if (!derivedPreview) {
-            return [];
-        }
-
-        const keyword = search.trim().toLowerCase();
-        if (!keyword) {
-            return derivedPreview.sessions;
-        }
-
-        return derivedPreview.sessions.filter((session) => {
-            const bag = [
-                session.classCode,
-                session.className,
-                session.teacherLabel,
-                session.resolvedAssignment?.room_name,
-                session.resolvedAssignment?.shift_name,
-            ]
-                .filter((value): value is string => typeof value === 'string' && value.length > 0)
-                .join(' ')
-                .toLowerCase();
-            return bag.includes(keyword);
-        });
-    }, [derivedPreview, search]);
+    const filteredSessions = useMemo(() => derivedPreview?.sessions || [], [derivedPreview]);
 
     const classPreviewSummaries = useMemo(() => {
         if (!derivedPreview) {
@@ -1163,24 +1092,72 @@ export const SchedulingPage = () => {
         () => derivedPreview?.sessions.find((session) => session.variableId === activeSessionId) || null,
         [activeSessionId, derivedPreview],
     );
+    const actionableSessions = useMemo(
+        () => filteredSessions.filter((session) => !session.resolvedAssignment || session.derivedConflictMessages.length > 0),
+        [filteredSessions],
+    );
+    const activeSessionIssueSummary = useMemo(() => {
+        if (!activeSession) {
+            return null;
+        }
+        return summarizeIssueMessages(collectSessionIssueMessages(activeSession));
+    }, [activeSession]);
     const activeSessionAvailableOptions = useMemo(() => {
         if (!activeSession || !derivedPreview) {
             return [];
         }
         return filterAvailableCandidateOptions(activeSession, derivedPreview);
     }, [activeSession, derivedPreview]);
+    const activeShiftOptions = useMemo(() => {
+        const seen = new Map<string, string>();
+        activeSessionAvailableOptions.forEach((option) => {
+            const key = option.shift_id || '__no_shift__';
+            const label = option.shift_name || option.shift_code || 'Ca chưa đặt tên';
+            if (!seen.has(key)) {
+                seen.set(key, label);
+            }
+        });
+        return Array.from(seen.entries()).map(([value, label]) => ({ value, label }));
+    }, [activeSessionAvailableOptions]);
+    const activeRoomOptions = useMemo(() => {
+        const seen = new Map<string, string>();
+        activeSessionAvailableOptions
+            .filter((option) => !selectedShiftId || (option.shift_id || '__no_shift__') === selectedShiftId)
+            .forEach((option) => {
+                if (!seen.has(option.room_id)) {
+                    seen.set(option.room_id, option.room_name);
+                }
+            });
+        return Array.from(seen.entries()).map(([value, label]) => ({ value, label }));
+    }, [activeSessionAvailableOptions, selectedShiftId]);
+    const filteredActiveSessionOptions = useMemo(() => (
+        activeSessionAvailableOptions.filter((option) => {
+            const optionShiftId = option.shift_id || '__no_shift__';
+            if (selectedShiftId && optionShiftId !== selectedShiftId) {
+                return false;
+            }
+            if (selectedRoomId && option.room_id !== selectedRoomId) {
+                return false;
+            }
+            return true;
+        })
+    ), [activeSessionAvailableOptions, selectedRoomId, selectedShiftId]);
     useEffect(() => {
         if (!activeSession) {
             return;
         }
-        if (activeSessionAvailableOptions.some((option) => option.key === pendingOptionKey)) {
+        if (filteredActiveSessionOptions.some((option) => option.key === pendingOptionKey)) {
             return;
         }
-        setPendingOptionKey(activeSessionAvailableOptions[0]?.key || '');
-    }, [activeSession, activeSessionAvailableOptions, pendingOptionKey]);
+        setPendingOptionKey(filteredActiveSessionOptions[0]?.key || '');
+    }, [activeSession, filteredActiveSessionOptions, pendingOptionKey]);
 
     const activeStep = wizardStep;
     const canCommitPreview = !!derivedPreview && derivedPreview.status === 'COMPLETED' && !derivedPreview.summary.excessiveManualAdjustment;
+    const calendarRows = useMemo(
+        () => (derivedPreview ? buildCalendarRows(derivedPreview, filteredActiveSessionOptions) : []),
+        [derivedPreview, filteredActiveSessionOptions],
+    );
 
     const getAvailableOptionsForSession = (session: SessionDraft) =>
         derivedPreview ? filterAvailableCandidateOptions(session, derivedPreview) : [];
@@ -1189,6 +1166,8 @@ export const SchedulingPage = () => {
         setManualSelections({});
         setActiveSessionId(null);
         setPendingOptionKey('');
+        setSelectedShiftId('');
+        setSelectedRoomId('');
     };
 
     const syncPreviewState = (nextPreview: SchedulingPreview) => {
@@ -1209,8 +1188,7 @@ export const SchedulingPage = () => {
             const dateFrom = values.expected_start_date || deriveDefaultStartDate(schedulingClasses);
             const response = await previewScheduling({
                 date_from: dateFrom,
-                date_to: deriveDefaultEndDate(schedulingClasses, dateFrom),
-                mode: values.preview_strategy,
+                mode: 'replan_with_published_lock',
                 class_ids: values.mode === 'class' ? values.class_ids : [],
                 teacher_ids: values.mode === 'teacher' ? values.teacher_ids : [],
             }).unwrap();
@@ -1266,41 +1244,11 @@ export const SchedulingPage = () => {
             (currentKey && availableOptions.some((option) => option.key === currentKey) ? currentKey : '') ||
             availableOptions[0]?.key ||
             '';
+        const initialOption = availableOptions.find((option) => option.key === initialKey);
         setActiveSessionId(variableId);
+        setSelectedShiftId(initialOption?.shift_id || '__no_shift__');
+        setSelectedRoomId(initialOption?.room_id || '');
         setPendingOptionKey(initialKey);
-    };
-
-    const handleSaveManualSelection = () => {
-        if (!activeSessionId || !pendingOptionKey) {
-            setActiveSessionId(null);
-            setPendingOptionKey('');
-            return;
-        }
-        if (!activeSessionAvailableOptions.some((option) => option.key === pendingOptionKey)) {
-            toast.error('Phương án đã chọn không còn trống. Hãy chọn lại ngày, ca hoặc phòng khác.');
-            return;
-        }
-
-        setManualSelections((current) => ({
-            ...current,
-            [activeSessionId]: pendingOptionKey,
-        }));
-        setActiveSessionId(null);
-        setPendingOptionKey('');
-    };
-
-    const handleClearSessionSelection = () => {
-        if (!activeSessionId) {
-            return;
-        }
-
-        setManualSelections((current) => {
-            const next = { ...current };
-            delete next[activeSessionId];
-            return next;
-        });
-        setActiveSessionId(null);
-        setPendingOptionKey('');
     };
 
     const handleApplyManualOption = (variableId: string, optionKey: string) => {
@@ -1310,6 +1258,8 @@ export const SchedulingPage = () => {
         }));
         setActiveSessionId(null);
         setPendingOptionKey('');
+        setSelectedShiftId('');
+        setSelectedRoomId('');
     };
 
     const handleCommitPreview = async () => {
@@ -1351,7 +1301,6 @@ export const SchedulingPage = () => {
         <Box>
             <PageHeader
                 title="Xếp lịch"
-                subtitle="Chạy xem trước, xem lịch theo dạng lịch và chỉnh tay các ca học bị trùng trước khi xác nhận lưu."
                 breadcrumbs={[
                     { label: 'Tổng quan', path: '/app/admin/overview' },
                     { label: 'Xếp lịch' },
@@ -1388,9 +1337,6 @@ export const SchedulingPage = () => {
                                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
                                     Chọn đối tượng cần xếp lịch
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Chỉ cần chọn lớp hoặc giáo viên. Phòng, ngày học, ca học và giáo viên phụ trách sẽ lấy từ lịch tuần đã cấu hình trong từng lớp.
-                                </Typography>
                             </Box>
 
                             <Controller
@@ -1403,24 +1349,6 @@ export const SchedulingPage = () => {
                                     </TextField>
                                 )}
                             />
-
-                            <Controller
-                                control={control}
-                                name="preview_strategy"
-                                render={({ field }) => (
-                                    <TextField {...field} select label="Chế độ xem trước" fullWidth>
-                                        {previewStrategyOptions.map((option) => (
-                                            <MenuItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </MenuItem>
-                                        ))}
-                                    </TextField>
-                                )}
-                            />
-
-                            <Alert severity={selectedPreviewStrategy === 'cold_start' ? 'warning' : 'info'}>
-                                {previewStrategyOptions.find((option) => option.value === selectedPreviewStrategy)?.description}
-                            </Alert>
 
                             {selectedMode === 'class' ? (
                                 <Controller
@@ -1439,7 +1367,7 @@ export const SchedulingPage = () => {
                                                     {...params}
                                                     label="Chọn lớp"
                                                     error={!!errors.class_ids}
-                                                    helperText={errors.class_ids?.message || 'Có thể chọn một hoặc nhiều lớp đang mở cần xếp lịch.'}
+                                                    helperText={errors.class_ids?.message}
                                                 />
                                             )}
                                         />
@@ -1462,7 +1390,7 @@ export const SchedulingPage = () => {
                                                     {...params}
                                                     label="Chọn giáo viên"
                                                     error={!!errors.teacher_ids}
-                                                    helperText={errors.teacher_ids?.message || 'Hệ thống sẽ lấy các lớp đang mở mà giáo viên đang phụ trách.'}
+                                                    helperText={errors.teacher_ids?.message}
                                                 />
                                             )}
                                         />
@@ -1480,14 +1408,10 @@ export const SchedulingPage = () => {
                                         label="Ngày bắt đầu dự kiến"
                                         fullWidth
                                         InputLabelProps={{ shrink: true }}
-                                        helperText={`Để trống sẽ dùng ngày bắt đầu lớp: ${format(parseISO(deriveDefaultStartDate(schedulingClasses)), 'dd/MM/yyyy', { locale: vi })}. Ngày kết thúc tự lấy theo cài đặt lớp.`}
+                                        helperText={`Để trống sẽ dùng từ ${format(parseISO(deriveDefaultStartDate(schedulingClasses)), 'dd/MM/yyyy', { locale: vi })}.`}
                                     />
                                 )}
                             />
-
-                            {/*<Alert severity="info">*/}
-                            {/*    Bộ lọc phòng và khoảng thời gian đã được bỏ khỏi màn này để tránh nhập trùng dữ liệu. Nếu muốn đổi phòng/ca, hãy sửa lịch tuần của lớp hoặc chỉnh tay trong màn preview.*/}
-                            {/*</Alert>*/}
 
                             <Stack direction="row" justifyContent="flex-end">
                                 <Button variant="contained" onClick={() => void handleContinueConfig()}>
@@ -1504,9 +1428,6 @@ export const SchedulingPage = () => {
                             <Box>
                                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
                                     Xác nhận cấu hình trước khi chạy
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Hệ thống sẽ sinh số buổi cần xếp dựa trên khóa học, lịch tuần và khoảng ngày của lớp.
                                 </Typography>
                             </Box>
 
@@ -1532,38 +1453,13 @@ export const SchedulingPage = () => {
 
                                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, flex: 1 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                        Khoảng ngày hệ thống dùng
+                                        Ngày bắt đầu dự kiến
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Từ {format(parseISO(derivedDateFrom), 'dd/MM/yyyy', { locale: vi })} đến {format(parseISO(derivedDateTo), 'dd/MM/yyyy', { locale: vi })}
+                                        {format(parseISO(derivedDateFrom), 'dd/MM/yyyy', { locale: vi })}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Ngày bắt đầu lấy từ lựa chọn dự kiến hoặc ngày bắt đầu của lớp; ngày kết thúc lấy từ ngày kết thúc của lớp.
-                                    </Typography>
-                                </Paper>
-
-                                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, flex: 1 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                        Chế độ xem trước
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {previewStrategyOptions.find((item) => item.value === selectedPreviewStrategy)?.description}
-                                    </Typography>
-                                    <Chip
-                                        sx={{ mt: 1 }}
-                                        size="small"
-                                        color={selectedPreviewStrategy === 'cold_start' ? 'warning' : 'primary'}
-                                        label={previewModeLabel(selectedPreviewStrategy)}
-                                        variant="outlined"
-                                    />
                                 </Paper>
                             </Stack>
-
-                            <Alert severity={schedulingClasses.length > 0 ? 'success' : 'warning'}>
-                                {schedulingClasses.length > 0
-                                    ? 'Cấu hình đã sẵn sàng. Bản xem trước sẽ dùng lịch tuần lớp để chọn ngày, ca và phòng.'
-                                    : 'Chưa tìm thấy lớp đang mở phù hợp. Bạn có thể quay lại đổi lớp hoặc giáo viên.'}
-                            </Alert>
 
                             <Stack direction="row" justifyContent="space-between">
                                 <Button variant="outlined" onClick={() => setWizardStep(0)}>
@@ -1620,10 +1516,10 @@ export const SchedulingPage = () => {
                             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between">
                                 <Box>
                                     <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                                        Lần chạy xem trước: {preview.run_id}
+                                        Trạng thái xem trước: {previewStatusLabel(derivedPreview.status)}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Sinh lúc {formatDateTime(preview.generated_at)} • Trạng thái hiện tại {previewStatusLabel(derivedPreview.status)}
+                                        Cập nhật lúc {formatDateTime(preview.generated_at)}
                                     </Typography>
                                 </Box>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -1632,13 +1528,7 @@ export const SchedulingPage = () => {
                                     <Chip label={`${derivedPreview.summary.scheduledLessons} buổi đã xếp`} color="success" variant="outlined" />
                                     <Chip label={`${derivedPreview.summary.unscheduledLessons} buổi chưa xếp`} color="warning" variant="outlined" />
                                     <Chip label={`${derivedPreview.summary.conflictCount} trùng`} color="error" variant="outlined" />
-                                    <Chip label={previewModeLabel(preview.mode)} color="info" variant="outlined" />
                                     <Chip label={`Điểm mềm ${derivedPreview.summary.softScore}`} color="primary" variant="outlined" />
-                                    <Chip
-                                        label={`Chênh điểm ${formatScoreDelta(derivedPreview.summary.scoreDelta)}`}
-                                        color={getScoreDeltaTone(derivedPreview.summary.scoreDelta)}
-                                        variant="outlined"
-                                    />
                                     <Chip
                                         label={`Chỉnh tay ${derivedPreview.summary.manualAdjustmentCount}/${derivedPreview.summary.manualAdjustmentLimit}`}
                                         color={derivedPreview.summary.excessiveManualAdjustment ? 'error' : 'secondary'}
@@ -1669,22 +1559,12 @@ export const SchedulingPage = () => {
                                         color={preview.summary.room_change_count > 0 ? 'warning' : 'success'}
                                         variant="outlined"
                                     />
+                                    <Chip
+                                        label={`Lấp đầy ${(preview.summary.average_capacity_utilization * 100).toFixed(0)}%`}
+                                        color="default"
+                                        variant="outlined"
+                                    />
                                 </Stack>
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1.25, display: 'block' }}>
-                                    Nếu các chỉ số này tăng cao, bản xem trước đang phải xáo trộn nhiều hơn mức mong muốn cho vận hành thực tế.
-                                </Typography>
-                            </Paper>
-
-                            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4, flex: 1 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.75 }}>
-                                    Mức lấp đầy trung bình
-                                </Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 800 }}>
-                                    {(preview.summary.average_capacity_utilization * 100).toFixed(0)}%
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Tỷ lệ lấp đầy trung bình của các buổi đã được xếp trong lần chạy xem trước hiện tại.
-                                </Typography>
                             </Paper>
                         </Stack>
 
@@ -1725,32 +1605,6 @@ export const SchedulingPage = () => {
                             </Stack>
                         </Paper>
 
-                        {derivedPreview.remainingConflicts.length > 0 ? (
-                            <Alert severity={derivedPreview.calendarAssignments.length > 0 ? 'warning' : 'error'}>
-                                Lịch xem trước còn {derivedPreview.remainingConflicts.length} vấn đề cần xử lý. Bạn có thể đổi chỗ/phòng cho từng ca học ngay hoặc quay lại sửa dữ liệu lớp nếu trùng lịch là do thiếu giáo viên/lịch tuần.
-                            </Alert>
-                        ) : (
-                            <Alert severity="success">Lịch xem trước hiện không còn lịch trùng.</Alert>
-                        )}
-
-                        {derivedPreview.summary.excessiveManualAdjustment ? (
-                            <Alert severity="warning">
-                                Số ca chỉnh tay hiện tại là {derivedPreview.summary.manualAdjustmentCount}, vượt ngưỡng cho phép {derivedPreview.summary.manualAdjustmentLimit}. Hãy tối ưu lại dữ liệu đầu vào thay vì vá tay quá nhiều.
-                            </Alert>
-                        ) : null}
-
-                        {derivedPreview.summary.scoreDelta < 0 ? (
-                            <Alert severity={derivedPreview.summary.scoreDelta < -10 ? 'warning' : 'info'}>
-                                Điểm luật mềm đang thấp hơn {Math.abs(derivedPreview.summary.scoreDelta)} điểm so với kết quả thuật toán ban đầu ({derivedPreview.summary.baseSoftScore}). Nếu đây không phải phương án bắt buộc, nên chọn slot khác ít ảnh hưởng chất lượng lịch hơn.
-                            </Alert>
-                        ) : null}
-
-                        {preview.summary.schedule_change_count > 0 && preview.mode === 'replan_with_published_lock' ? (
-                            <Alert severity="info">
-                                Bản xem trước đang ở chế độ giữ lịch đã công bố nhưng vẫn có {preview.summary.schedule_change_count} ca bị dịch chuyển. Nên rà lại tác động trước khi lưu nếu đây là lịch gần công bố.
-                            </Alert>
-                        ) : null}
-
                         <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4 }}>
                             <Stack
                                 direction={{ xs: 'column', lg: 'row' }}
@@ -1759,20 +1613,6 @@ export const SchedulingPage = () => {
                                 alignItems={{ xs: 'stretch', lg: 'center' }}
                                 sx={{ mb: 2 }}
                             >
-                                <TextField
-                                    size="small"
-                                    value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
-                                    placeholder="Tìm lớp, giáo viên, phòng, ca học..."
-                                    sx={{ minWidth: { xs: '100%', md: 320 } }}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <SearchRounded fontSize="small" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
                                 <Stack direction="row" spacing={1}>
                                     <Button
                                         variant="outlined"
@@ -1807,25 +1647,12 @@ export const SchedulingPage = () => {
                                 </Stack>
                             </Stack>
 
-                            {canCommitPreview ? (
-                                <Alert severity="success" sx={{ mb: 2 }}>
-                                    Lịch hiện đã đạt trạng thái `Hoàn tất`. Bạn có thể xác nhận lưu để tạo buổi học thật; hệ thống sẽ kiểm tra lần cuối trước khi ghi dữ liệu.
-                                </Alert>
-                            ) : (
-                                <Alert severity="info" sx={{ mb: 2 }}>
-                                    Xác nhận lưu chỉ mở khi tất cả ca học đã được xếp, không còn trùng lịch và số chỉnh tay không vượt ngưỡng cho phép. Hãy xử lý các ca học chưa thỏa mãn ở bảng và lịch bên dưới.
-                                </Alert>
-                            )}
-
                             <Stack spacing={2.5}>
                                 <Stack direction="row" spacing={1} alignItems="center">
                                     <CalendarMonthRounded color="primary" />
                                     <Box>
                                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                                             Xem trước lịch
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Các buổi đã xếp được hiển thị theo tuần. Bấm vào từng card để đổi chỗ/phòng ngay tại chỗ.
                                         </Typography>
                                     </Box>
                                 </Stack>
@@ -1838,87 +1665,112 @@ export const SchedulingPage = () => {
                                                     Tuần {weekIndex + 1}: {format(week[0], 'dd/MM', { locale: vi })} - {format(week[6], 'dd/MM/yyyy', { locale: vi })}
                                                 </Typography>
                                             </Box>
-                                            <Box
-                                                sx={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: { xs: '1fr', lg: 'repeat(7, minmax(0, 1fr))' },
-                                                }}
-                                            >
-                                                {week.map((day, dayIndex) => {
-                                                    const dayString = format(day, 'yyyy-MM-dd');
-                                                    const dayAssignments = derivedPreview.calendarAssignments.filter((assignment) =>
-                                                        assignment.start_time.startsWith(dayString),
-                                                    );
-                                                    const dayExistingLessons = derivedPreview.existingLessons.filter((lesson) =>
-                                                        lesson.start_time.startsWith(dayString),
-                                                    );
-                                                    const dayActiveOptions = activeSession
-                                                        ? activeSessionAvailableOptions.filter((option) =>
-                                                            option.start_time.startsWith(dayString),
-                                                        )
-                                                        : [];
-
-                                                    return (
+                                            <Box sx={{ overflowX: 'auto' }}>
+                                                <Box
+                                                    sx={{
+                                                        minWidth: 1120,
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '160px repeat(7, minmax(0, 1fr))',
+                                                    }}
+                                                >
+                                                    <Box sx={{ p: 1.5, borderBottom: '1px solid rgba(15,23,42,0.08)', backgroundColor: '#f8fafc' }}>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                                            Ca học
+                                                        </Typography>
+                                                    </Box>
+                                                    {week.map((day, dayIndex) => (
                                                         <Box
-                                                            key={day.toISOString()}
+                                                            key={`header-${day.toISOString()}`}
                                                             sx={{
                                                                 p: 1.5,
-                                                                minHeight: 180,
-                                                                borderLeft: { xs: 'none', lg: dayIndex === 0 ? 'none' : '1px solid rgba(15,23,42,0.08)' },
-                                                                borderTop: '1px solid rgba(15,23,42,0.08)',
+                                                                borderLeft: '1px solid rgba(15,23,42,0.08)',
+                                                                borderBottom: '1px solid rgba(15,23,42,0.08)',
+                                                                backgroundColor: '#f8fafc',
                                                             }}
                                                         >
-                                                            <Stack spacing={1}>
-                                                                <Box>
-                                                                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                                                        {dayLabels[dayIndex]}
-                                                                    </Typography>
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {format(day, 'dd/MM/yyyy', { locale: vi })}
-                                                                    </Typography>
-                                                                </Box>
+                                                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                                                {dayLabels[dayIndex]}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {format(day, 'dd/MM/yyyy', { locale: vi })}
+                                                            </Typography>
+                                                        </Box>
+                                                    ))}
 
-                                                                {activeSession && dayActiveOptions.length > 0 ? (
-                                                                    <Stack spacing={1}>
-                                                                        {dayActiveOptions.map((option) => {
-                                                                            const insight = getOptionScoreInsight(activeSession, option, derivedPreview);
-                                                                            const isSelected = pendingOptionKey === option.key;
-                                                                            return (
-                                                                                <Tooltip
-                                                                                    key={`${activeSession.variableId}-${option.key}`}
-                                                                                    title={renderScoreInsightTooltip(insight)}
-                                                                                    placement="top"
-                                                                                    arrow
-                                                                                >
-                                                                                    <Paper
-                                                                                        variant="outlined"
-                                                                                        onClick={() => handleApplyManualOption(activeSession.variableId, option.key)}
-                                                                                        sx={{
-                                                                                            p: 1.25,
-                                                                                            borderRadius: 2.5,
-                                                                                            cursor: 'pointer',
-                                                                                            borderStyle: 'dashed',
-                                                                                            borderWidth: isSelected ? 2 : 1,
-                                                                                            borderColor: isSelected ? 'primary.main' : 'secondary.main',
-                                                                                            backgroundColor: isSelected ? 'rgba(14,165,233,0.08)' : 'rgba(168,85,247,0.04)',
-                                                                                            transition: 'all 0.2s',
-                                                                                            '&:hover': {
-                                                                                                backgroundColor: 'rgba(14,165,233,0.12)',
-                                                                                                borderColor: 'primary.main',
-                                                                                            }
-                                                                                        }}
+                                                    {calendarRows.map((row) => (
+                                                        <Box
+                                                            key={`calendar-row-${row.key}`}
+                                                            sx={{ display: 'contents' }}
+                                                        >
+                                                            <Box
+                                                                sx={{
+                                                                    p: 1.5,
+                                                                    borderBottom: '1px solid rgba(15,23,42,0.08)',
+                                                                    backgroundColor: '#fcfcfd',
+                                                                }}
+                                                            >
+                                                                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                                    {row.shiftLabel}
+                                                                </Typography>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {row.timeLabel}
+                                                                </Typography>
+                                                            </Box>
+                                                            {week.map((day) => {
+                                                                const dayString = format(day, 'yyyy-MM-dd');
+                                                                const rowAssignments = derivedPreview.calendarAssignments.filter((assignment) =>
+                                                                    assignment.start_time.startsWith(dayString) && getCalendarRowKey(assignment) === row.key,
+                                                                );
+                                                                const rowExistingLessons = derivedPreview.existingLessons.filter((lesson) =>
+                                                                    lesson.start_time.startsWith(dayString) && getCalendarRowKey(lesson) === row.key,
+                                                                );
+                                                                const rowActiveOptions = activeSession
+                                                                    ? filteredActiveSessionOptions.filter((option) =>
+                                                                        option.start_time.startsWith(dayString) && getCalendarRowKey(option) === row.key,
+                                                                    )
+                                                                    : [];
+
+                                                                return (
+                                                                    <Box
+                                                                        key={`${row.key}-${day.toISOString()}`}
+                                                                        sx={{
+                                                                            p: 1,
+                                                                            minHeight: 132,
+                                                                            borderLeft: '1px solid rgba(15,23,42,0.08)',
+                                                                            borderBottom: '1px solid rgba(15,23,42,0.08)',
+                                                                        }}
+                                                                    >
+                                                                        <Stack spacing={0.75}>
+                                                                            {rowActiveOptions.map((option) => {
+                                                                                const insight = getOptionScoreInsight(activeSession!, option, derivedPreview);
+                                                                                const isSelected = pendingOptionKey === option.key;
+                                                                                return (
+                                                                                    <Tooltip
+                                                                                        key={`${activeSession!.variableId}-${option.key}`}
+                                                                                        title={renderScoreInsightTooltip(insight)}
+                                                                                        placement="top"
+                                                                                        arrow
                                                                                     >
-                                                                                        <Stack spacing={0.75}>
-                                                                                            <Typography variant="body2" sx={{ fontWeight: 700, color: isSelected ? 'primary.dark' : 'secondary.dark' }}>
-                                                                                                Chuyển tới slot này
-                                                                                            </Typography>
-                                                                                            <Typography variant="caption" color="text.secondary">
-                                                                                                {format(parseISO(option.start_time), 'HH:mm', { locale: vi })} - {format(parseISO(option.end_time), 'HH:mm', { locale: vi })}
-                                                                                            </Typography>
-                                                                                            <Typography variant="caption" color="text.secondary">
-                                                                                                {option.room_name} • {option.shift_name || 'Ca tự do'}
-                                                                                            </Typography>
-                                                                                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                                                        <Paper
+                                                                                            variant="outlined"
+                                                                                            onClick={() => handleApplyManualOption(activeSession!.variableId, option.key)}
+                                                                                            sx={{
+                                                                                                p: 1,
+                                                                                                borderRadius: 2,
+                                                                                                cursor: 'pointer',
+                                                                                                borderStyle: 'dashed',
+                                                                                                borderWidth: isSelected ? 2 : 1,
+                                                                                                borderColor: isSelected ? 'primary.main' : 'secondary.main',
+                                                                                                backgroundColor: isSelected ? 'rgba(14,165,233,0.08)' : 'rgba(168,85,247,0.04)',
+                                                                                            }}
+                                                                                        >
+                                                                                            <Stack spacing={0.5}>
+                                                                                                <Typography variant="body2" sx={{ fontWeight: 700, color: isSelected ? 'primary.dark' : 'secondary.dark' }}>
+                                                                                                    Buổi {activeSession!.sessionIndex}/{activeSession!.sessionTotal}
+                                                                                                </Typography>
+                                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                                    {option.room_name}
+                                                                                                </Typography>
                                                                                                 <Chip
                                                                                                     size="small"
                                                                                                     color={getScoreDeltaTone(insight.delta)}
@@ -1926,104 +1778,96 @@ export const SchedulingPage = () => {
                                                                                                     label={`Điểm mềm ${formatScoreDelta(insight.delta)}`}
                                                                                                 />
                                                                                             </Stack>
+                                                                                        </Paper>
+                                                                                    </Tooltip>
+                                                                                );
+                                                                            })}
+
+                                                                            {rowExistingLessons.map((lesson) => (
+                                                                                <Tooltip
+                                                                                    key={lesson.lesson_id}
+                                                                                    title={`${formatDateTime(lesson.start_time)} - ${format(parseISO(lesson.end_time), 'HH:mm', { locale: vi })} • ${lesson.room_name || 'Chưa có phòng'} • ${lesson.teacher_label || 'Chưa có giáo viên'}`}
+                                                                                    arrow
+                                                                                >
+                                                                                    <Paper
+                                                                                        variant="outlined"
+                                                                                        sx={{
+                                                                                            p: 1,
+                                                                                            borderRadius: 2,
+                                                                                            backgroundColor: 'rgba(15,23,42,0.04)',
+                                                                                            borderColor: derivedPreview.existingLessonConflictTags[lesson.lesson_id]?.length
+                                                                                                ? 'error.light'
+                                                                                                : 'rgba(15,23,42,0.12)',
+                                                                                        }}
+                                                                                    >
+                                                                                        <Stack spacing={0.5}>
+                                                                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                                                                {lesson.class_code} • Đã lưu
+                                                                                            </Typography>
+                                                                                            <Typography variant="caption" color="text.secondary">
+                                                                                                {lesson.room_name || 'Chưa có phòng'}
+                                                                                            </Typography>
+                                                                                            {renderConflictChips(derivedPreview.existingLessonConflictTags[lesson.lesson_id] || [])}
                                                                                         </Stack>
                                                                                     </Paper>
                                                                                 </Tooltip>
-                                                                            );
-                                                                        })}
-                                                                    </Stack>
-                                                                ) : null}
+                                                                            ))}
 
-                                                                {dayExistingLessons.length > 0 ? (
-                                                                    <Stack spacing={1}>
-                                                                        {dayExistingLessons.map((lesson) => (
-                                                                            <Paper
-                                                                                key={lesson.lesson_id}
-                                                                                variant="outlined"
-                                                                                sx={{
-                                                                                    p: 1.25,
-                                                                                    borderRadius: 2.5,
-                                                                                    backgroundColor: 'rgba(15,23,42,0.04)',
-                                                                                    borderColor: derivedPreview.existingLessonConflictTags[lesson.lesson_id]?.length
-                                                                                        ? 'error.light'
-                                                                                        : 'rgba(15,23,42,0.12)',
-                                                                                }}
-                                                                            >
-                                                                                <Stack spacing={0.5}>
-                                                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                                                                        {lesson.class_code} • Buổi đã lưu
-                                                                                    </Typography>
-                                                                                    <Typography variant="caption" color="text.secondary">
-                                                                                        {formatCompactDateTime(lesson.start_time)} - {format(parseISO(lesson.end_time), 'HH:mm', { locale: vi })}
-                                                                                    </Typography>
-                                                                                    <Typography variant="caption" color="text.secondary">
-                                                                                        {lesson.room_name || 'Chưa có phòng'} • {lesson.teacher_label || 'Chưa có giáo viên'}
-                                                                                    </Typography>
-                                                                                    {renderConflictChips(derivedPreview.existingLessonConflictTags[lesson.lesson_id] || [])}
-                                                                                </Stack>
-                                                                            </Paper>
-                                                                        ))}
-                                                                    </Stack>
-                                                                ) : null}
-
-                                                                {dayAssignments.length > 0 ? (
-                                                                    <Stack spacing={1}>
-                                                                        {dayAssignments.map((assignment) => {
-                                                                            const session = derivedPreview.sessions.find((item) => item.variableId === assignment.variable_id);
-                                                                            const isManual = !!manualSelections[assignment.variable_id];
-                                                                            const isEditingThis = activeSession?.variableId === assignment.variable_id;
-                                                                            return (
-                                                                                <Paper
-                                                                                    key={assignment.variable_id}
-                                                                                    variant="outlined"
-                                                                                    sx={{
-                                                                                        p: 1.25,
-                                                                                        borderRadius: 2.5,
-                                                                                        backgroundColor: isEditingThis ? 'rgba(14,165,233,0.12)' : isManual ? 'rgba(56,189,248,0.08)' : 'rgba(15,118,110,0.06)',
-                                                                                        borderColor: isEditingThis ? 'primary.main' : session?.derivedConflictMessages.length ? 'warning.main' : 'rgba(15,118,110,0.2)',
-                                                                                        borderWidth: isEditingThis ? 2 : 1,
-                                                                                    }}
-                                                                                >
-                                                                                    <Stack spacing={0.75}>
-                                                                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                                                                            {assignment.class_code} • Buổi {assignment.session_index}/{assignment.session_total}
-                                                                                        </Typography>
-                                                                                        <Typography variant="caption" color="text.secondary">
-                                                                                            {formatCompactDateTime(assignment.start_time)} - {format(parseISO(assignment.end_time), 'HH:mm', { locale: vi })}
-                                                                                        </Typography>
-                                                                                        <Typography variant="caption" color="text.secondary">
-                                                                                            {assignment.room_name} • {assignment.shift_name || 'Ca tự do'}
-                                                                                        </Typography>
-                                                                                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                                                                                            <Chip
-                                                                                                size="small"
-                                                                                                color={assignment.constraint_fit === 'MANUAL_OVERRIDE' ? 'secondary' : 'success'}
-                                                                                                label={assignment.constraint_fit === 'MANUAL_OVERRIDE' ? 'Chỉnh tay' : 'Theo hệ thống'}
-                                                                                            />
-                                                                                        </Stack>
-                                                                                        {renderConflictChips(session?.conflictTags || [])}
-                                                                                        <Button
-                                                                                            size="small"
-                                                                                            color={isEditingThis ? 'error' : 'primary'}
-                                                                                            startIcon={<EditCalendarRounded />}
-                                                                                            onClick={() => toggleEditMode(assignment.variable_id)}
+                                                                            {rowAssignments.map((assignment) => {
+                                                                                const session = derivedPreview.sessions.find((item) => item.variableId === assignment.variable_id);
+                                                                                const isManual = !!manualSelections[assignment.variable_id];
+                                                                                const isEditingThis = activeSession?.variableId === assignment.variable_id;
+                                                                                return (
+                                                                                    <Tooltip
+                                                                                        key={assignment.variable_id}
+                                                                                        title={`${formatDateTime(assignment.start_time)} - ${format(parseISO(assignment.end_time), 'HH:mm', { locale: vi })} • ${assignment.room_name} • ${assignment.shift_name || 'Ca tự do'}`}
+                                                                                        arrow
+                                                                                    >
+                                                                                        <Paper
+                                                                                            variant="outlined"
+                                                                                            sx={{
+                                                                                                p: 1,
+                                                                                                borderRadius: 2,
+                                                                                                backgroundColor: isEditingThis ? 'rgba(14,165,233,0.12)' : isManual ? 'rgba(56,189,248,0.08)' : 'rgba(15,118,110,0.06)',
+                                                                                                borderColor: isEditingThis ? 'primary.main' : session?.derivedConflictMessages.length ? 'warning.main' : 'rgba(15,118,110,0.2)',
+                                                                                                borderWidth: isEditingThis ? 2 : 1,
+                                                                                            }}
                                                                                         >
-                                                                                            {isEditingThis ? 'Hủy đổi' : 'Đổi chỗ'}
-                                                                                        </Button>
-                                                                                    </Stack>
-                                                                                </Paper>
-                                                                            );
-                                                                        })}
-                                                                    </Stack>
-                                                                ) : !dayExistingLessons.length ? (
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        Không có buổi nào được xếp trong ngày này.
-                                                                    </Typography>
-                                                                ) : null}
-                                                            </Stack>
+                                                                                            <Stack spacing={0.5}>
+                                                                                                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                                                                    {assignment.class_code} • Buổi {assignment.session_index}/{assignment.session_total}
+                                                                                                </Typography>
+                                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                                    {assignment.room_name}
+                                                                                                </Typography>
+                                                                                                <Stack direction="row" spacing={0.75} flexWrap="wrap">
+                                                                                                    <Chip
+                                                                                                        size="small"
+                                                                                                        color={assignment.constraint_fit === 'MANUAL_OVERRIDE' ? 'secondary' : 'success'}
+                                                                                                        label={assignment.constraint_fit === 'MANUAL_OVERRIDE' ? 'Chỉnh tay' : 'Theo hệ thống'}
+                                                                                                    />
+                                                                                                </Stack>
+                                                                                                {renderConflictChips(session?.conflictTags || [])}
+                                                                                                <Button
+                                                                                                    size="small"
+                                                                                                    color={isEditingThis ? 'error' : 'primary'}
+                                                                                                    startIcon={<EditCalendarRounded />}
+                                                                                                    onClick={() => toggleEditMode(assignment.variable_id)}
+                                                                                                >
+                                                                                                    {isEditingThis ? 'Hủy đổi' : 'Đổi chỗ'}
+                                                                                                </Button>
+                                                                                            </Stack>
+                                                                                        </Paper>
+                                                                                    </Tooltip>
+                                                                                );
+                                                                            })}
+                                                                        </Stack>
+                                                                    </Box>
+                                                                );
+                                                            })}
                                                         </Box>
-                                                    );
-                                                })}
+                                                    ))}
+                                                </Box>
                                             </Box>
                                         </Paper>
                                     ))}
@@ -2033,15 +1877,67 @@ export const SchedulingPage = () => {
 
                         <Stack direction={{ xs: 'column', xl: 'row' }} spacing={2.5}>
                             <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4, flex: 1.1 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                                    Ca học cần xử lý
-                                </Typography>
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                        Ca cần xử lý
+                                    </Typography>
+                                    <Chip size="small" label={`${actionableSessions.length} ca`} variant="outlined" />
+                                </Stack>
+                                {activeSession ? (
+                                    <Stack spacing={1.25} sx={{ mb: 2 }}>
+                                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                Đang chọn vị trí cho {activeSession.classCode} • Buổi {activeSession.sessionIndex}/{activeSession.sessionTotal}
+                                            </Typography>
+                                            <Chip size="small" label={`${filteredActiveSessionOptions.length} vị trí hợp lệ`} color="primary" variant="outlined" />
+                                        </Stack>
+                                        {activeSessionIssueSummary?.primary ? (
+                                            <Typography variant="caption" color="text.secondary">
+                                                {activeSessionIssueSummary.primary}
+                                                {activeSessionIssueSummary.remainingCount > 0 ? ` • +${activeSessionIssueSummary.remainingCount} vấn đề` : ''}
+                                            </Typography>
+                                        ) : null}
+                                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.25}>
+                                            <TextField
+                                                select
+                                                label="Chọn ca"
+                                                size="small"
+                                                value={selectedShiftId}
+                                                onChange={(event) => {
+                                                    setSelectedShiftId(event.target.value);
+                                                    setSelectedRoomId('');
+                                                }}
+                                                sx={{ minWidth: 220 }}
+                                            >
+                                                {activeShiftOptions.map((option) => (
+                                                    <MenuItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                            <TextField
+                                                select
+                                                label="Chọn phòng"
+                                                size="small"
+                                                value={selectedRoomId}
+                                                onChange={(event) => setSelectedRoomId(event.target.value)}
+                                                sx={{ minWidth: 220 }}
+                                            >
+                                                <MenuItem value="">Tất cả phòng hợp lệ</MenuItem>
+                                                {activeRoomOptions.map((option) => (
+                                                    <MenuItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </MenuItem>
+                                                ))}
+                                            </TextField>
+                                        </Stack>
+                                    </Stack>
+                                ) : null}
                                 <Stack spacing={1.25}>
-                                    {filteredSessions.filter((session) => !session.resolvedAssignment || session.derivedConflictMessages.length > 0).length > 0 ? (
-                                        filteredSessions
-                                            .filter((session) => !session.resolvedAssignment || session.derivedConflictMessages.length > 0)
-                                            .map((session) => {
+                                    {actionableSessions.length > 0 ? (
+                                        actionableSessions.map((session) => {
                                                 const availableOptionCount = getAvailableOptionsForSession(session).length;
+                                                const issueSummary = summarizeIssueMessages(collectSessionIssueMessages(session));
                                                 return (
                                                     <Paper
                                                         key={session.variableId}
@@ -2074,19 +1970,19 @@ export const SchedulingPage = () => {
                                                             {renderConflictChips(session.conflictTags)}
                                                             {session.resolvedAssignment ? (
                                                                 <Typography variant="caption" color="text.secondary">
-                                                                    Hiện tại: {formatCompactDateTime(session.resolvedAssignment.start_time)} • {session.resolvedAssignment.room_name} • {session.resolvedAssignment.shift_name || 'Ca tự do'}
+                                                                    Đang ở: {formatCompactDateTime(session.resolvedAssignment.start_time)} • {session.resolvedAssignment.room_name} • {session.resolvedAssignment.shift_name || 'Ca tự do'}
                                                                 </Typography>
                                                             ) : null}
-                                                            {session.baseConflicts.map((conflict) => (
-                                                                <Alert key={`${conflict.variable_id}-${conflict.type}`} severity={getConflictSeverity(conflict.type)}>
-                                                                    {conflict.message}
-                                                                </Alert>
-                                                            ))}
-                                                            {session.derivedConflictMessages.map((message) => (
-                                                                <Alert key={`${session.variableId}-${message}`} severity="warning">
-                                                                    {message}
-                                                                </Alert>
-                                                            ))}
+                                                            {issueSummary.primary ? (
+                                                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                                                                    <Typography variant="caption" sx={{ color: 'warning.main' }}>
+                                                                        {issueSummary.primary}
+                                                                    </Typography>
+                                                                    {issueSummary.remainingCount > 0 ? (
+                                                                        <Chip size="small" variant="outlined" label={`+${issueSummary.remainingCount} vấn đề`} />
+                                                                    ) : null}
+                                                                </Stack>
+                                                            ) : null}
                                                             <Button
                                                                 variant={activeSessionId === session.variableId ? 'contained' : 'outlined'}
                                                                 color={activeSessionId === session.variableId ? 'error' : 'primary'}
@@ -2096,8 +1992,8 @@ export const SchedulingPage = () => {
                                                             >
                                                                 {availableOptionCount > 0
                                                                     ? activeSessionId === session.variableId
-                                                                        ? 'Hủy đổi'
-                                                                        : 'Chọn ngày/ca/phòng trống'
+                                                                        ? 'Đóng chọn'
+                                                                        : 'Chọn vị trí'
                                                                     : 'Không còn phương án trống'}
                                                             </Button>
                                                         </Stack>
@@ -2105,36 +2001,47 @@ export const SchedulingPage = () => {
                                                 );
                                             })
                                     ) : (
-                                        <Alert severity="success">
-                                            Không còn ca học nào cần xử lý trong bộ lọc hiện tại.
-                                        </Alert>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Không còn ca học nào cần xử lý.
+                                        </Typography>
                                     )}
                                 </Stack>
                             </Paper>
 
                             <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4, flex: 1 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                                    Danh sách trùng lịch
-                                </Typography>
+                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                        Lịch còn trùng
+                                    </Typography>
+                                    <Chip size="small" label={`${derivedPreview.remainingConflicts.length} mục`} variant="outlined" />
+                                </Stack>
                                 <Stack spacing={1.25}>
                                     {derivedPreview.remainingConflicts.length > 0 ? (
                                         derivedPreview.remainingConflicts.map((conflict, index) => (
-                                            <Alert
+                                            <Paper
                                                 key={`${conflict.variable_id || 'global'}-${conflict.type}-${index}`}
-                                                severity={getConflictSeverity(conflict.type)}
+                                                variant="outlined"
+                                                sx={{
+                                                    p: 1.5,
+                                                    borderRadius: 3,
+                                                    borderColor: getConflictSeverity(conflict.type) === 'error' ? 'error.light' : 'warning.light',
+                                                }}
                                             >
-                                                {renderConflictChips(buildConflictTags(conflict.type, conflict.message))}
-                                                <strong>{getConflictScopeLabel(conflict.class_code, conflict.class_name, conflict.session_index, conflict.session_total)}</strong>
-                                                {`: ${conflict.message} `}
-                                                <Typography component="span" variant="body2" sx={{ fontWeight: 600 }}>
-                                                    {getConflictActionHint(conflict.type)}
+                                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 0.75 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                        {getConflictScopeLabel(conflict.class_code, conflict.class_name, conflict.session_index, conflict.session_total)}
+                                                    </Typography>
+                                                    {renderConflictChips(buildConflictTags(conflict.type, conflict.message))}
+                                                </Stack>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {conflict.message}
                                                 </Typography>
-                                            </Alert>
+                                            </Paper>
                                         ))
                                     ) : (
-                                        <Alert severity="success">
-                                            Không còn lịch trùng nào sau các chỉnh sửa hiện tại.
-                                        </Alert>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Không còn lịch trùng.
+                                        </Typography>
                                     )}
                                 </Stack>
                             </Paper>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+    Autocomplete,
     Container,
     Paper,
     Box,
@@ -23,17 +24,12 @@ import {
 import { ArrowBack, Save } from '@mui/icons-material';
 import {
     useGetTeacherByIdQuery,
+    useGetSkillCatalogQuery,
     useCreateTeacherMutation,
     useUpdateTeacherMutation
 } from '@/api/teacherApi';
 import { createTeacherSchema, updateTeacherSchema } from '@/schemas/teacherSchema';
 import { toast } from 'sonner';
-
-const parseSkillInput = (value: string) =>
-    value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
 
 export const TeacherFormPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -41,8 +37,10 @@ export const TeacherFormPage = () => {
     const isEditMode = Boolean(id);
 
     const { data: responseData, isLoading: isFetching, error: fetchError } = useGetTeacherByIdQuery(id!, { skip: !isEditMode });
+    const { data: skillCatalogResponse } = useGetSkillCatalogQuery({ limit: 200 });
     const [createTeacher, { isLoading: isCreating }] = useCreateTeacherMutation();
     const [updateTeacher, { isLoading: isUpdating }] = useUpdateTeacherMutation();
+    const skillOptions = skillCatalogResponse?.data?.skills || [];
 
     const {
         control,
@@ -60,7 +58,7 @@ export const TeacherFormPage = () => {
             school_name: '',
             employment_type: 'FULL_TIME',
             status: 'ACTIVE',
-            skills_input: '',
+            skills: [],
             notes: '',
         },
     });
@@ -77,17 +75,16 @@ export const TeacherFormPage = () => {
                 school_name: teacher.school_name || '',
                 employment_type: teacher.employment_type || 'FULL_TIME',
                 status: teacher.status || 'ACTIVE',
-                skills_input: teacher.skills?.join(', ') || '',
+                skills: teacher.skills || [],
                 notes: teacher.notes || '',
             });
         }
     }, [responseData, isEditMode, reset]);
 
     const onSubmit = async (data: any) => {
-        const { skills_input, ...rest } = data;
         const payload = {
-            ...rest,
-            skills: parseSkillInput(skills_input || ''),
+            ...data,
+            skills: data.skills || [],
         };
 
         try {
@@ -282,16 +279,31 @@ export const TeacherFormPage = () => {
 
                         <Grid size={12}>
                             <Controller
-                                name="skills_input"
+                                name="skills"
                                 control={control}
                                 render={({ field }) => (
-                                    <TextField
-                                        {...field}
-                                        label="Kỹ năng / chứng chỉ"
-                                        placeholder="Ví dụ: IELTS_8.0, TESOL, MATH_ADVANCED"
+                                    <Autocomplete<string, true, false, true>
+                                        multiple
+                                        freeSolo
+                                        options={skillOptions.map((item) => item.code)}
+                                        value={field.value || []}
+                                        onChange={(_, value) => field.onChange(value)}
+                                        onBlur={field.onBlur}
+                                        isOptionEqualToValue={(option, value) => option === value}
+                                        filterSelectedOptions
+                                        selectOnFocus
+                                        clearOnBlur={false}
+                                        handleHomeEndKeys
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Kỹ năng / chứng chỉ"
+                                                placeholder="Chọn hoặc nhập mã skill"
+                                                error={!!errors.skills}
+                                                helperText={(errors.skills?.message as string) || 'Có thể chọn từ danh mục hoặc nhập mới. Skill mới sẽ được chuẩn hóa, lưu vào danh mục dùng chung và xuất hiện lại ở các form khác sau khi lưu.'}
+                                            />
+                                        )}
                                         fullWidth
-                                        error={!!errors.skills_input}
-                                        helperText={(errors.skills_input?.message as string) || 'Nhập danh sách phân tách bằng dấu phẩy. Hệ thống sẽ tự chuẩn hóa và dùng cho rule xếp lịch.'}
                                     />
                                 )}
                             />

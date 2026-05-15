@@ -159,11 +159,28 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 			}
 		}
 
+		replacedLessonIDs := collectReplaceLessonIDs(preview.Assignments)
+		for _, lessonID := range replacedLessonIDs {
+			if lessonID == "" {
+				continue
+			}
+			if err := uc.lessonRepo.Update(txCtx, lessonID, map[string]interface{}{
+				"status":        entities.LessonStatusHistory,
+				"change_reason": entities.LessonChangeReasonReplanArchived,
+			}); err != nil {
+				return nil, err
+			}
+		}
+
 		for _, assignment := range preview.Assignments {
 			teacherID := assignment.TeacherID
 			roomID := assignment.RoomID
 			publishedAt := time.Now().UTC()
 			sourcePreviewRunID := input.RunID
+			changeReason := entities.LessonChangeReasonInitialSchedulingCommit
+			if assignment.ReplaceLessonID != "" {
+				changeReason = entities.LessonChangeReasonReplanReplacement
+			}
 
 			_, err := uc.lessonRepo.Create(txCtx, &entities.Lesson{
 				ClassID:          assignment.ClassID,
@@ -174,7 +191,7 @@ func (uc *commitPreviewUseCase) Execute(ctx context.Context, input CommitPreview
 				Status:           entities.LessonStatusPublished,
 				PublishedAt:      &publishedAt,
 				SourcePreviewRun: &sourcePreviewRunID,
-				ChangeReason:     entities.LessonChangeReasonInitialSchedulingCommit,
+				ChangeReason:     changeReason,
 				Notes: fmt.Sprintf(
 					"Generated from scheduling preview %s - session %d/%d",
 					input.RunID,
@@ -304,6 +321,9 @@ func detectCommitConflicts(assignments []PreviewAssignment, lessons []entities.L
 	conflicts := make([]commitConflict, 0)
 	for _, assignment := range assignments {
 		for _, lesson := range lessons {
+			if assignment.ReplaceLessonID != "" && lesson.ID == assignment.ReplaceLessonID {
+				continue
+			}
 			if !overlaps(assignment.StartTime, assignment.EndTime, lesson.DateStart, lesson.DateEnd) {
 				continue
 			}
@@ -329,6 +349,22 @@ func detectCommitConflicts(assignments []PreviewAssignment, lessons []entities.L
 	}
 
 	return conflicts
+}
+
+func collectReplaceLessonIDs(assignments []PreviewAssignment) []string {
+	seen := make(map[string]struct{}, len(assignments))
+	ids := make([]string, 0)
+	for _, assignment := range assignments {
+		if assignment.ReplaceLessonID == "" {
+			continue
+		}
+		if _, ok := seen[assignment.ReplaceLessonID]; ok {
+			continue
+		}
+		seen[assignment.ReplaceLessonID] = struct{}{}
+		ids = append(ids, assignment.ReplaceLessonID)
+	}
+	return ids
 }
 
 func refreshPreviewWithExistingLessons(preview PreviewResult, lessons []entities.Lesson) PreviewResult {

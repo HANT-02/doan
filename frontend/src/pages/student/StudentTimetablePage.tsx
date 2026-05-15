@@ -22,7 +22,7 @@ import {
     EventAvailableRounded,
     TodayRounded,
 } from '@mui/icons-material';
-import { addDays, addWeeks, endOfWeek, format, isSameDay, parseISO, startOfWeek } from 'date-fns';
+import { addWeeks, endOfWeek, format, isSameDay, parseISO, startOfWeek } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 import {
@@ -34,8 +34,8 @@ import {
     type StudentTimetableLesson,
 } from '@/api/studentPortalApi';
 import PageHeader from '@/components/common/PageHeader';
+import PreviewScheduleGrid from '@/components/schedule/PreviewScheduleGrid';
 import ScheduleCardShell from '@/components/schedule/ScheduleCardShell';
-import WeekScheduleBoard from '@/components/schedule/WeekScheduleBoard';
 import { getApiErrorMessage } from '@/utils/apiError';
 
 function isRenderableEmptyStateError(error: unknown) {
@@ -45,10 +45,6 @@ function isRenderableEmptyStateError(error: unknown) {
 
     const apiError = error as { status?: number | string };
     return apiError.status === 403 || apiError.status === 404;
-}
-
-function buildWeekDays(weekStart: Date) {
-    return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 }
 
 function getAttendanceStatus(status?: number) {
@@ -104,7 +100,6 @@ export default function StudentTimetablePage() {
 
     const {
         data: timetableResponse,
-        isLoading: isLoadingTimetable,
         isFetching: isFetchingTimetable,
         error: timetableError,
     } = useGetStudentTimetableQuery({
@@ -152,17 +147,6 @@ export default function StudentTimetablePage() {
         [attendanceRecords],
     );
 
-    const calendarDays = useMemo(
-        () =>
-            buildWeekDays(weekStart).map((day) => ({
-                date: day,
-                items: lessons
-                    .filter((lesson) => isSameDay(parseISO(lesson.date_start), day))
-                    .sort((left, right) => left.date_start.localeCompare(right.date_start)),
-            })),
-        [lessons, weekStart],
-    );
-
     const uniqueClasses = useMemo(() => new Set(lessons.map((lesson) => lesson.class_id)).size, [lessons]);
     const linkedLeaveCount = useMemo(
         () => lessons.filter((lesson) => findMatchingLeave(lesson, leaveRequests)).length,
@@ -173,7 +157,6 @@ export default function StudentTimetablePage() {
         <Stack sx={{ p: { xs: 2, md: 4 } }} spacing={3}>
             <PageHeader
                 title="Thời khóa biểu"
-                subtitle="Theo dõi lịch học theo tuần ở dạng calendar, đồng bộ cách đọc card với màn preview scheduling."
                 icon={<EventAvailableRounded />}
                 breadcrumbs={[
                     { label: 'Cổng học sinh', path: '/app/student/overview' },
@@ -227,9 +210,6 @@ export default function StudentTimetablePage() {
                             </MenuItem>
                         ))}
                     </TextField>
-                    <Typography variant="body2" color="text.secondary">
-                        Bộ lọc này áp dụng đồng thời cho calendar, đơn xin phép và thống kê chuyên cần.
-                    </Typography>
                 </Stack>
             </Paper>
 
@@ -281,13 +261,11 @@ export default function StudentTimetablePage() {
                 </Stack>
             </Paper>
 
-            <WeekScheduleBoard
+            <PreviewScheduleGrid
                 title="Lịch tuần"
-                subtitle="Các buổi học hiển thị cùng phong cách card/chip như preview, kèm trạng thái điểm danh và đơn xin phép."
-                days={calendarDays}
+                weekStart={weekStart}
+                items={lessons}
                 isFetching={isFetchingTimetable}
-                minDayHeight={280}
-                emptyLabel={isLoadingTimetable || isFetchingTimetable ? 'Đang tải thời khóa biểu...' : 'Chưa có buổi học nào trong ngày này.'}
                 renderItem={(lesson: StudentTimetableLesson) => {
                     const status = getLessonStatus(lesson);
                     const linkedLeave = findMatchingLeave(lesson, leaveRequests);

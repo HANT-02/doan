@@ -53,8 +53,9 @@ import {
     useTransferStudentMutation,
     type Class,
 } from '@/api/classApi';
+import { useGetCoursesQuery } from '@/api/courseApi';
 import { useGetStudentsQuery, type Student } from '@/api/studentApi';
-import { useGetTeachersQuery, type Teacher } from '@/api/teacherApi';
+import { useGetSkillCatalogQuery, useGetTeachersQuery, type Teacher } from '@/api/teacherApi';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ClassScheduleTab from './ClassScheduleTab';
 
@@ -64,6 +65,7 @@ const enrollStudentsSchema = z.object({
 
 const assignTeacherSchema = z.object({
     teacher_id: z.string().min(1, 'Vui lòng chọn giáo viên phụ trách'),
+    teacher_skill_codes: z.array(z.string()).optional(),
 });
 
 type EnrollStudentsValues = z.infer<typeof enrollStudentsSchema>;
@@ -156,9 +158,11 @@ export default function ClassDetailDialog({
         { skip: !open },
     );
     const { data: teachersResponse, isFetching: isFetchingTeachers } = useGetTeachersQuery(
-        { page: 1, limit: 200, status: 'ACTIVE' },
+        { page: 1, limit: 200, status: 'ACTIVE', class_id: classId || undefined },
         { skip: !open },
     );
+    const { data: coursesResponse } = useGetCoursesQuery({ limit: 200 }, { skip: !open });
+    const { data: skillCatalogResponse, isFetching: isFetchingSkillCatalog } = useGetSkillCatalogQuery({ limit: 200 });
     const { data: studentsResponse, isFetching: isFetchingStudents } = useGetStudentsQuery(
         { page: 1, limit: 500, status: 'ACTIVE' },
         { skip: !open || !isEnrollDialogOpen },
@@ -171,28 +175,49 @@ export default function ClassDetailDialog({
     const [transferStudent, { isLoading: isTransferring }] = useTransferStudentMutation();
     const [assignTeacher, { isLoading: isAssigning }] = useAssignTeacherMutation();
 
-    const teachers = useMemo(() => teachersResponse?.data?.teachers || [], [teachersResponse?.data?.teachers]);
+    const courses = useMemo(() => coursesResponse?.data?.courses || [], [coursesResponse?.data?.courses]);
+    const skillCatalog = useMemo(() => skillCatalogResponse?.data?.skills || [], [skillCatalogResponse?.data?.skills]);
+    const allTeachers = useMemo(() => teachersResponse?.data?.teachers || [], [teachersResponse?.data?.teachers]);
     const allClasses = useMemo(() => classesResponse?.data?.classes || [], [classesResponse?.data?.classes]);
     const classData = classResponse?.data || null;
     const roster = rosterResponse?.data;
+    const currentCourse = useMemo(
+        () => courses.find((course) => course.id === classData?.course_id) || null,
+        [classData?.course_id, courses],
+    );
 
     const teacherForm = useForm<AssignTeacherValues>({
         resolver: zodResolver(assignTeacherSchema),
-        defaultValues: { teacher_id: '' },
+        defaultValues: { teacher_id: '', teacher_skill_codes: [] },
     });
     const enrollForm = useForm<EnrollStudentsValues>({
         resolver: zodResolver(enrollStudentsSchema),
         defaultValues: { student_ids: [] },
     });
 
+    const selectedTeacherSkillCodes = teacherForm.watch('teacher_skill_codes') || [];
+    const teachers = useMemo(() => {
+        const source = allTeachers;
+        if (selectedTeacherSkillCodes.length === 0) {
+            return source;
+        }
+
+        return source.filter((teacher) =>
+            selectedTeacherSkillCodes.every((skillCode) => teacher.skills?.includes(skillCode)),
+        );
+    }, [allTeachers, selectedTeacherSkillCodes]);
+
     const currentTeacher = useMemo(
-        () => teachers.find((teacher) => teacher.id === classData?.teacher_id) || null,
-        [teachers, classData?.teacher_id],
+        () => allTeachers.find((teacher) => teacher.id === classData?.teacher_id) || null,
+        [allTeachers, classData?.teacher_id],
     );
 
     useEffect(() => {
-        teacherForm.reset({ teacher_id: classData?.teacher_id || '' });
-    }, [classData?.teacher_id, teacherForm]);
+        teacherForm.reset({
+            teacher_id: classData?.teacher_id || '',
+            teacher_skill_codes: currentCourse?.required_skills || [],
+        });
+    }, [classData?.teacher_id, currentCourse?.required_skills, teacherForm]);
 
     useEffect(() => {
         if (!isEnrollDialogOpen) {
@@ -366,15 +391,20 @@ export default function ClassDetailDialog({
             flex: 1.3,
             minWidth: 220,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="flex-start"
+                    sx={{ minWidth: 0, width: '100%', height: '100%', py: 1 }}
+                >
                     <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.light', color: 'primary.dark' }}>
                         {params.row.full_name?.charAt(0) || 'H'}
                     </Avatar>
                     <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.35 }} noWrap>
                             {params.row.full_name || 'Chưa có tên học sinh'}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.35 }} noWrap>
                             {params.row.code || 'Chưa có mã học sinh'}
                         </Typography>
                     </Box>
@@ -386,7 +416,11 @@ export default function ClassDetailDialog({
             headerName: 'Khối lớp',
             width: 120,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Typography variant="body2">{params.row.grade_level || '-'}</Typography>
+                <Box sx={{ width: '100%' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {params.row.grade_level || '-'}
+                    </Typography>
+                </Box>
             ),
         },
         {
@@ -394,7 +428,11 @@ export default function ClassDetailDialog({
             headerName: 'Số điện thoại',
             width: 140,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Typography variant="body2">{params.row.phone || '-'}</Typography>
+                <Box sx={{ width: '100%' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {params.row.phone || '-'}
+                    </Typography>
+                </Box>
             ),
         },
         {
@@ -402,7 +440,11 @@ export default function ClassDetailDialog({
             headerName: 'SĐT phụ huynh',
             width: 150,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Typography variant="body2">{params.row.guardian_phone || '-'}</Typography>
+                <Box sx={{ width: '100%' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {params.row.guardian_phone || '-'}
+                    </Typography>
+                </Box>
             ),
         },
         {
@@ -425,7 +467,7 @@ export default function ClassDetailDialog({
             sortable: false,
             flex: 1,
             renderCell: (params: GridRenderCellParams<Student>) => (
-                <Stack direction="row" spacing={1} sx={{ py: 1 }}>
+                <Stack direction="row" spacing={1} sx={{ py: 1, width: '100%' }} justifyContent="flex-end">
                     <Button
                         color="warning"
                         size="small"
@@ -650,7 +692,21 @@ export default function ClassDetailDialog({
                         '& .MuiDataGrid-columnHeaders': {
                             backgroundColor: '#f8fafc',
                         },
+                        '& .MuiDataGrid-cell': {
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            py: '10px !important',
+                            lineHeight: 'normal !important',
+                        },
+                        '& .MuiDataGrid-row': {
+                            maxHeight: 'none !important',
+                        },
+                        '& .MuiDataGrid-columnHeaderTitle': {
+                            fontWeight: 700,
+                        },
                     }}
+                    rowHeight={94}
+                    columnHeaderHeight={48}
                 />
             </Paper>
 
@@ -659,9 +715,6 @@ export default function ClassDetailDialog({
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                             Học viên đang bảo lưu
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Có thể hoàn tác ngay tại đây nếu vừa thao tác nhầm hoặc muốn cho học viên quay lại lớp.
                         </Typography>
                     </Box>
 
@@ -673,22 +726,43 @@ export default function ClassDetailDialog({
                                     variant="outlined"
                                     sx={{ p: 1.5, borderRadius: 2.5, bgcolor: 'warning.50', borderColor: 'warning.light' }}
                                 >
-                                    <Stack
-                                        direction={{ xs: 'column', md: 'row' }}
-                                        spacing={1.5}
-                                        justifyContent="space-between"
-                                        alignItems={{ xs: 'flex-start', md: 'center' }}
+                                    <Box
+                                        sx={{
+                                            display: 'grid',
+                                            gap: 1.5,
+                                            alignItems: 'center',
+                                            gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.4fr) 140px 180px auto' },
+                                        }}
                                     >
+                                        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                                            <Avatar sx={{ width: 34, height: 34, bgcolor: 'warning.light', color: 'warning.dark' }}>
+                                                {student.full_name?.charAt(0) || 'H'}
+                                            </Avatar>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                                                    {student.full_name || 'Chưa có tên học sinh'}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap>
+                                                    {student.code || 'Chưa có mã học sinh'}
+                                                </Typography>
+                                            </Box>
+                                        </Stack>
                                         <Box>
-                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                                {student.full_name || 'Chưa có tên học sinh'}
-                                            </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {student.code || 'Chưa có mã học sinh'}
-                                                {student.grade_level ? ` • ${student.grade_level}` : ''}
-                                                {student.phone ? ` • ${student.phone}` : ''}
+                                                Khối lớp
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                {student.grade_level || '-'}
                                             </Typography>
                                         </Box>
+                                        <Stack alignItems={{ xs: 'flex-start', md: 'flex-end' }} spacing={0.5}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Liên hệ
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                                {student.phone || 'Chưa có số điện thoại'}
+                                            </Typography>
+                                        </Stack>
                                         <Button
                                             variant="outlined"
                                             color="warning"
@@ -697,7 +771,7 @@ export default function ClassDetailDialog({
                                         >
                                             Hoàn tác bảo lưu
                                         </Button>
-                                    </Stack>
+                                    </Box>
                                 </Paper>
                             ))}
                         </Stack>
@@ -716,9 +790,6 @@ export default function ClassDetailDialog({
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                             Giáo viên hiện tại
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Gán giáo viên phụ trách để dùng cho demo quản trị và luồng xếp lịch tiếp theo.
                         </Typography>
                     </Box>
 
@@ -744,6 +815,48 @@ export default function ClassDetailDialog({
                         <Stack spacing={2}>
                             <Controller
                                 control={teacherForm.control}
+                                name="teacher_skill_codes"
+                                render={({ field }) => (
+                                    <Autocomplete<string, true, false, false>
+                                        multiple
+                                        options={skillCatalog.map((item) => item.code)}
+                                        loading={isFetchingSkillCatalog}
+                                        value={field.value || []}
+                                        onChange={(_, value) => field.onChange(value)}
+                                        disableCloseOnSelect
+                                        filterSelectedOptions
+                                        getOptionLabel={(option) => {
+                                            const matchedSkill = skillCatalog.find((item) => item.code === option);
+                                            return matchedSkill ? `${matchedSkill.name} (${matchedSkill.code})` : option;
+                                        }}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => {
+                                                const matchedSkill = skillCatalog.find((item) => item.code === option);
+                                                return (
+                                                    <Chip
+                                                        {...getTagProps({ index })}
+                                                        key={option}
+                                                        label={matchedSkill?.name || option}
+                                                        size="small"
+                                                        color="primary"
+                                                        variant="outlined"
+                                                    />
+                                                );
+                                            })
+                                        }
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Lọc giáo viên theo kỹ năng"
+                                                helperText="Mặc định lấy theo khóa học của lớp. Bạn có thể bỏ bớt kỹ năng để mở rộng danh sách giáo viên."
+                                            />
+                                        )}
+                                    />
+                                )}
+                            />
+
+                            <Controller
+                                control={teacherForm.control}
                                 name="teacher_id"
                                 render={({ field, fieldState }) => (
                                     <Autocomplete<Teacher, false, false, false>
@@ -757,7 +870,7 @@ export default function ClassDetailDialog({
                                                 {...params}
                                                 label="Chọn giáo viên phụ trách"
                                                 error={!!fieldState.error}
-                                                helperText={fieldState.error?.message || 'Có thể đổi giáo viên nhiều lần để demo nghiệp vụ'}
+                                                helperText={fieldState.error?.message || (teachers.length === 0 ? 'Không có giáo viên phù hợp với nhóm kỹ năng đang lọc.' : undefined)}
                                             />
                                         )}
                                     />
@@ -828,9 +941,6 @@ export default function ClassDetailDialog({
                                         <Box>
                                             <Typography variant="h6" sx={{ fontWeight: 700 }}>
                                                 {classData?.name}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                Theo dõi học sinh, sĩ số và giáo viên phụ trách trong một màn hình.
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -1000,7 +1110,7 @@ export default function ClassDetailDialog({
                     <Stack spacing={2.5} sx={{ pt: 1 }}>
                         {studentToTransfer ? (
                             <Alert severity="info">
-                                Chuyển <strong>{studentToTransfer.full_name}</strong> sang lớp tương thích. Backend sẽ chặn nếu lớp đích đầy, khác chương trình, trùng lịch hoặc không đủ travel gap.
+                                Chuyển <strong>{studentToTransfer.full_name}</strong> sang lớp phù hợp.
                             </Alert>
                         ) : null}
 
@@ -1014,7 +1124,6 @@ export default function ClassDetailDialog({
                                 <TextField
                                     {...params}
                                     label="Lớp đích"
-                                    helperText="Ưu tiên lớp cùng course. Nếu không phù hợp, backend sẽ từ chối."
                                 />
                             )}
                         />

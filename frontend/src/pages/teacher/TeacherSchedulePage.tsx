@@ -7,20 +7,16 @@ import {
     EventAvailableRounded,
     TodayRounded,
 } from '@mui/icons-material';
-import { addDays, addWeeks, endOfWeek, format, isSameDay, parseISO, startOfWeek } from 'date-fns';
+import { addWeeks, endOfWeek, format, parseISO, startOfWeek } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 
 import { useGetTeacherLessonsQuery } from '@/api/teacherPortalApi';
 import type { TeacherLesson } from '@/api/teacherPortalApi';
 import PageHeader from '@/components/common/PageHeader';
+import PreviewScheduleGrid from '@/components/schedule/PreviewScheduleGrid';
 import ScheduleCardShell from '@/components/schedule/ScheduleCardShell';
-import WeekScheduleBoard from '@/components/schedule/WeekScheduleBoard';
 import { getApiErrorMessage } from '@/utils/apiError';
-
-function buildWeekDays(weekStart: Date) {
-    return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
-}
 
 export default function TeacherSchedulePage() {
     const navigate = useNavigate();
@@ -29,23 +25,12 @@ export default function TeacherSchedulePage() {
     const weekStart = useMemo(() => startOfWeek(weekAnchor, { weekStartsOn: 1 }), [weekAnchor]);
     const weekEnd = useMemo(() => endOfWeek(weekAnchor, { weekStartsOn: 1 }), [weekAnchor]);
 
-    const { data, isLoading, isFetching, error } = useGetTeacherLessonsQuery({
+    const { data, isFetching, error } = useGetTeacherLessonsQuery({
         from: format(weekStart, 'yyyy-MM-dd'),
         to: format(weekEnd, 'yyyy-MM-dd'),
     });
 
     const lessons = data?.data?.lessons ?? [];
-
-    const calendarDays = useMemo(
-        () =>
-            buildWeekDays(weekStart).map((day) => ({
-                date: day,
-                items: lessons
-                    .filter((lesson) => isSameDay(parseISO(lesson.date_start), day))
-                    .sort((left, right) => left.date_start.localeCompare(right.date_start)),
-            })),
-        [lessons, weekStart],
-    );
 
     const uniqueClasses = useMemo(() => new Set(lessons.map((lesson) => lesson.class_id)).size, [lessons]);
 
@@ -53,7 +38,6 @@ export default function TeacherSchedulePage() {
         <Stack sx={{ p: { xs: 2, md: 4 } }} spacing={3}>
             <PageHeader
                 title="Lịch giảng dạy"
-                subtitle="Theo dõi các buổi học trong tuần theo cùng ngôn ngữ hiển thị với màn preview scheduling."
                 icon={<EventAvailableRounded />}
                 breadcrumbs={[
                     { label: 'Trang giáo viên', path: '/app/teacher/overview' },
@@ -91,12 +75,11 @@ export default function TeacherSchedulePage() {
                 </Alert>
             ) : null}
 
-            <WeekScheduleBoard
+            <PreviewScheduleGrid
                 title="Lịch tuần giảng dạy"
-                subtitle="Mỗi buổi học là một card với chip ca học và phòng học, giống cách đọc trên preview."
-                days={calendarDays}
+                weekStart={weekStart}
+                items={lessons}
                 isFetching={isFetching}
-                emptyLabel={isLoading || isFetching ? 'Đang tải lịch giảng dạy...' : 'Chưa có buổi học nào trong ngày này.'}
                 renderItem={(lesson: TeacherLesson) => (
                     <ScheduleCardShell
                         key={lesson.id}
@@ -107,7 +90,6 @@ export default function TeacherSchedulePage() {
                             { label: lesson.shift?.name || 'Chưa gắn ca học', color: 'primary' },
                             { label: lesson.room_name || 'Chưa xếp phòng' },
                         ]}
-                        note={lesson.notes || undefined}
                         actionLabel="Xem chi tiết"
                         onActionClick={() => navigate(`/app/teacher/lessons/${lesson.id}`)}
                         onClick={() => navigate(`/app/teacher/lessons/${lesson.id}`)}

@@ -40,6 +40,7 @@ type Variable struct {
 	ExpectedCapcity int    `json:"expected_capacity"`
 	DurationMinutes int    `json:"duration_minutes"`
 	PreferredRoomID string `json:"preferred_room_id,omitempty"`
+	ReplaceLessonID string `json:"replace_lesson_id,omitempty"`
 }
 
 type DomainValue struct {
@@ -62,6 +63,7 @@ type PreviewAssignment struct {
 	RoomName             string    `json:"room_name"`
 	RoomCapacity         int       `json:"room_capacity"`
 	ExpectedStudentCount int       `json:"expected_student_count"`
+	ReplaceLessonID      string    `json:"replace_lesson_id,omitempty"`
 	ShiftID              string    `json:"shift_id,omitempty"`
 	ShiftCode            string    `json:"shift_code,omitempty"`
 	ShiftName            string    `json:"shift_name,omitempty"`
@@ -131,6 +133,7 @@ type SolverInput struct {
 	TeacherIDs    []string
 	RoomIDs       []string
 	Classes       []entities.Class
+	ClassWindows  map[string]ClassSchedulingWindow
 	Rooms         []entities.Room
 	Shifts        []entities.Shift
 	RoomsByID     map[string]entities.Room

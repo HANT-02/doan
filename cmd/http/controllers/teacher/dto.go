@@ -47,10 +47,21 @@ type TeacherResponse struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
+type SkillCatalogItemResponse struct {
+	ID     string `json:"id"`
+	Code   string `json:"code"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
 // ListTeachersResponse represents the response for listing teachers
 type ListTeachersResponse struct {
 	Teachers   []TeacherResponse `json:"teachers"`
 	Pagination PaginationMeta    `json:"pagination"`
+}
+
+type ListSkillCatalogResponse struct {
+	Skills []SkillCatalogItemResponse `json:"skills"`
 }
 
 // PaginationMeta represents pagination metadata

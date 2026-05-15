@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
+    Autocomplete,
     Button,
     CircularProgress,
     Dialog,
@@ -15,6 +16,7 @@ import {
 } from '@mui/material';
 
 import type { Course } from '@/api/courseApi';
+import { useGetSkillCatalogQuery } from '@/api/teacherApi';
 
 const courseSchema = z.object({
     code: z.string().min(1, 'Mã khóa học không được để trống'),
@@ -27,7 +29,7 @@ const courseSchema = z.object({
     total_hours: z.coerce.number().min(0, 'Tổng giờ không hợp lệ'),
     price: z.coerce.number().min(0, 'Học phí không hợp lệ'),
     status: z.enum(['ACTIVE', 'INACTIVE']),
-    required_skills_input: z.string().optional(),
+    required_skills: z.array(z.string()).optional(),
 });
 
 type CourseFormValues = z.infer<typeof courseSchema>;
@@ -45,6 +47,7 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
         register,
         handleSubmit,
         reset,
+        control,
         formState: { errors },
     } = useForm<CourseFormValues>({
         resolver: zodResolver(courseSchema) as any,
@@ -59,9 +62,11 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
             total_hours: 0,
             price: 0,
             status: 'ACTIVE',
-            required_skills_input: '',
+            required_skills: [],
         },
     });
+    const { data: skillCatalogResponse } = useGetSkillCatalogQuery({ limit: 200 });
+    const skillOptions = skillCatalogResponse?.data?.skills || [];
 
     useEffect(() => {
         if (course) {
@@ -76,7 +81,7 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
                 total_hours: course.total_hours || 0,
                 price: course.price || 0,
                 status: course.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
-                required_skills_input: course.required_skills?.join(', ') || '',
+                required_skills: course.required_skills || [],
             });
             return;
         }
@@ -92,19 +97,14 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
             total_hours: 0,
             price: 0,
             status: 'ACTIVE',
-            required_skills_input: '',
+            required_skills: [],
         });
     }, [open, course, reset]);
 
     const handleFormSubmit = async (values: CourseFormValues) => {
-        const requiredSkills = (values.required_skills_input || '')
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean);
-        const { required_skills_input, ...rest } = values;
         const payload = {
-            ...rest,
-            required_skills: requiredSkills,
+            ...values,
+            required_skills: values.required_skills || [],
         };
 
         await onSubmit(payload);
@@ -187,13 +187,34 @@ const CourseDialog = ({ open, onClose, onSubmit, course, isLoading }: CourseDial
                         </TextField>
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                            fullWidth
-                            label="Kỹ năng / chứng chỉ bắt buộc"
-                            placeholder="Ví dụ: IELTS_8.0, TESOL"
-                            {...register('required_skills_input')}
-                            error={!!errors.required_skills_input}
-                            helperText={errors.required_skills_input?.message || 'Nhập danh sách phân tách bằng dấu phẩy để dùng làm hard-constraint cho giáo viên.'}
+                        <Controller
+                            name="required_skills"
+                            control={control}
+                            render={({ field }) => (
+                                <Autocomplete<string, true, false, true>
+                                    multiple
+                                    freeSolo
+                                    options={skillOptions.map((item) => item.code)}
+                                    value={field.value || []}
+                                    onChange={(_, value) => field.onChange(value)}
+                                    onBlur={field.onBlur}
+                                    isOptionEqualToValue={(option, value) => option === value}
+                                    filterSelectedOptions
+                                    selectOnFocus
+                                    clearOnBlur={false}
+                                    handleHomeEndKeys
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            fullWidth
+                                            label="Kỹ năng / chứng chỉ bắt buộc"
+                                            placeholder="Chọn hoặc nhập mã skill"
+                                            error={!!errors.required_skills}
+                                            helperText={errors.required_skills?.message || 'Có thể chọn từ danh mục hoặc nhập mới. Skill mới sẽ được lưu vào danh mục dùng chung để giáo viên, khóa học và lớp học dùng lại.'}
+                                        />
+                                    )}
+                                />
+                            )}
                         />
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>

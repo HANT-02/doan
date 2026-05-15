@@ -33,10 +33,12 @@ func prepareSchedulingProblem(input SolverInput) preparedSchedulingProblem {
 	}
 
 	targetLessons := make(map[string]entities.Lesson)
-	for _, variable := range variables {
+	for index, variable := range variables {
 		lessons := targetLessonsByClass[variable.ClassID]
 		if variable.SessionIndex > 0 && variable.SessionIndex <= len(lessons) {
-			targetLessons[variable.ID] = lessons[variable.SessionIndex-1]
+			target := lessons[variable.SessionIndex-1]
+			targetLessons[variable.ID] = target
+			variables[index].ReplaceLessonID = target.ID
 		}
 	}
 
@@ -155,24 +157,25 @@ func collectUnassignedConflicts(
 
 func newPreviewAssignment(variable Variable, value DomainValue, constraintFit string) PreviewAssignment {
 	return PreviewAssignment{
-		VariableID:    variable.ID,
-		ClassID:       variable.ClassID,
-		ClassCode:     variable.ClassCode,
-		ClassName:     variable.ClassName,
-		SessionIndex:  variable.SessionIndex,
-		SessionTotal:  variable.SessionTotal,
-		TeacherID:     variable.TeacherID,
-		TeacherLabel:  variable.TeacherLabel,
-		RoomID:        value.RoomID,
-		RoomName:      value.RoomName,
-		RoomCapacity:  value.RoomCapacity,
-		ShiftID:       value.TimeSlot.ShiftID,
-		ShiftCode:     value.TimeSlot.ShiftCode,
-		ShiftName:     value.TimeSlot.ShiftName,
-		ShiftType:     value.TimeSlot.ShiftType,
-		StartTime:     value.TimeSlot.Start,
-		EndTime:       value.TimeSlot.End,
-		ConstraintFit: constraintFit,
+		VariableID:      variable.ID,
+		ClassID:         variable.ClassID,
+		ClassCode:       variable.ClassCode,
+		ClassName:       variable.ClassName,
+		SessionIndex:    variable.SessionIndex,
+		SessionTotal:    variable.SessionTotal,
+		TeacherID:       variable.TeacherID,
+		TeacherLabel:    variable.TeacherLabel,
+		RoomID:          value.RoomID,
+		RoomName:        value.RoomName,
+		RoomCapacity:    value.RoomCapacity,
+		ReplaceLessonID: variable.ReplaceLessonID,
+		ShiftID:         value.TimeSlot.ShiftID,
+		ShiftCode:       value.TimeSlot.ShiftCode,
+		ShiftName:       value.TimeSlot.ShiftName,
+		ShiftType:       value.TimeSlot.ShiftType,
+		StartTime:       value.TimeSlot.Start,
+		EndTime:         value.TimeSlot.End,
+		ConstraintFit:   constraintFit,
 	}
 }
 

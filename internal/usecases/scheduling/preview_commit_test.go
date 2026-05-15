@@ -93,6 +93,48 @@ func TestPreviewAndCommitUseCase_CommitAssignmentsWithDefaultSolver(t *testing.T
 	}
 }
 
+func TestPreviewUseCase_NormalizesEffectiveDateFromForPastRequest(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositoriesWithSessionCount(2)
+	lessonRepo := &previewLessonRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		&previewTravelRepoStub{},
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	today := time.Now().UTC()
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: today.AddDate(0, 0, -10),
+		DateTo:   today.AddDate(0, 0, 7),
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	expected := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	if !sameCalendarDay(result.EffectiveDateFrom, expected) {
+		t.Fatalf("expected effective_date_from day %s, got %s", expected.Format(time.RFC3339), result.EffectiveDateFrom.Format(time.RFC3339))
+	}
+	if !sameCalendarDay(result.Filters.EffectiveDateFrom, expected) {
+		t.Fatalf("expected filters.effective_date_from day %s, got %s", expected.Format(time.RFC3339), result.Filters.EffectiveDateFrom.Format(time.RFC3339))
+	}
+	for _, assignment := range result.Assignments {
+		if assignment.StartTime.Before(expected) {
+			t.Fatalf("did not expect assignment in the past: %s", assignment.StartTime.Format(time.RFC3339))
+		}
+	}
+}
+
 func TestCommitPreviewUseCase_ReturnsConflictWhenExistingLessonOverlaps(t *testing.T) {
 	t.Parallel()
 
@@ -265,8 +307,8 @@ func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T)
 	)
 
 	firstPreview, err := previewUseCase.Execute(context.Background(), PreviewInput{
-		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
-		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		DateFrom: time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 6, 19, 0, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
 		t.Fatalf("unexpected preview error: %v", err)
@@ -279,7 +321,7 @@ func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T)
 	lessonRepo.existingLessons = []entities.Lesson{
 		{
 			ID:        "lesson-existing-preview",
-			ClassID:   firstAssignment.ClassID,
+			ClassID:   "class-other",
 			TeacherID: &firstAssignment.TeacherID,
 			RoomID:    &firstAssignment.RoomID,
 			DateStart: firstAssignment.StartTime,
@@ -289,8 +331,8 @@ func TestPreviewUseCase_IncludesExistingLessonConflictBeforeCommit(t *testing.T)
 	}
 
 	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
-		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
-		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		DateFrom: time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 6, 19, 0, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
 		t.Fatalf("unexpected preview error: %v", err)
@@ -372,8 +414,8 @@ func TestPreviewUseCase_ColdStartIgnoresPublishedLessons(t *testing.T) {
 				ClassID:   "class-other",
 				TeacherID: stringPtr("teacher-1"),
 				RoomID:    stringPtr("room-1"),
-				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
-				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				DateStart: time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC),
 				Status:    entities.LessonStatusPublished,
 			},
 		},
@@ -392,8 +434,8 @@ func TestPreviewUseCase_ColdStartIgnoresPublishedLessons(t *testing.T) {
 	)
 
 	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
-		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
-		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		DateFrom: time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 6, 19, 0, 0, 0, 0, time.UTC),
 		Mode:     schedulingservice.PreviewModeColdStart,
 	})
 	if err != nil {
@@ -422,8 +464,8 @@ func TestPreviewUseCase_ReplanWithPublishedLockIgnoresHistoryButBlocksPublished(
 				ClassID:   "class-other-history",
 				TeacherID: stringPtr("teacher-1"),
 				RoomID:    stringPtr("room-1"),
-				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
-				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				DateStart: time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC),
 				Status:    entities.LessonStatusHistory,
 			},
 			{
@@ -431,8 +473,8 @@ func TestPreviewUseCase_ReplanWithPublishedLockIgnoresHistoryButBlocksPublished(
 				ClassID:   "class-other-published",
 				TeacherID: stringPtr("teacher-1"),
 				RoomID:    stringPtr("room-1"),
-				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
-				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				DateStart: time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC),
 				Status:    entities.LessonStatusPublished,
 			},
 		},
@@ -451,8 +493,8 @@ func TestPreviewUseCase_ReplanWithPublishedLockIgnoresHistoryButBlocksPublished(
 	)
 
 	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
-		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
-		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		DateFrom: time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 6, 19, 0, 0, 0, 0, time.UTC),
 		Mode:     schedulingservice.PreviewModeReplanWithPublishedLock,
 	})
 	if err != nil {
@@ -541,7 +583,7 @@ func TestCommitPreviewUseCase_FormatsPublishedConflictLifecycle(t *testing.T) {
 	}
 }
 
-func TestPreviewUseCase_ComputesRequestedSessionsFromClassWeeklySchedule(t *testing.T) {
+func TestPreviewUseCase_ComputesRequestedSessionsFromCourseSessionCount(t *testing.T) {
 	t.Parallel()
 
 	store := schedulingservice.NewPreviewStore[PreviewResult]()
@@ -571,17 +613,20 @@ func TestPreviewUseCase_ComputesRequestedSessionsFromClassWeeklySchedule(t *test
 	if result.Status != "COMPLETED" {
 		t.Fatalf("expected COMPLETED preview status, got %s", result.Status)
 	}
-	if result.Summary.RequestedSessions != 2 {
-		t.Fatalf("expected requested sessions to match 2 weekly schedule slots in range, got %d", result.Summary.RequestedSessions)
+	if result.Summary.RequestedSessions != 8 {
+		t.Fatalf("expected requested sessions to match course session_count=8, got %d", result.Summary.RequestedSessions)
 	}
-	if result.Summary.ScheduledLessons != 2 {
-		t.Fatalf("expected exactly 2 scheduled lessons in the selected range, got %d", result.Summary.ScheduledLessons)
+	if result.Summary.ScheduledLessons != 8 {
+		t.Fatalf("expected exactly 8 scheduled lessons from projected class window, got %d", result.Summary.ScheduledLessons)
 	}
 	if result.Summary.UnscheduledLessons != 0 {
 		t.Fatalf("expected no unscheduled lessons, got %d", result.Summary.UnscheduledLessons)
 	}
 	if len(result.Conflicts) != 0 {
 		t.Fatalf("expected no conflicts, got %d", len(result.Conflicts))
+	}
+	if result.Filters.DateTo.Before(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("expected projected preview window to extend beyond manual date_to, got %s", result.Filters.DateTo.Format(time.RFC3339))
 	}
 }
 
@@ -914,7 +959,18 @@ func (s *previewLessonRepoStub) Create(_ context.Context, entity *entities.Lesso
 	return entity, nil
 }
 
-func (s *previewLessonRepoStub) Update(_ context.Context, _ interface{}, _ map[string]interface{}) error {
+func (s *previewLessonRepoStub) Update(_ context.Context, id interface{}, updatedData map[string]interface{}) error {
+	for index := range s.existingLessons {
+		if s.existingLessons[index].ID != fmt.Sprint(id) {
+			continue
+		}
+		if status, ok := updatedData["status"].(string); ok {
+			s.existingLessons[index].Status = status
+		}
+		if changeReason, ok := updatedData["change_reason"].(string); ok {
+			s.existingLessons[index].ChangeReason = changeReason
+		}
+	}
 	return nil
 }
 
@@ -1099,8 +1155,8 @@ func TestPreviewUseCase_NonvolatileReplanning_MinimizesDisruption(t *testing.T) 
 				ClassID:   "class-1",
 				TeacherID: stringPtr("teacher-1"),
 				RoomID:    stringPtr("room-1"),
-				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
-				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				DateStart: time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC),
 				Status:    entities.LessonStatusPublished,
 			},
 		},
@@ -1120,8 +1176,8 @@ func TestPreviewUseCase_NonvolatileReplanning_MinimizesDisruption(t *testing.T) 
 
 	// In replan_draft mode, it should load the published lesson as target, and NO schedule change should occur
 	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
-		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
-		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		DateFrom: time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 6, 19, 0, 0, 0, 0, time.UTC),
 		Mode:     schedulingservice.PreviewModeReplanDraft,
 	})
 	if err != nil {
@@ -1136,6 +1192,134 @@ func TestPreviewUseCase_NonvolatileReplanning_MinimizesDisruption(t *testing.T) 
 	}
 	if result.Summary.TeacherChangeCount != 0 {
 		t.Fatalf("expected 0 teacher changes, got %d", result.Summary.TeacherChangeCount)
+	}
+}
+
+func TestPreviewUseCase_ReplanSelectedClassIgnoresOwnPublishedLessonsAsConflicts(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{
+		existingLessons: []entities.Lesson{
+			{
+				ID:        "lesson-published-target",
+				ClassID:   "class-1",
+				TeacherID: stringPtr("teacher-1"),
+				RoomID:    stringPtr("room-1"),
+				DateStart: time.Date(2026, 4, 13, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 4, 13, 10, 0, 0, 0, time.UTC),
+				Status:    entities.LessonStatusPublished,
+			},
+		},
+	}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		&previewTravelRepoStub{},
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC),
+		ClassIDs: []string{"class-1"},
+		Mode:     schedulingservice.PreviewModeReplanWithPublishedLock,
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+
+	for _, conflict := range result.Conflicts {
+		if conflict.Type == "SYSTEM_LESSON_CONFLICT" {
+			t.Fatalf("did not expect the selected class to conflict with its own published lessons: %s", conflict.Message)
+		}
+	}
+	if len(result.ExistingLessons) != 0 {
+		t.Fatalf("expected selected class published lessons to stay out of existing lock list, got %d", len(result.ExistingLessons))
+	}
+}
+
+func TestCommitPreviewUseCase_ReplacesOwnPublishedLessonByArchivingOldOne(t *testing.T) {
+	t.Parallel()
+
+	store := schedulingservice.NewPreviewStore[PreviewResult]()
+	classRepo, roomRepo, shiftRepo := previewFixtureRepositories()
+	lessonRepo := &previewLessonRepoStub{
+		existingLessons: []entities.Lesson{
+			{
+				ID:        "lesson-published-target",
+				ClassID:   "class-1",
+				TeacherID: stringPtr("teacher-1"),
+				RoomID:    stringPtr("room-1"),
+				DateStart: time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC),
+				DateEnd:   time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC),
+				Status:    entities.LessonStatusPublished,
+			},
+		},
+	}
+	classScheduleRepo := &previewClassScheduleRepoStub{}
+	enrollmentRepo := &previewEnrollmentRepoStub{}
+	uow := &previewUnitOfWorkStub{}
+
+	previewUseCase := NewPreviewUseCase(
+		classRepo,
+		roomRepo,
+		shiftRepo,
+		lessonRepo,
+		enrollmentRepo,
+		&previewTravelRepoStub{},
+		store,
+		schedulingservice.NewDefaultSchedulingSolver(schedulingservice.NewCPSATSolver()),
+	)
+	commitUseCase := NewCommitPreviewUseCase(
+		lessonRepo,
+		classScheduleRepo,
+		uow,
+		logger.NewZapLogger(logger.Config{Level: "error", Format: "json", Output: "stdout", ServiceName: "test", Environment: "test"}),
+		store,
+	)
+
+	result, err := previewUseCase.Execute(context.Background(), PreviewInput{
+		DateFrom: time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC),
+		DateTo:   time.Date(2026, 6, 19, 0, 0, 0, 0, time.UTC),
+		ClassIDs: []string{"class-1"},
+		Mode:     schedulingservice.PreviewModeReplanWithPublishedLock,
+	})
+	if err != nil {
+		t.Fatalf("unexpected preview error: %v", err)
+	}
+	if len(result.Assignments) == 0 {
+		t.Fatalf("expected assignments for replan")
+	}
+	if result.Assignments[0].ReplaceLessonID != "lesson-published-target" {
+		t.Fatalf("expected replace_lesson_id to map target lesson, got %q", result.Assignments[0].ReplaceLessonID)
+	}
+
+	output, err := commitUseCase.Execute(context.Background(), CommitPreviewInput{RunID: result.RunID})
+	if err != nil {
+		t.Fatalf("unexpected commit error: %v", err)
+	}
+	if output.Status != "COMMITTED" {
+		t.Fatalf("expected COMMITTED status, got %s", output.Status)
+	}
+	if len(lessonRepo.createdLessons) == 0 {
+		t.Fatalf("expected replacement lesson to be created")
+	}
+	if lessonRepo.createdLessons[0].ChangeReason != entities.LessonChangeReasonReplanReplacement {
+		t.Fatalf("expected replacement lesson change_reason %s, got %s", entities.LessonChangeReasonReplanReplacement, lessonRepo.createdLessons[0].ChangeReason)
+	}
+	if lessonRepo.existingLessons[0].Status != entities.LessonStatusHistory {
+		t.Fatalf("expected old lesson to be archived as HISTORY, got %s", lessonRepo.existingLessons[0].Status)
+	}
+	if lessonRepo.existingLessons[0].ChangeReason != entities.LessonChangeReasonReplanArchived {
+		t.Fatalf("expected old lesson change_reason %s, got %s", entities.LessonChangeReasonReplanArchived, lessonRepo.existingLessons[0].ChangeReason)
 	}
 }
 
